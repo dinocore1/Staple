@@ -1,0 +1,66 @@
+/** These templates emit C code not LLVM IR code. I'm just demonstrating
+ *  how to build a retard of a code generator. It's not necessarily
+ *  useful for anything.
+ */
+group C;
+
+file(decls, strings) ::= <<
+int printf(const char *, ...);
+<decls; separator="\n">
+>>
+
+def_func(sym, args, block) ::= <<
+<sym.type.name> <sym.name>(<args; separator=", ">) {
+    <block>
+<if(!sym.void)>return 0;<endif>
+}
+>>
+
+def_globalarray(id, type, size, descr) ::= "int <id>[<size>];"
+
+def_array(reg, id, type, size, descr) ::= "int <id>[<size>];"
+
+def_var(id, type, descr) ::= "int <id>;"
+
+def_arg(id, type) ::= "int <id>"
+
+block(decls, stats) ::= <<
+{
+    <decls; separator="\n">
+    <stats; separator="\n">
+}
+>>
+
+if(cond, stat1, stat2, descr, tmp) ::= <<
+if ( <cond> ) <stat1>
+<if(stat2)>
+else <stat2>
+<endif>
+>>
+
+while(cond, stat, descr, tmp) ::= "while ( <cond> ) <stat>"
+
+assign(id, rhs, descr) ::= "<id> = <rhs>;"
+
+assign_array(sym, index, rhs, descr, tmp1, tmp2) ::= "<sym.name>[<index>] = <rhs>;"
+
+return(v, descr) ::= "return <v>;"
+
+call(reg, sym, args, descr) ::= <<
+<sym.name>(<args; separator=", ">);
+>>
+
+printf(format, args, descr) ::= <<
+printf(<format>, <args; separator=", ">);
+>>
+
+bop(reg, op, a, b) ::= "(<a> <op.text> <b>)"
+
+index(reg, type, sym, index, tmp1, tmp2) ::= "<sym.name>[<index>]"
+
+load_var(reg, id) ::= "<id>"
+
+int(reg, v) ::= "<v>"
+
+// s needed by C target, sreg needed by llvm target
+string(reg, s, sreg, type) ::= <<"<s>">>

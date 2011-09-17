@@ -1,0 +1,165 @@
+group llvm;
+
+opToInstr ::= [ // map operators to LLVM IR instructions
+        "+":"add",
+        "-":"sub",
+        "*":"mul",
+        "/":"sdiv",
+        "==":"icmp eq",
+        "!=":"icmp ne",
+        "<":"icmp slt",
+        ">":"icmp sgt",
+        "<=":"icmp sle",
+        ">=":"icmp sge"
+]
+
+llvmType ::= [ "int":"i32", "void":"void" ]
+
+file(decls, strings) ::= <<
+declare i32 @printf(i8 *, ...)
+<strings:{s | @s<i> = internal constant <string_type(s)> c"<s>"}; separator="\n">
+<decls; separator="\n">
+>>
+
+def_func(sym, args, block) ::= <<
+define <llvmType.(sym.type.name)> @<sym.name>(<args; separator=", ">) {
+; init arg(s): <args:{a | <a.id>}; separator=", ">
+    <args:initarg(); separator="\n">
+    <block>
+<if(sym.void)>
+    ret void<\n>
+<else>
+    ret i32 0<\n>
+<endif>
+}
+>>
+
+initarg(a) ::= <<
+%<a.id> = alloca i32
+store i32 %<a.id>_arg, i32* %<a.id>
+>>
+
+def_globalarray(id, type, size, descr) ::= <<
+; <descr>
+@<id> = global [<size> x i32] zeroinitializer
+>>
+
+def_array(reg, id, type, size, descr) ::= <<
+; <descr>
+<size>
+%r<reg> = alloca i32, i32 %<size.reg>
+>>
+
+def_var(id, type, descr) ::= <<
+; <descr>
+%<id> = alloca i32
+>>
+
+def_arg(id, type) ::= "i32 %<id>_arg"
+
+block(decls, stats) ::= <<
+<decls; separator="\n">
+<stats; separator="\n">
+>>
+
+if(cond, stat1, stat2, descr, tmp) ::= <<
+; <descr>
+<cond>
+br i1 %r<cond.reg>, label %true<tmp>, label %false<tmp>
+true<tmp>:
+<stat1>
+<if(stat2)>
+br label %end<tmp>
+false<tmp>:
+<stat2>
+end<tmp>:
+<else>
+false<tmp>:
+<endif>
+>>
+
+while(cond, stat, descr, tmp) ::= <<
+; <descr>
+    br label %loop ; force basic block boundary
+loop<id>:
+    <cond>
+    br i1 %r<cond.reg>, label %start<tmp>, label %end<tmp>
+start<tmp>:
+    <stat>
+    br label %loop<id>
+end<tmp>:
+>>
+
+assign(id, rhs, descr) ::= <<
+; <descr>
+<rhs>
+store i32 %r<rhs.reg>, i32* %<id>
+>>
+
+assign_array(sym, index, rhs, descr, tmp1, tmp2) ::= <<
+; <descr>
+<rhs>
+<index>
+<array_ptr(reg=tmp1, ...)>
+%r<tmp2> = getelementptr i32* %r<tmp1>, i32 %r<index.reg>
+store i32 %r<rhs.reg>, i32* %r<tmp2>
+>>
+
+return(v, descr) ::= <<
+; <descr>
+<v>
+ret i32 %r<v.reg>
+>>
+
+call(reg, sym, args, descr) ::= <<
+; <descr>
+<args; separator="\n">
+%r<reg> = call <llvmType.(sym.type)>(<args:{i32}; separator=",">)* @<sym.name>(<args:{i32 %r<it.reg>}; separator=", ">)
+>>
+
+printf(format, args, descr) ::= <<
+; <descr>
+<format>
+<if(args)>
+<args; separator="\n">
+call i32 (i8*, ...)* @printf(i8* %r<format.reg>, <args:{i32 %r<it.reg>}; separator=", ">)
+<else>
+call i32 (i8*, ...)* @printf(i8* %r<format.reg>)
+<endif>
+>>
+
+bop(reg, op, a, b) ::= <<
+<a>
+<b>
+%r<reg> = <opToInstr.(op.text)> i32 %r<a.reg>, %r<b.reg>
+>>
+
+index(reg, type, sym, index, tmp1, tmp2) ::= <<
+<index>
+<array_ptr(reg=tmp1, ...)>
+%r<tmp2> = getelementptr i32* %r<tmp1>, i32 %r<index.reg>
+%r<reg> = load i32* %r<tmp2>
+>>
+
+elem_ptr(reg, sym, index, tmp) ::= <<
+<index>
+<array_ptr(reg=tmp, ...)>
+%r<reg> = getelementptr i32* %r<tmp>, i32 %r<index.reg>
+>>
+
+// don't leak var creation/naming into generator
+array_ptr(reg, sym) ::= <<
+; array_ptr.reg=<reg>
+%r<reg> = bitcast <sym.type:array_type()>* <if(sym.global)>@<else>%<endif><sym.name> to i32*
+>>
+
+array_type(type) ::= "[<type.sizeExpr> x i32]"
+
+string_type(s) ::= "[<s.lengthInBytes> x i8]"
+
+load_var(reg, id) ::= "%r<reg> = load i32* %<id>"
+
+int(reg, v) ::= "%r<reg> = add i32 <v>, 0"
+
+// s needed by C target, sreg needed by llvm target
+string(reg, s, sreg) ::= "%r<reg> = getelementptr <string_type(s)>* @s<sreg>, i32 0, i32 0"
