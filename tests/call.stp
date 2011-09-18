@@ -1,0 +1,9 @@
+int g(int x, int y) { 
+	return x+y;
+}
+
+void staple_main() { 
+	printf("%d\n", g(1,2)); 
+}
+
+

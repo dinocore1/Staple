@@ -1,11 +1,21 @@
-import org.antlr.runtime.*;
-import org.antlr.runtime.tree.*;
-import org.antlr.stringtemplate.StringTemplateGroup;
-
+import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+
+import org.antlr.runtime.ANTLRInputStream;
+import org.antlr.runtime.RecognitionException;
+import org.antlr.runtime.Token;
+import org.antlr.runtime.TokenRewriteStream;
+import org.antlr.runtime.TokenStream;
+import org.antlr.runtime.tree.CommonTree;
+import org.antlr.runtime.tree.CommonTreeAdaptor;
+import org.antlr.runtime.tree.CommonTreeNodeStream;
+import org.antlr.runtime.tree.DOTTreeGenerator;
+import org.antlr.runtime.tree.TreeAdaptor;
+import org.antlr.stringtemplate.StringTemplateGroup;
 
 public class CC {
     /** An adaptor that tells ANTLR to build CTree nodes */
@@ -29,12 +39,16 @@ public class CC {
     };
 
     public static void main(String[] args) throws Exception {
+    	String outputFilename = null;
         String templatesFilename = "llvm.stg";
         String filename=null;
         int i = 0;
         while ( i<args.length ) {
             if ( args[i].equals("-templates") ) {
                 templatesFilename = args[i+1]; i+=2;
+            } else if(args[i].equals("-o")) {
+            	outputFilename = args[i+1];
+            	i += 2;
             }
             else { filename = args[i]; i++; }
         }
@@ -82,6 +96,16 @@ public class CC {
         // uncomment next line to learn which template emits what output
         //templates.emitDebugStartStopStrings(true);
         String output = ret2.getTemplate().toString();
+        if(outputFilename != null){
+        	FileWriter fstream = new FileWriter(outputFilename);
+        	BufferedWriter out = new BufferedWriter(fstream);
+        	try {
+        		out.write(output);
+        	} finally {
+        		//Close the output stream
+        		out.close();
+        	}
+        }
         System.out.println(output);
     }
 }

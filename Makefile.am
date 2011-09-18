@@ -1,1 +1,1 @@
-SUBDIRS = compiler
+SUBDIRS = compiler tests
