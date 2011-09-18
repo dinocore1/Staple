@@ -65,18 +65,11 @@ public class CC {
         CParser.translation_unit_return ret = parser.translation_unit();
         CommonTree t = (CommonTree)ret.getTree();
         System.out.println("; "+t.toStringTree());
-        DOTTreeGenerator dot = new DOTTreeGenerator();
-        System.out.println(dot.toDOT(t));
+        //DOTTreeGenerator dot = new DOTTreeGenerator();
+        //System.out.println(dot.toDOT(t));
 
         // MAKE SYM TAB
         SymbolTable symtab = new SymbolTable();
-
-        // LOAD TEMPLATES (via classpath)
-        ClassLoader cl = CC.class.getClassLoader();
-        InputStream in = cl.getResourceAsStream(templatesFilename);
-        Reader rd = new InputStreamReader(in);
-        StringTemplateGroup templates = new StringTemplateGroup(rd);
-        rd.close();
 
         CommonTreeNodeStream nodes = new CommonTreeNodeStream(cTreeAdaptor, t);
         nodes.setTokenStream(tokens);
@@ -85,6 +78,13 @@ public class CC {
         DefRef def = new DefRef(nodes, symtab); // use custom constructor
         def.downup(t); // trigger symtab actions upon certain subtrees
         //System.out.println("globals: "+symtab.globals);
+        
+        // LOAD TEMPLATES (via classpath)
+        ClassLoader cl = CC.class.getClassLoader();
+        InputStream in = cl.getResourceAsStream(templatesFilename);
+        Reader rd = new InputStreamReader(in);
+        StringTemplateGroup templates = new StringTemplateGroup(rd);
+        rd.close();
 
         // GENERATE CODE
         nodes.reset();

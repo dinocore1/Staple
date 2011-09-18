@@ -31,10 +31,15 @@ translation_unit
 	;
 
 external_declaration
-	:	function_definition	-> {$function_definition.st}
+	:   class_definition    -> {$class_definition.st}
+	|	function_definition	-> {$function_definition.st}
 	|	declaration			-> {$declaration.st}
 	;
-		
+
+class_definition
+	:   ^( CLASSDEF ID function_definition+ )
+	;
+
 function_definition
 	:	^(	FUNCDEF ID type_specifier 
 			(^(ARGS p+=parameter_declaration+) )?

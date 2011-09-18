@@ -15,19 +15,34 @@ options {
 }
 
 topdown
-    :   enterBlock
+	:   enterClass
+    |   enterBlock
     |   enterFunction
     |   varDeclaration
     ;
 
 bottomup
-    :   exitBlock
+	:   exitClass
+    |   exitBlock
     |   exitFunction
     |   idref
     |	call
     ;
 
 // S C O P E S
+
+enterClass
+	:   ^(CLASSDEF ID .*) 
+		{
+		ClassSymbol classSymbol = new ClassSymbol($ID.text, currentScope);
+		currentScope.define(classSymbol);
+		currentScope = classSymbol;
+		}
+	;
+	
+exitClass
+	:   CLASSDEF {currentScope = currentScope.getEnclosingScope();}
+	;
 
 enterBlock
     :   BLOCK {currentScope = new LocalScope(currentScope);}// push scope

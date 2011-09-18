@@ -5,7 +5,7 @@ options {
 }
 
 tokens {
-	FILE; FUNCDEF; EXTERNFUNC; EXTERNVAR; VARDEF; ARRAY; ARGS; ARG;
+	FILE; CLASSDEF; FUNCDEF; EXTERNFUNC; EXTERNVAR; VARDEF; ARRAY; ARGS; ARG;
 	EXPR; ELIST; INDEX; CALL; BLOCK; ASSIGN='=';
 }
 
@@ -14,8 +14,14 @@ translation_unit
 	;
 
 external_declaration
-	:	function_definition -> function_definition
+	:   class_definition    -> class_definition
+	|	function_definition -> function_definition
 	|	declaration         -> declaration
+	;
+	
+class_definition
+	:  'class' ID '{' function_definition+ '}'
+		-> ^(CLASSDEF ID function_definition+)
 	;
 
 function_definition

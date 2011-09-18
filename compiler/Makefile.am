@@ -19,6 +19,8 @@ compiler_SOURCES = \
 	BuiltInTypeSymbol.java \
 	CC.java \
 	CErrorNode.java \
+	ClassSymbol.java \
+	ClassType.java \
 	CLexer.java \
 	CParser.java \
 	CString.java \
