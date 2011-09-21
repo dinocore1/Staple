@@ -1,10 +1,10 @@
 
 
 
-CLexer.java CParser.java C.tokens: C.g
-	java -classpath $(top_srcdir)/libs/antlr-3.4-complete.jar org.antlr.Tool C.g
+StapleLexer.java StapleParser.java Staple.tokens: Staple.g
+	java -classpath $(top_srcdir)/libs/antlr-3.4-complete.jar org.antlr.Tool Staple.g
 	
-DefRef.g: C.tokens
+DefRef.java Gen.java: Staple.tokens
 
 libantlr.so: $(top_srcdir)/libs/antlr-3.4-complete.jar
 	gcj -findirect-dispatch -fPIC -shared -o libantlr.so $(top_srcdir)/libs/antlr-3.4-complete.jar
@@ -21,8 +21,8 @@ compiler_SOURCES = \
 	CErrorNode.java \
 	ClassSymbol.java \
 	ClassType.java \
-	CLexer.java \
-	CParser.java \
+	StapleLexer.java \
+	StapleParser.java \
 	CString.java \
 	CTree.java \
 	FunctionSymbol.java \
@@ -48,4 +48,4 @@ compiler_LDADD = libantlr.so llvm.o C.o
 	
 
 	
-CLEANFILES = Gen.java CLexer.java CParser.java *.tokens
+CLEANFILES = Gen.java DefRef.java StapleLexer.java StapleParser.java *.tokens

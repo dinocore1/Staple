@@ -1,6 +1,6 @@
 tree grammar DefRef;
 options {
-  tokenVocab = C;
+  tokenVocab = Staple;
   ASTLabelType = CTree;
   filter = true;
 }
@@ -83,6 +83,7 @@ type_specifier returns [Type type]
 @init { $type = (Type)currentScope.resolve($start.getText()); }
 	: 'void'
 	| 'int'
+	|  ID
 	;
 
 // D e f i n e  s y m b o l s

@@ -44,7 +44,7 @@ public class CC {
         String filename=null;
         int i = 0;
         while ( i<args.length ) {
-            if ( args[i].equals("-templates") ) {
+            if ( args[i].equals("-template") ) {
                 templatesFilename = args[i+1]; i+=2;
             } else if(args[i].equals("-o")) {
             	outputFilename = args[i+1];
@@ -58,11 +58,11 @@ public class CC {
         else input = System.in;
 
         // CREATE LEXER/PARSER THAT CREATES AST FROM INPUT
-        CLexer lexer = new CLexer(new ANTLRInputStream(input));
+        StapleLexer lexer = new StapleLexer(new ANTLRInputStream(input));
         TokenRewriteStream tokens = new TokenRewriteStream(lexer);
-        CParser parser = new CParser(tokens);
+        StapleParser parser = new StapleParser(tokens);
         parser.setTreeAdaptor(cTreeAdaptor);
-        CParser.translation_unit_return ret = parser.translation_unit();
+        StapleParser.translation_unit_return ret = parser.translation_unit();
         CommonTree t = (CommonTree)ret.getTree();
         System.out.println("; "+t.toStringTree());
         //DOTTreeGenerator dot = new DOTTreeGenerator();

@@ -20,7 +20,7 @@ def_globalarray(id, type, size, descr) ::= "int <id>[<size>];"
 
 def_array(reg, id, type, size, descr) ::= "int <id>[<size>];"
 
-def_var(id, type, descr) ::= "int <id>;"
+def_var(id, type, descr) ::= "<type> <id>;"
 
 def_arg(id, type) ::= "int <id>"
 

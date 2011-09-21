@@ -2,7 +2,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 
-public class ClassSymbol extends Symbol implements Scope {
+public class ClassSymbol extends Symbol implements Scope, Type {
 
 	Map<String, Symbol> symbolTable = new LinkedHashMap<String, Symbol>();
 	private Scope enclosingScope;

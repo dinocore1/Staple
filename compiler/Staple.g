@@ -1,4 +1,4 @@
-grammar C;
+grammar Staple;
 options {
 	output=AST;
 	ASTLabelType=CTree;
@@ -20,8 +20,8 @@ external_declaration
 	;
 	
 class_definition
-	:  'class' ID '{' function_definition+ '}'
-		-> ^(CLASSDEF ID function_definition+)
+	:  'class' ID '{' (function_definition | declaration)+ '}'
+		-> ^(CLASSDEF ID declaration* function_definition*)
 	;
 
 function_definition
@@ -37,6 +37,7 @@ declaration
 type_specifier
 	: 'void'
 	| 'int'
+	|  ID
 	;
 
 declarator[CTree typeAST] returns [CommonTree id]
@@ -68,10 +69,6 @@ options {backtrack=true;}
 								  -> ^('if' expressionRoot $s1 $s2?)
 	| 'while' '(' expressionRoot ')' statement
 								  -> ^('while' expressionRoot statement)
-/*
-	| 'printf' '(' STRING (',' parameter_list)? ')' ';'
-								  -> ^('printf' STRING parameter_list?)
-*/
 	;
 
 compound_statement

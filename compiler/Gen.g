@@ -1,7 +1,7 @@
 tree grammar Gen;
 
 options {
-    tokenVocab=C;
+    tokenVocab=Staple;
     ASTLabelType=CTree;
     output=template;
 }
@@ -37,7 +37,7 @@ external_declaration
 	;
 
 class_definition
-	:   ^( CLASSDEF ID function_definition+ )
+	:   ^( CLASSDEF ID (function_definition | declaration)+ )
 	;
 
 function_definition
@@ -58,7 +58,7 @@ declaration
 		-> def_array(reg={getreg()}, id={$ID.text},
 				     type={$type_specifier.text}, size={$expression.st})
 	|	^(VARDEF ID type_specifier)
-		-> def_var(id={$ID.text}, type={$type_specifier.text})
+		-> def_var(id={$ID.text}, type={$ID.symbol.type.getName()})
 	;
 
 type_tree
@@ -69,6 +69,7 @@ type_tree
 type_specifier
 	: 'void'
 	| 'int'
+	|  ID
 	;
 
 parameter_declaration
