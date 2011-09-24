@@ -8,8 +8,7 @@ public class ClassType implements Type {
 	}
 
 	public String getName() {
-		// TODO Auto-generated method stub
-		return null;
+		return mSymbol.name;
 	}
 
 }

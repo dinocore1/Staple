@@ -1,1 +1,2 @@
-SUBDIRS = compiler tests
+ACLOCAL_AMFLAGS=-I m4
+SUBDIRS = compiler runtime tests
