@@ -15,7 +15,9 @@ typedef struct utils_linkedlist {
 } utils_linkedlist;
 
 typedef struct utils_linkedlist_iterator {
+	utils_linkedlist* list;
 	utils_linkedlist_node* currentPtr;
+	utils_linkedlist_node* lastPtr;
 } utils_linkedlist_iterator;
 
 
@@ -45,5 +47,7 @@ void utils_linkedlist_iterator_init(utils_linkedlist_iterator* it, utils_linkedl
 BOOL utils_linkedlist_iterator_hasnext(utils_linkedlist_iterator* it);
 
 void utils_linkedlist_iterator_next(utils_linkedlist_iterator* it, void** data);
+
+void utils_linkedlist_iterator_remove(utils_linkedlist_iterator* it);
 
 
