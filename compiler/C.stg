@@ -16,6 +16,19 @@ def_func(sym, args, block) ::= <<
 }
 >>
 
+def_object(sym, members) ::= <<
+typedef struct <sym> {
+	<members; separator="\n">
+} <sym>;
+
+>>
+
+def_obj_func(obj, sym, args, block) ::= <<
+<sym.type.name> <obj>_<sym.name>(<obj> *self, <args; separator=", ">) {
+    <block>
+<if(!sym.void)>return 0;<endif>
+>>
+
 def_globalarray(id, type, size, descr) ::= "int <id>[<size>];"
 
 def_array(reg, id, type, size, descr) ::= "int <id>[<size>];"

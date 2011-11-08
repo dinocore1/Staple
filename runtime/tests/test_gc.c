@@ -1,4 +1,5 @@
 
+#include "assert.h"
 #include <staple.h>
 #include <gc.h>
 
@@ -16,6 +17,7 @@ int main() {
 	printf("0x%x alloc\n", obj1);
 	gc_getStats(&stats);
 	printf("heap size: %d bytes, %d objects\n", stats.heapBytes, stats.numObjects);
+	ASSERT(stats.numObjects == 1);
 
 	gc_addstatic(obj1);
 
@@ -23,6 +25,7 @@ int main() {
 	printf("0x%x alloc\n", obj2);
 	gc_getStats(&stats);
 	printf("heap size: %d bytes, %d objects\n", stats.heapBytes, stats.numObjects);
+	ASSERT(stats.numObjects == 2);
 
 	gc_setMember(obj1, 0, obj2);
 

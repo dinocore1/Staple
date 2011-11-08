@@ -1,0 +1,3 @@
+Run Staple compiler:
+
+stpc [input.stp] -o output -template [llvm.stg | C.stg]

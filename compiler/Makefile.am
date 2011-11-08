@@ -10,8 +10,8 @@ libantlr.so: $(top_srcdir)/libs/antlr-3.4-complete.jar
 	gcj -findirect-dispatch -fPIC -shared -o libantlr.so $(top_srcdir)/libs/antlr-3.4-complete.jar
 
 
-bin_PROGRAMS = compiler
-compiler_SOURCES = \
+bin_PROGRAMS = stpc
+stpc_SOURCES = \
 	DefRef.java \
 	Gen.java \
 	ArrayType.java \
@@ -34,10 +34,10 @@ compiler_SOURCES = \
 	Type.java \
 	VariableSymbol.java 
 	 
-compiler_GCJFLAGS = -I$(top_srcdir)/libs/antlr-3.4-complete.jar -I. -findirect-dispatch
-compiler_LDFLAGS = -findirect-dispatch --main=CC
-compiler_LDADD = libantlr.so llvm.o C.o
-#compiler_LDADD = $(top_srcdir)/libs/antlr-3.4-complete.jar
+stpc_GCJFLAGS = -I$(top_srcdir)/libs/antlr-3.4-complete.jar -I. -findirect-dispatch
+stpc_LDFLAGS = -findirect-dispatch --main=CC
+stpc_LDADD = libantlr.so llvm.o C.o
+#stpc_LDADD = $(top_srcdir)/libs/antlr-3.4-complete.jar
 	
 
 .stg.o:

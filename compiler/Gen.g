@@ -23,6 +23,7 @@ options {
     	strings.add(new CString(s));
     	return strings.size();
     }
+    
 }
 
 translation_unit
@@ -37,8 +38,10 @@ external_declaration
 	;
 
 class_definition
-	:   ^( CLASSDEF ID (function_definition | declaration)+ )
+	:   ^( CLASSDEF ID mem+=declaration* function_definition* )
+		-> def_object(sym={$ID}, members={$mem})
 	;
+
 
 function_definition
 	:	^(	FUNCDEF ID type_specifier 
