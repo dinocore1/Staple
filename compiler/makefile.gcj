@@ -1,0 +1,62 @@
+
+GCJ = gcj
+top_srcdir = ..
+GCJFLAGS = -I$(top_srcdir)/libs/antlr-3.4-complete.jar -I. -findirect-dispatch
+
+%.o:%.stg
+	$(GCJ) -c -o $@ --resource=$< $<	
+
+%.java:%.g 
+	java -classpath $(top_srcdir)/libs/antlr-3.4-complete.jar org.antlr.Tool $<
+	
+%.o:%.java
+	$(GCJ) $(GCJFLAGS) -c -o $@ $<
+	objcopy -L '_ZGr8_$$_dummy' $@  
+
+%.class:%.java
+	$(GCJ) $(GCJFLAGS) -C $<
+
+
+StapleLexer.java StapleParser.java Staple.tokens: Staple.g
+	java -classpath $(top_srcdir)/libs/antlr-3.4-complete.jar org.antlr.Tool Staple.g
+	
+DefRef.java Gen.java: Staple.tokens
+
+libantlr.so: $(top_srcdir)/libs/antlr-3.4-complete.jar
+	gcj -findirect-dispatch -fPIC -shared -o libantlr.so $(top_srcdir)/libs/antlr-3.4-complete.jar
+
+
+SOURCES = \
+	DefRef.java \
+	Gen.java \
+	ArrayType.java \
+	BaseScope.java \
+	BuiltInTypeSymbol.java \
+	CC.java \
+	CErrorNode.java \
+	ClassSymbol.java \
+	ClassType.java \
+	StapleLexer.java \
+	StapleParser.java \
+	CString.java \
+	CTree.java \
+	FunctionSymbol.java \
+	GlobalScope.java \
+	LocalScope.java \
+	Scope.java \
+	Symbol.java \
+	SymbolTable.java \
+	Type.java \
+	VariableSymbol.java
+CLASSFILES = $(SOURCES:%.java=%.class) 
+OBJFILES = $(SOURCES:%.java=%.o) llvm.o C.o
+
+all: stpc
+
+stpc: $(OBJFILES)
+	$(GCJ) -findirect-dispatch --main=CC $(OBJFILES) libantlr.so -o $@
+
+clean:
+	rm -f $(OBJFILES)
+	rm -f $(CLASSFILES)
+	rm -f Gen.java DefRef.java StapleLexer.java StapleParser.java *.tokens
