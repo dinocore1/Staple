@@ -10,24 +10,24 @@ int printf(const char *, ...);
 >>
 
 def_func(sym, args, block) ::= <<
-<sym.type.name> <sym.name>(<args; separator=", ">) {
+<sym.type.name> <sym.enclosingScope.name>_<sym.name>(<args; separator=", ">) {
     <block>
 <if(!sym.void)>return 0;<endif>
 }
 >>
 
-def_object(sym, members) ::= <<
+def_object(sym, members, functions) ::= <<
 typedef struct <sym> {
 	<members; separator="\n">
 } <sym>;
 
+<functions>
+
 >>
 
-def_obj_func(obj, sym, args, block) ::= <<
-<sym.type.name> <obj>_<sym.name>(<obj> *self, <args; separator=", ">) {
-    <block>
-<if(!sym.void)>return 0;<endif>
->>
+pointervarable(id) ::= "<id>->"
+builtinvarable(id) ::= "<id>"
+
 
 def_globalarray(id, type, size, descr) ::= "int <id>[<size>];"
 

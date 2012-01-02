@@ -20,8 +20,13 @@ external_declaration
 	;
 	
 class_definition
-	:  'class' ID '{' (function_definition | declaration)+ '}'
-		-> ^(CLASSDEF ID declaration* function_definition*)
+	:  'class' ID '{' (class_function_definition[$ID.text] | declaration)+ '}'
+		-> ^(CLASSDEF ID declaration* class_function_definition*)
+	;
+	
+class_function_definition[String className]
+	:	type_specifier ID '(' (parameter_declaration (',' parameter_declaration)*)? ')' compound_statement
+		-> ^(FUNCDEF ID type_specifier ^(ARGS ^(ARG ID["self"] ID[className]) parameter_declaration*) compound_statement)
 	;
 
 function_definition

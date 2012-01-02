@@ -24,6 +24,8 @@ options {
     	return strings.size();
     }
     
+    public String className;
+    
 }
 
 translation_unit
@@ -38,8 +40,9 @@ external_declaration
 	;
 
 class_definition
-	:   ^( CLASSDEF ID mem+=declaration* function_definition* )
-		-> def_object(sym={$ID}, members={$mem})
+@after {currentScope = currentScope.getEnclosingScope();}
+	:   ^( CLASSDEF ID {currentScope = (Scope)currentScope.resolve($ID.text);} mem+=declaration* func+=function_definition*  )
+		-> def_object(sym={$ID}, members={$mem}, functions={$func})
 	;
 
 
@@ -87,7 +90,7 @@ parameter_declaration
 statement
 @after {$st.setAttribute("descr", $text.replaceAll("\\n"," "));}
 	:	compound_statement
-	|	^('=' ID expression) -> assign(id={$ID.text}, rhs={$expression.st})
+	|	^('=' resolvesymbol expression) -> assign(id={$resolvesymbol.st}, rhs={$expression.st})
 	|	^('=' ^(INDEX ID expr) expression)
 		-> assign_array(sym={$ID.symbol}, index={$expr.st},
 					    rhs={$expression.st}, tmp1={getreg()}, tmp2={getreg()})
@@ -105,6 +108,20 @@ compound_statement
 
 expression
 	:	^(EXPR expr) -> {$expr.st}
+	;
+	
+resolvesymbol
+	: ID 
+	{
+		Symbol sym = currentScope.resolve($ID.text);
+		if(sym instanceof VariableSymbol) {
+			if(sym.type instanceof ClassSymbol){
+				$st = templateLib.getInstanceOf("pointervarable",new STAttrMap().put("id", $ID.text));
+			} else if(sym.type instanceof BuiltInTypeSymbol){
+				$st = templateLib.getInstanceOf("builtinvarable",new STAttrMap().put("id", $ID.text));
+			}
+		}
+	}
 	;
 	
 // try to store return value reg in template so it has code/reg

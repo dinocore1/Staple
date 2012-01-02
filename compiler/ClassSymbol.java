@@ -32,10 +32,11 @@ public class ClassSymbol extends Symbol implements Scope, Type {
 	}
 
 	public Symbol resolve(String name) {
-		if ( getEnclosingScope() != null ) {
-			return getEnclosingScope().resolve(name);
+		Symbol retval = symbolTable.get(name);
+		if ( retval == null && getEnclosingScope() != null ) {
+			retval = getEnclosingScope().resolve(name);
 		}
-		return null; // not found
+		return retval;
 	}
 
 
