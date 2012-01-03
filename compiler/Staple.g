@@ -6,7 +6,7 @@ options {
 
 tokens {
 	FILE; CLASSDEF; FUNCDEF; EXTERNFUNC; EXTERNVAR; VARDEF; ARRAY; ARGS; ARG;
-	EXPR; ELIST; INDEX; CALL; BLOCK; ASSIGN='=';
+	EXPR; ELIST; INDEX; CALL; BLOCK; ASSIGN; DEREF; SELF; NEW; IDENTIFIER;
 }
 
 translation_unit
@@ -25,13 +25,13 @@ class_definition
 	;
 	
 class_function_definition[String className]
-	:	type_specifier ID '(' (parameter_declaration (',' parameter_declaration)*)? ')' compound_statement
-		-> ^(FUNCDEF ID type_specifier ^(ARGS ^(ARG ID["self"] ID[className]) parameter_declaration*) compound_statement)
+	:	type_specifier ID '(' (parameter_declaration (',' parameter_declaration)*)? ')' block
+		-> ^(FUNCDEF ID type_specifier ^(ARGS ^(ARG ID["self"] ID[className]) parameter_declaration*) block)
 	;
 
 function_definition
-	:	type_specifier ID '(' parameter_list? ')' compound_statement
-		-> ^(FUNCDEF ID type_specifier parameter_list? compound_statement)
+	:	type_specifier ID '(' parameter_list? ')' block
+		-> ^(FUNCDEF ID type_specifier parameter_list? block)
 	;
 
 declaration
@@ -46,8 +46,8 @@ type_specifier
 	;
 
 declarator[CTree typeAST] returns [CommonTree id]
-	:   ID '[' expressionRoot ']' {$id=new CTree($ID);}
-			-> ^(ARRAY {$typeAST} expressionRoot)
+	:   ID '[' expr ']' {$id=new CTree($ID);}
+			-> ^(ARRAY {$typeAST} ^(EXPR expr))
 	|   ID {$id=new CTree($ID);}
 			-> {$typeAST}
 	;
@@ -65,42 +65,33 @@ parameter_declaration
 // S t a t e m e n t s
 
 statement
-options {backtrack=true;}
-	: compound_statement
-	| assignment_expression ';'   -> assignment_expression
+	: block
+	| (type_specifier ID) => declaration ';' -> declaration
+	| l=expr '=' r=expr ';' -> ^(ASSIGN $l $r)
+	| 'if' '(' e=expr ')' s1=statement 
+		(options {greedy=true;} : 'else' s2=statement)?	-> ^('if' ^(EXPR $e) $s1 $s2?)
+	
+	
+	/*
 	| postfix_expression ';'      -> postfix_expression // handles function calls
 	| 'return' expressionRoot ';' -> ^('return' expressionRoot)
-	| 'if' '(' expressionRoot ')' s1=statement ('else' s2=statement)?
-								  -> ^('if' expressionRoot $s1 $s2?)
+	
 	| 'while' '(' expressionRoot ')' statement
 								  -> ^('while' expressionRoot statement)
+	| 'return' expressionRoot ';' -> ^('return' expressionRoot)							  
+	*/
 	;
 
-compound_statement
-	: '{' declaration* statement* '}' -> ^(BLOCK declaration* statement*)
+block
+	: '{' statement+ '}' -> ^(BLOCK statement+)
 	;
 
 // E x p r e s s i o n s
 
-assignment_expression
-	: postfix_expression ('='^ expressionRoot)?
-	;
-
-expressionRoot
-	:	expression -> ^(EXPR expression)
-	;
 	
-expression
-	:	conditional_expression 
+expr
+	:	additive_expression (('=='|'!='|'<'|'>'|'<='|'>=')^ additive_expression)*
 	;
-
-conditional_expression
-	:	relational_expression (('=='|'!=')^ relational_expression)?
-	;
-
-relational_expression
-    :	additive_expression (('<'|'>'|'<='|'>=')^ additive_expression)*
-    ;
 
 additive_expression
 	:	multiplicative_expression (('+'|'-')^ multiplicative_expression)*
@@ -111,25 +102,34 @@ multiplicative_expression
 	;
 
 postfix_expression
-	:   (primary_expression->primary_expression)
-        (   '[' expression ']'
-        			-> ^(INDEX $postfix_expression expression)
-        |   '(' argument_expression_list ')'
-        			-> ^(CALL $postfix_expression argument_expression_list)
-        |   '(' ')'	-> ^(CALL $postfix_expression)
-        )*
+	: '-' INT -> INT["-"+$INT.text]
+	| INT -> INT
+	| '(' expr ')' -> expr
+	| lvalue -> lvalue
+	| 'new' ID '(' argument_expression_list? ')'  -> ^(NEW ID argument_expression_list?) 
+	;
+
+	
+lvalue
+	: base=ID ( 
+				'(' argument_expression_list? ')' -> ^(CALL SELF $base argument_expression_list? )
+				| n=lvalue_p[$base] -> ^($n)
+			  ) 
+	;
+
+lvalue_p[Token base]
+	: '.' n=ID ( 
+			'(' argument_expression_list? ')' -> ^(CALL {new CTree($base)} ID argument_expression_list?)
+			| -> ^(DEREF {new CTree($base)} $n) 
+			) 
+			lvalue_p[base]
+	| -> ^(IDENTIFIER {new CTree($base)})
 	;
 
 argument_expression_list
-	:   expression (',' expression)* -> ^(ELIST expression+)
+	:   expr (',' expr)* -> ^(ELIST expr+)
 	;
 
-primary_expression
-	: ID
-	| STRING
-	| INT
-	| '(' expression ')' -> expression
-	;
 
 // T o k e n s
 

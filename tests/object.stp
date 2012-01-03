@@ -3,8 +3,9 @@ class MyObject {
 
 	int a;
 	
-	int g(int x, int y) { 
-		return x+y;
+	void g(int x, int y) { 
+		a = x+y;
+		g(a, 0);
 	}
 	
 	int b;

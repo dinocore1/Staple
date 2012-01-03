@@ -6,7 +6,7 @@ check_PROGRAMS = call
 call_SOURCES = call.s common_start.c
 
 .stp.llvm:
-	LD_LIBRARY_PATH=$(top_builddir)/compiler:$$LD_LIBRARY_PATH $(COMPILER) -o $@ $< 
+	java -cp $(top_srcdir)/compiler/:$(top_srcdir)/libs/antlr-3.4-complete.jar CC -o $@ $< -template C.stg
 
 .llvm.s:
 	llc -o $@ $<
