@@ -67,7 +67,9 @@ parameter_declaration
 statement
 	: block
 	| (type_specifier ID) => declaration ';' -> declaration
-	| l=expr '=' r=expr ';' -> ^(ASSIGN $l $r)
+	| l=expr ('=' r=expr -> ^(ASSIGN $l $r) 
+				| -> $l
+			 ) ';' 
 	| 'if' '(' e=expr ')' s1=statement 
 		(options {greedy=true;} : 'else' s2=statement)?	-> ^('if' ^(EXPR $e) $s1 $s2?)
 	
@@ -113,13 +115,13 @@ postfix_expression
 lvalue
 	: base=ID ( 
 				'(' argument_expression_list? ')' -> ^(CALL SELF $base argument_expression_list? )
-				| n=lvalue_p[$base] -> ^($n)
+				| lvalue_p[$base] -> lvalue_p
 			  ) 
 	;
 
 lvalue_p[Token base]
 	: '.' n=ID ( 
-			'(' argument_expression_list? ')' -> ^(CALL {new CTree($base)} ID argument_expression_list?)
+			'(' argument_expression_list? ')' -> ^(CALL {new CTree($base)} $n argument_expression_list?)
 			| -> ^(DEREF {new CTree($base)} $n) 
 			) 
 			lvalue_p[base]
