@@ -55,6 +55,8 @@ public class CC {
         InputStream input = null;
         if ( filename!=null ) input = new FileInputStream(filename);
         else input = System.in;
+        
+        ErrorStream mErrorStream = new ErrorStream();
 
         // CREATE LEXER/PARSER THAT CREATES AST FROM INPUT
         StapleLexer lexer = new StapleLexer(new ANTLRInputStream(input));
@@ -74,7 +76,7 @@ public class CC {
         nodes.setTokenStream(tokens);
 
         // DEFINE/RESOLVE SYMBOLS
-        DefRef def = new DefRef(nodes, symtab); // use custom constructor
+        DefRef def = new DefRef(nodes, symtab, mErrorStream); // use custom constructor
         def.downup(t); // trigger symtab actions upon certain subtrees
         //System.out.println("globals: "+symtab.globals);
         
