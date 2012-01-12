@@ -90,10 +90,7 @@ parameter_declaration
 statement
 @after {$st.setAttribute("descr", $text.replaceAll("\\n"," "));}
 	:	compound_statement
-	|	^('=' resolvesymbol expression) -> assign(id={$resolvesymbol.st}, rhs={$expression.st})
-	|	^('=' ^(INDEX ID expr) expression)
-		-> assign_array(sym={$ID.symbol}, index={$expr.st},
-					    rhs={$expression.st}, tmp1={getreg()}, tmp2={getreg()})
+	|	^(ASSIGN id=expr rhs=expr) -> assign(id={$id.st}, rhs={$rhs.st})
 	|	call -> {$call.st}
 	|	^('return' expression) -> return(v={$expression.st})
 	|	^('if' expression s1=statement s2=statement?)
@@ -147,6 +144,8 @@ call
 		-> printf(format={$primary_expression.st}, args={$e})
 	|	^(CALL ID ( ^(ELIST e+=expr+) )?)
 		-> call(reg={getreg()}, sym={$ID.symbol}, args={$e})
+	|   ^(OBJCALL ID fn=ID ( ^(ELIST e+=expr+) )?)
+		-> call(reg={getreg()}, sym={$fn.symbol}, args={$e})
 	;
 
 primary_expression returns [Type type]

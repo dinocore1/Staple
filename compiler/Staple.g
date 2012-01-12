@@ -6,7 +6,7 @@ options {
 
 tokens {
 	FILE; CLASSDEF; FUNCDEF; EXTERNFUNC; EXTERNVAR; VARDEF; ARRAY; ARGS; ARG;
-	EXPR; ELIST; INDEX; CALL; BLOCK; ASSIGN; DEREF; SELF; NEW; IDENTIFIER;
+	EXPR; ELIST; INDEX; CALL; OBJCALL; BLOCK; ASSIGN; DEREF; NEW;
 }
 
 translation_unit
@@ -108,28 +108,28 @@ postfix_expression
 	| INT -> INT
 	| '(' expr ')' -> expr
 	| lvalue -> lvalue
-	| 'new' ID '(' argument_expression_list? ')'  -> ^(NEW ID argument_expression_list?) 
+	| 'new' ID '(' argument_expression_list? ')'  -> ^(NEW ID ^(ELIST argument_expression_list?) ) 
 	;
 
 	
 lvalue
 	: base=ID ( 
-				'(' argument_expression_list? ')' -> ^(CALL SELF $base argument_expression_list? )
+				'(' argument_expression_list? ')' -> ^(CALL $base ^(ELIST argument_expression_list?) )
 				| lvalue_p[$base] -> lvalue_p
 			  ) 
 	;
 
 lvalue_p[Token base]
 	: '.' n=ID ( 
-			'(' argument_expression_list? ')' -> ^(CALL {new CTree($base)} $n argument_expression_list?)
+			'(' argument_expression_list? ')' -> ^(OBJCALL {new CTree($base)} $n ^(ELIST {new CTree($base)} argument_expression_list?))
 			| -> ^(DEREF {new CTree($base)} $n) 
 			) 
 			lvalue_p[base]
-	| -> ^(IDENTIFIER {new CTree($base)})
+	| -> ^({new CTree($base)})
 	;
 
 argument_expression_list
-	:   expr (',' expr)* -> ^(ELIST expr+)
+	:   expr (',' expr)* -> expr+
 	;
 
 

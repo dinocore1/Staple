@@ -7,10 +7,16 @@ options {
 @members {
     SymbolTable symtab;
     Scope currentScope;
-    public DefRef(TreeNodeStream input, SymbolTable symtab) {
+    ErrorStream mErrorStream;
+    public DefRef(TreeNodeStream input, SymbolTable symtab, ErrorStream estream) {
         this(input);
         this.symtab = symtab;
+        this.mErrorStream = estream;
         currentScope = symtab.globals;
+    }
+    
+    private void undefinedSymbol(int line, String symbolname) {
+        mErrorStream.addSymanticError(line, "Undefined Symbol: " + symbolname);
     }
 }
 
@@ -106,6 +112,27 @@ call:   ^(CALL ID .)
         $ID.symbol = s;
         // System.out.println("line "+$ID.getLine()+": call "+s);
         }
+    | ^(OBJCALL sobj=ID fn=ID .)
+    	{
+    	Symbol s = currentScope.resolve($sobj.text);
+    	if(s == null) {
+    	  undefinedSymbol($sobj.getLine(), $sobj.text);
+    	} else {
+    	  s = currentScope.resolve(s.type.getName());
+    	  if(s == null){
+    	  	mErrorStream.addSymanticError($sobj.getLine(), "Undefined class '" + s.type.getName() + "'");
+    	  } else {
+    	  	s = ((Scope)s).resolve($fn.text);
+    	  	if(s == null) {
+    	  		mErrorStream.addSymanticError($fn.getLine(), "Class '" + s.type.getName() + "' has undefined function '" + $fn.text);  
+    	  	} else {
+    	  		$fn.symbol = s;
+    	  	}
+    	    
+    	  }
+    	}
+        
+    	}
 	;
 	
 idref

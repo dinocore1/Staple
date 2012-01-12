@@ -14,5 +14,6 @@ class MyObject {
 
 int main() {
 	MyObject i;
+	i.g(3, 5);
 	int q;
 }
