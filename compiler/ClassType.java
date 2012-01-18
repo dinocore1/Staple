@@ -11,4 +11,9 @@ public class ClassType implements Type {
 		return mSymbol.name;
 	}
 
+	@Override
+	public boolean isPointer() {
+		return true;
+	}
+
 }

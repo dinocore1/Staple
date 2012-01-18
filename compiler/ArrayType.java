@@ -13,4 +13,9 @@ public class ArrayType extends Symbol implements Type {
     public int getTypeIndex() { return 0; }
     
     public CommonTree getSizeExpr() { return (CommonTree)sizeExpr.getChild(0); }
+    
+	@Override
+	public boolean isPointer() {
+		return true;
+	}
 }

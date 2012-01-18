@@ -64,7 +64,7 @@ declaration
 		-> def_array(reg={getreg()}, id={$ID.text},
 				     type={$type_specifier.text}, size={$expression.st})
 	|	^(VARDEF ID type_specifier)
-		-> def_var(id={$ID.text}, type={$ID.symbol.type.getName()})
+		-> def_var(id={$ID.text}, type={$ID.symbol.type})
 	;
 
 type_tree
@@ -100,7 +100,7 @@ statement
 	;
 
 compound_statement
-	:	^(BLOCK d+=declaration* s+=statement*) -> block(decls={$d}, stats={$s})
+	:	^(BLOCK (d+=declaration | s+=statement)+ ) -> block(decls={$d}, stats={$s})
 	;
 
 expression
