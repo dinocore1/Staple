@@ -56,7 +56,6 @@ function_definition
 	;
 	
 declaration
-@after {$st.setAttribute("descr", $text);}
 	:	^(VARDEF ID ^(ARRAY type_specifier expression))
 		-> {$ID.symbol.scope instanceof GlobalScope}?
 		   def_globalarray(id={$ID.text},
@@ -64,7 +63,14 @@ declaration
 		-> def_array(reg={getreg()}, id={$ID.text},
 				     type={$type_specifier.text}, size={$expression.st})
 	|	^(VARDEF ID type_specifier)
-		-> def_var(id={$ID.text}, type={$ID.symbol.type})
+		{
+			Boolean isPtr = false;
+			if($ID.symbol.type instanceof ClassSymbol){
+				isPtr = true;
+			}
+		}
+		
+		-> def_var(id={$ID.text}, type={$ID.symbol.type}, ptr={isPtr})
 	;
 
 type_tree
@@ -79,12 +85,17 @@ type_specifier
 	;
 
 parameter_declaration
-//@after { System.out.println("arg: "+$st); }
 	:	^(ARG ID ^(ARRAY type_specifier expression))
 		-> def_array(reg={getreg()}, id={$ID.text},
 				     type={$type_specifier.text}, size={$expression.st})
 	|	^(ARG ID type_specifier)
-		-> def_arg(id={$ID.text}, type={$type_specifier.text})
+		{
+			Boolean isPtr = false;
+			if($ID.symbol.type instanceof ClassSymbol){
+				isPtr = true;
+			}
+		}
+		-> def_arg(id={$ID.text}, type={$ID.symbol.type}, ptr={isPtr})
 	;
 
 statement
@@ -139,11 +150,8 @@ expr returns [Type type]
 	;
 
 call
-	:	{((CTree)input.LT(3)).getText().equals("printf")}?  // 3 not 2 due to DOWN
-		^(CALL ID  ( ^(ELIST primary_expression e+=expr*) )?)
-		-> printf(format={$primary_expression.st}, args={$e})
-	|	^(CALL ID ( ^(ELIST e+=expr+) )?)
-		-> call(reg={getreg()}, sym={$ID.symbol}, args={$e})
+	:   ^(CALL fn=ID ( ^(ELIST e+=expr+) )?)
+		-> call(reg={getreg()}, sym={$fn.symbol}, args={$e})
 	|   ^(OBJCALL ID fn=ID ( ^(ELIST e+=expr+) )?)
 		-> call(reg={getreg()}, sym={$fn.symbol}, args={$e})
 	;
@@ -155,4 +163,6 @@ primary_expression returns [Type type]
 						  sreg={getstr($STRING.text)})
 	| INT {$type = (Type)symtab.globals.resolve("int");}
 				-> int(reg={getreg()}, v={$INT.text})
+	| ^(DEREF l=primary_expression r=primary_expression) {$type=$r.type;} 
+				-> deref(l={$l.st}, r={$r.st})
 	;

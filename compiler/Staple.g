@@ -120,11 +120,8 @@ lvalue
 	;
 
 lvalue_p[Token base]
-	: '.' n=ID ( 
-			'(' argument_expression_list? ')' -> ^(OBJCALL {new CTree($base)} $n ^(ELIST {new CTree($base)} argument_expression_list?))
-			| -> ^(DEREF {new CTree($base)} $n) 
-			) 
-			lvalue_p[base]
+	: '.' n=ID '(' argument_expression_list? ')' lvalue_p[$n] -> ^(OBJCALL {new CTree($base)} $n ^(ELIST {new CTree($base)} argument_expression_list?)) lvalue_p
+	| '.' n=ID lvalue_p[$n] -> ^(DEREF {new CTree($base)} lvalue_p)
 	| -> ^({new CTree($base)})
 	;
 

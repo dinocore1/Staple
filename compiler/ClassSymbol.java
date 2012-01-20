@@ -41,12 +41,6 @@ public class ClassSymbol extends Symbol implements Scope, Type {
 
 
 
-	@Override
-	public boolean isPointer() {
-		return true;
-	}
-
-
 
 
 }
