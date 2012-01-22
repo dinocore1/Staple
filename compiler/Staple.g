@@ -25,13 +25,13 @@ class_definition
 	;
 	
 class_function_definition[String className]
-	:	type_specifier ID '(' (parameter_declaration (',' parameter_declaration)*)? ')' block
+	:	type_specifier ID '(' parameter_declaration? (',' parameter_declaration)* ')' block
 		-> ^(FUNCDEF ID type_specifier ^(ARGS ^(ARG ID["self"] ID[className]) parameter_declaration*) block)
 	;
 
 function_definition
-	:	type_specifier ID '(' parameter_list? ')' block
-		-> ^(FUNCDEF ID type_specifier parameter_list? block)
+	:	type_specifier ID '(' parameter_list ')' block
+		-> ^(FUNCDEF ID type_specifier parameter_list block)
 	;
 
 declaration
@@ -53,8 +53,8 @@ declarator[CTree typeAST] returns [CommonTree id]
 	;
 
 parameter_list
-	:	parameter_declaration (',' parameter_declaration)*
-		-> ^(ARGS parameter_declaration+)
+	:	parameter_declaration? (',' parameter_declaration)*
+		-> ^(ARGS parameter_declaration*)
 	;
 
 parameter_declaration
@@ -65,8 +65,8 @@ parameter_declaration
 // S t a t e m e n t s
 
 statement
-	: block
-	| (type_specifier ID) => declaration ';' -> declaration
+	: block -> block
+	| vardef -> vardef
 	| l=expr ('=' r=expr -> ^(ASSIGN $l $r) 
 				| -> $l
 			 ) ';' 
@@ -82,6 +82,15 @@ statement
 								  -> ^('while' expressionRoot statement)
 	| 'return' expressionRoot ';' -> ^('return' expressionRoot)							  
 	*/
+	;
+	
+vardef
+	: (type_specifier ID) => type_specifier ID assign[$ID]? ';'
+		-> ^(VARDEF ID type_specifier) assign?
+	;
+	
+assign[Token l]
+	: '=' r=expr -> ^(ASSIGN {new CTree($l)} $r)
 	;
 
 block
@@ -108,21 +117,19 @@ postfix_expression
 	| INT -> INT
 	| '(' expr ')' -> expr
 	| lvalue -> lvalue
-	| 'new' ID '(' argument_expression_list? ')'  -> ^(NEW ID ^(ELIST argument_expression_list?) ) 
+	| 'new' ID '(' argument_expression_list? ')'  -> ^(NEW ID ^(ELIST argument_expression_list?))
 	;
 
 	
 lvalue
-	: base=ID ( 
-				'(' argument_expression_list? ')' -> ^(CALL $base ^(ELIST argument_expression_list?) )
-				| lvalue_p[$base] -> lvalue_p
-			  ) 
+	: base=ID '(' argument_expression_list? ')' -> ^(CALL $base ^(ELIST argument_expression_list?) )
+	| base=ID lvalue_p[$base] -> lvalue_p
 	;
 
 lvalue_p[Token base]
-	: '.' n=ID '(' argument_expression_list? ')' lvalue_p[$n] -> ^(OBJCALL {new CTree($base)} $n ^(ELIST {new CTree($base)} argument_expression_list?)) lvalue_p
-	| '.' n=ID lvalue_p[$n] -> ^(DEREF {new CTree($base)} lvalue_p)
-	| -> ^({new CTree($base)})
+	: '.' n=ID '(' argument_expression_list? ')' lvalue_p[$n] -> ^(OBJCALL {new CTree($base)} $n ^(ELIST {new CTree($base)} argument_expression_list?))
+	| '.' n=ID lvalue_p[$n] -> ^(DEREF {new CTree($base)} $n)
+	| -> ^({new CTree($base)})  
 	;
 
 argument_expression_list

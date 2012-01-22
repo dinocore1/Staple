@@ -48,7 +48,7 @@ class_definition
 
 function_definition
 	:	^(	FUNCDEF ID type_specifier 
-			(^(ARGS p+=parameter_declaration+) )?
+			(^(ARGS p+=parameter_declaration*) )?
 		 	compound_statement
 		 )
 		 -> def_func(sym={$ID.symbol}, args={$p},
@@ -165,4 +165,5 @@ primary_expression returns [Type type]
 				-> int(reg={getreg()}, v={$INT.text})
 	| ^(DEREF l=primary_expression r=primary_expression) {$type=$r.type;} 
 				-> deref(l={$l.st}, r={$r.st})
+	| ^(NEW ID ELIST) -> objconst(id={$ID})
 	;

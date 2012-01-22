@@ -51,14 +51,10 @@ exitClass
 	;
 
 enterBlock
-    :   BLOCK {currentScope = new LocalScope(currentScope);}// push scope
+    :   BLOCK {currentScope = new LocalScope(currentScope);} // push scope
     ;
 exitBlock
-    :   BLOCK
-        {
-        // System.out.println("locals: "+currentScope);
-        currentScope = currentScope.getEnclosingScope();    // pop scope
-        }
+    :   BLOCK { currentScope = currentScope.getEnclosingScope();} // pop scope
     ;
 
 enterFunction // match method subtree with 0-or-more args

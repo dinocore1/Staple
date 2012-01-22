@@ -63,6 +63,8 @@ while(cond, stat, descr, tmp) ::= "while ( <cond> ) <stat>"
 
 assign(id, rhs, descr) ::= "<id> = <rhs>;"
 
+objconst(id) ::= "malloc <id>"
+
 assign_array(sym, index, rhs, descr, tmp1, tmp2) ::= "<sym.name>[<index>] = <rhs>;"
 
 return(v, descr) ::= "return <v>;"
