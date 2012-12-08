@@ -1,0 +1,8 @@
+package staple.runtime;
+
+import staple.runtime.object;
+
+class string extends object {
+
+	
+}

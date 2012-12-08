@@ -1,0 +1,96 @@
+<project
+    name="Staple"
+    basedir="."
+    default="runtime" >
+
+    <path id="classpath" >
+        <pathelement location="." />
+        <fileset dir="lib" >
+            <include name="**/*.jar" />
+        </fileset>
+    	<dirset dir="bin">
+    	</dirset>
+    </path>
+
+    <macrodef name="antlr3" >
+        <attribute name="grammar.name" />
+        <attribute
+            name="outputdirectory"
+            default="." />
+
+        <attribute
+            name="libdirectory"
+            default="." />
+
+        <sequential>
+            <java
+                classname="org.antlr.Tool"
+                failonerror="true"
+                fork="true" >
+                <arg value="-o" />
+                <arg path="@{outputdirectory}" />
+                <arg value="-lib" />
+                <arg path="@{libdirectory}" />
+                <arg value="-verbose" />
+                <arg value="-Xmultithreaded" />
+                <arg value="-make" />
+                <arg path="@{grammar.name}" />
+                <classpath refid="classpath" />
+            </java>
+        </sequential>
+    </macrodef>
+	
+	<macrodef name="staple">
+		<attribute name="input" />
+		<sequential>
+            <java
+                classname="com.devsmart.Compiler"
+                failonerror="true"
+                 >
+                <arg path="@{input}" />
+            	<classpath refid="classpath" />
+            </java>
+        </sequential>
+	</macrodef>
+
+    <!-- Check if ANTLR3 can be found in the classpath -->
+
+    <target name="compiler" >
+		<antlr3 grammar.name="src/com/devsmart/Staple.g" 
+				outputdirectory="src/com/devsmart"
+				libdirectory="src/com/devsmart" />
+    	
+    	<antlr3 grammar.name="src/com/devsmart/SemPass1.g" 
+    					outputdirectory="src/com/devsmart"
+    					libdirectory="src/com/devsmart" />
+    	
+    	<antlr3 grammar.name="src/com/devsmart/SemPass2.g" 
+    	    			outputdirectory="src/com/devsmart"
+    	    			libdirectory="src/com/devsmart" />
+    	
+    	<antlr3 grammar.name="src/com/devsmart/CodeGen.g" 
+    	    	    	outputdirectory="src/com/devsmart"
+    	    	    	libdirectory="src/com/devsmart" />
+    	
+    	<javac 
+    		srcdir="src" 
+    		destdir="bin" 
+    		classpathref="classpath" />
+    	
+    </target>
+    
+    <target name="jar" depends="compiler">
+        <mkdir dir="build/jar"/>
+        <jar destfile="build/jar/Staple.jar" basedir="bin">
+            <manifest>
+                <attribute name="Main-Class" value="com.devsmart.Compiler"/>
+            </manifest>
+        </jar>
+    </target>
+    
+    <target name="runtime" depends="compiler">
+        <staple input="runtime/object.stp" />
+    	<staple input="runtime/string.stp" />
+    </target>
+
+</project>

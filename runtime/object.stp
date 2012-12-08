@@ -1,0 +1,10 @@
+package staple.runtime;
+
+class object {
+
+	int refCount;
+
+	string toString() {
+		
+	}
+}
