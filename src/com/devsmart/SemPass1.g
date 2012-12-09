@@ -23,13 +23,38 @@ import com.devsmart.symbol.*;
 }
 
 topdown
-	: enterClass
+	: enterPackage
+	| enterClass
     ;
 
 bottomup
-	: exitClass
+	: exitPackage
+	| exitClass
     ;
     
+enterPackage
+	: ^(PACKAGE 
+		(ID 
+		{
+			NamespaceSymbol namespace = new NamespaceSymbol($ID.text);
+			currentScope.define(namespace);
+			currentScope = currentScope.push();
+			namespace.scope = currentScope;
+		}
+		)+ 
+	  )
+	;
+	
+exitPackage
+	: PACKAGE 
+		(ID 
+		{
+			currentScope = currentScope.pop();
+		}
+		)+ 
+	  
+	;
+   
 enterClass
 	: ^(CLASS cname=ID subclass=ID .*) 
 	{

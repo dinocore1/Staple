@@ -135,7 +135,7 @@ typeDefinition returns [AbstractType value]
 						errorstream.addSymanticError($name.token, "Undefined class " + $name.text);
 						return null;
 					}
-					if(classtype instanceof ClassSymbol){
+					if(!(classtype instanceof ClassSymbol)){
 						errorstream.addSymanticError($name.token, $name.text + " is not a class type");
 						return null;
 					}

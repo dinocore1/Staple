@@ -1,5 +1,6 @@
 package com.devsmart;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -21,6 +22,7 @@ public class ParserTest {
 		InputStream in = getClass().getResourceAsStream("/com/devsmart/templates/C.st");
         Reader rd = new InputStreamReader(in);
         Compiler.config.codegentemplate = new StringTemplateGroup(rd);
+        Compiler.setRuntime(new File("runtime/src"));
 		rd.close();
 		
 		int retval = Compiler.compile();

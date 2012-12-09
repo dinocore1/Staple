@@ -32,7 +32,7 @@ bottomup
 	;
 	
 enterBlock
-	: ^(BLOCK (variableDefinition | o=. )* ) 
+	: ^(BLOCK .* ) 
 	;
 	
 exitBlock

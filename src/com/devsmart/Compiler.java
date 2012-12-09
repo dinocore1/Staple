@@ -1,18 +1,25 @@
 package com.devsmart;
 
+import java.io.File;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 import org.antlr.runtime.ANTLRFileStream;
 import org.antlr.runtime.CharStream;
 import org.antlr.runtime.CommonTokenStream;
+import org.antlr.runtime.RecognitionException;
 import org.antlr.runtime.tree.CommonTree;
 import org.antlr.runtime.tree.CommonTreeNodeStream;
 import org.antlr.runtime.tree.Tree;
 import org.antlr.stringtemplate.StringTemplate;
 import org.antlr.stringtemplate.StringTemplateGroup;
+
+import com.devsmart.StapleParser.compilationUnit_return;
 
 public class Compiler {
 	
@@ -26,6 +33,8 @@ public class Compiler {
 		public String inputfile;
 		public int verbose = 0;
 		public StringTemplateGroup codegentemplate;
+		public File runtimefolder;
+		public Scope globalScope = new Scope(null);
 	}
 	
 	public static Config config = new Config();
@@ -53,26 +62,26 @@ public class Compiler {
         
 	}
 	
-	public static int compile() throws Exception {
-		CharStream input = new ANTLRFileStream(config.inputfile);
-		
-		ErrorStream estream = new ErrorStream();
-		
+	public static StapleParser.compilationUnit_return parse(String inputfilepath) throws IOException, RecognitionException {
+		CharStream input = new ANTLRFileStream(inputfilepath);
 		// BUILD AST
 		StapleLexer lex = new StapleLexer(input);
-        CommonTokenStream tokens = new CommonTokenStream(lex);
-        StapleParser parser = new StapleParser(tokens);
-        parser.setTreeAdaptor(new StapleTreeAdapter());
-        StapleParser.compilationUnit_return r = parser.compilationUnit();
-        
-        if(config.verbose >= Config.VERBOSE_ALL) {
-        	System.out.println("tree="+((Tree)r.tree).toStringTree());
-        }
-        
-        // Do Semantic Pass 1
-        Scope globalScope = new Scope(null);
-        CommonTree t = (CommonTree) r.getTree();
-        SemPass1 sempass1 = new SemPass1(new CommonTreeNodeStream(t), globalScope, estream);
+		CommonTokenStream tokens = new CommonTokenStream(lex);
+		StapleParser parser = new StapleParser(tokens);
+		parser.setTreeAdaptor(new StapleTreeAdapter());
+		compilationUnit_return r = parser.compilationUnit();
+
+		if (config.verbose >= Config.VERBOSE_ALL) {
+			System.out.println("tree=" + ((Tree) r.tree).toStringTree());
+		}
+
+		return r;
+	}
+	
+	public static int dosempass(ErrorStream estream, Scope globalScope, CommonTree t) {
+		
+		// Do Semantic Pass 1
+		SemPass1 sempass1 = new SemPass1(new CommonTreeNodeStream(t), globalScope, estream);
         sempass1.downup(t);
         
         estream.printMessages(System.out);
@@ -89,6 +98,27 @@ public class Compiler {
         	//return 1;
         }
         
+        return 0;
+	}
+	
+	
+	public static int compile() throws Exception {
+		
+		
+		ErrorStream estream = new ErrorStream();
+		StapleParser.compilationUnit_return r = parse(config.inputfile);
+		
+        
+        // Do Semantic Passes
+        CommonTree t = (CommonTree) r.getTree();
+        dosempass(estream, config.globalScope, t);
+        
+        
+        estream.printMessages(System.out);
+        if(estream.hasError()){
+        	return 1;
+        }
+        
         // Do Code Generation
         CodeGen codegen = new CodeGen(new CommonTreeNodeStream(t));
         codegen.setTemplateLib(config.codegentemplate);
@@ -98,6 +128,31 @@ public class Compiler {
         }
         
         return 0;
+	}
+
+	static FilenameFilter textFilter = new FilenameFilter() {
+		public boolean accept(File dir, String name) {
+			String lowercaseName = name.toLowerCase();
+			if (lowercaseName.endsWith(".stp")) {
+				return true;
+			} else {
+				return false;
+			}
+		}
+	};
+
+	public static void setRuntime(File file) throws IOException, RecognitionException {
+		ErrorStream estream = new ErrorStream();
+		config.runtimefolder = file;
+		if(config.runtimefolder.exists() && config.runtimefolder.isDirectory()){
+			for(File f : config.runtimefolder.listFiles(textFilter)){
+				String filepath = f.getAbsolutePath();
+				compilationUnit_return r = parse(filepath);
+				CommonTree t = (CommonTree) r.getTree();
+				dosempass(estream, config.globalScope, t);
+			}
+		}
+		
 	}
 
 }

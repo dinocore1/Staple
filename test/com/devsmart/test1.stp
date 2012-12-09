@@ -3,6 +3,7 @@ package com.test1;
 class test1 {
 	
 	void myfunction(int beans) {
-		int i = 3+8;
+		test1 i;
+		int q = 3 + 8;
 	}
 }

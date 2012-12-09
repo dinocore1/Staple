@@ -98,14 +98,19 @@ formalArg
 	;
 	
 block
-	: ^(BLOCK code=statement*) -> basic_block(code={$code.st})
+	: ^(BLOCK { StringBuilder stm = new StringBuilder(); }
+		( code=statement
+		   {  stm.append($code.st); stm.append("\n"); }
+		)*
+		) -> basic_block(code={stm})
 	;
 	
 statement
 	: block {retval.st = $block.st;}
-	| assignment {retval.st = $assignment.st;}
-	| vardef {retval.st = $vardef.st;}
+	| assignment -> statement(code={$assignment.st})
+	| vardef {retval.st = $vardef.st;} -> statement(code={$vardef.st})
 	| integerOp {retval.st = $integerOp.st;}
+	| ID -> varref(name={$ID.text})
 	;
 	
 assignment

@@ -37,7 +37,11 @@ basic_block(code) ::= <<
 }
 >>
 
-assignment(lside, rside) ::= "<lside> = <rside>;"
+assignment(lside, rside) ::= "<lside> = <rside>"
+
+statement(code) ::= "<code>;"
+
+varref(name) ::= "<name>"
 
 add(lside, rside) ::= "<lside> + <rside>"
 subtract(lside, rside) ::= "<lside> - <rside>"

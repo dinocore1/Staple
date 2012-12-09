@@ -79,22 +79,16 @@ block
 	
 statement
 	: block
-	| statementExpression ';' -> statementExpression
-	;
-	
-statementExpression
-	: ( leftside '=' ) => assignment
-	| leftside -> leftside
-	;
-	
-leftside
-	: postfixExpression
-	| variableDefinition
+	| typeDefinition ID 
+		( '=' rvalue=expression -> ^(  VARDEF typeDefinition ID ) ^(ASSIGN ID $rvalue ) 
+		 | -> ^(VARDEF typeDefinition ID)
+		) ';' 
+	| lvalue=postfixExpression 
+		( '=' rvalue=expression -> ^(ASSIGN $lvalue $rvalue) 
+		  |  -> postfixExpression 
+		) ';'
 	;
 
-assignment
-	: lvalue=leftside '=' rvalue=expression -> ^(ASSIGN $lvalue $rvalue)
-	;
 
 expression
 	: additive_expression (('=='|'!='|'<'|'>'|'<='|'>=')^ additive_expression)*

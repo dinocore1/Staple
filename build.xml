@@ -68,9 +68,14 @@
     	    			outputdirectory="src/com/devsmart"
     	    			libdirectory="src/com/devsmart" />
     	
+    	<antlr3 grammar.name="src/com/devsmart/BlockReorg.g"
+    	    					outputdirectory="src/com/devsmart"
+    	    					libdirectory="src/com/devsmart"/>
+    	
     	<antlr3 grammar.name="src/com/devsmart/CodeGen.g" 
     	    	    	outputdirectory="src/com/devsmart"
     	    	    	libdirectory="src/com/devsmart" />
+    	
     	
     	<javac 
     		srcdir="src" 
