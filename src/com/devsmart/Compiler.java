@@ -78,27 +78,36 @@ public class Compiler {
 		return r;
 	}
 	
-	public static int dosempass(ErrorStream estream, Scope globalScope, CommonTree t) {
+	public static boolean doSemPass2(ErrorStream estream, Scope globalScope, CommonTree t) {
+		boolean retval = true;
+		
+        // Do Semantic Pass 2
+        SemPass2 sempass2 = new SemPass2(new CommonTreeNodeStream(t), globalScope, estream);
+        sempass2.downup(t);
+        
+        
+        if(estream.hasError()){
+        	estream.printMessages(System.out);
+        	retval = false;
+        }
+        
+        return retval;
+	}
+	
+	public static boolean doSemPass1(ErrorStream estream, Scope globalScope, CommonTree t) {
+		boolean retval = true;
 		
 		// Do Semantic Pass 1
 		SemPass1 sempass1 = new SemPass1(new CommonTreeNodeStream(t), globalScope, estream);
         sempass1.downup(t);
         
-        estream.printMessages(System.out);
+        
         if(estream.hasError()){
-        	return 1;
+        	estream.printMessages(System.out);
+        	retval = false;
         }
         
-        // Do Semantic Pass 2
-        SemPass2 sempass2 = new SemPass2(new CommonTreeNodeStream(t), estream);
-        sempass2.downup(t);
-        
-        estream.printMessages(System.out);
-        if(estream.hasError()){
-        	//return 1;
-        }
-        
-        return 0;
+        return retval;
 	}
 	
 	
@@ -111,7 +120,8 @@ public class Compiler {
         
         // Do Semantic Passes
         CommonTree t = (CommonTree) r.getTree();
-        dosempass(estream, config.globalScope, t);
+        doSemPass1(estream, config.globalScope, t);
+        doSemPass2(estream, config.globalScope, t);
         
         
         estream.printMessages(System.out);
@@ -142,15 +152,24 @@ public class Compiler {
 	};
 
 	public static void setRuntime(File file) throws IOException, RecognitionException {
-		ErrorStream estream = new ErrorStream();
 		config.runtimefolder = file;
 		if(config.runtimefolder.exists() && config.runtimefolder.isDirectory()){
 			for(File f : config.runtimefolder.listFiles(textFilter)){
+				ErrorStream estream = new ErrorStream();
 				String filepath = f.getAbsolutePath();
 				compilationUnit_return r = parse(filepath);
 				CommonTree t = (CommonTree) r.getTree();
-				dosempass(estream, config.globalScope, t);
+				doSemPass1(estream, config.globalScope, t);
 			}
+			
+			for(File f : config.runtimefolder.listFiles(textFilter)){
+				ErrorStream estream = new ErrorStream();
+				String filepath = f.getAbsolutePath();
+				compilationUnit_return r = parse(filepath);
+				CommonTree t = (CommonTree) r.getTree();
+				doSemPass2(estream, config.globalScope, t);
+			}
+			
 		}
 		
 	}

@@ -19,14 +19,16 @@ import com.devsmart.type.*;
     ClassSymbol currentClass;
     MethodSymbol currentMethod;
     
-    public SemPass2(TreeNodeStream input, ErrorStream estream) {
+    public SemPass2(TreeNodeStream input, Scope globalScope, ErrorStream estream) {
         this(input);
+        currentScope = globalScope;
         errorstream = estream;
     }
 }
 
 topdown
-	: enterClass
+	: enterPackage
+	| enterClass
 	| enterFieldDefinition
 	| enterMethodDefinition
 	| enterFormalArgs
@@ -34,16 +36,38 @@ topdown
     ;
 
 bottomup
-	: exitClass
+	: exitPackage
+	| exitClass
 	| exitMethodDefinition
 	| exitBlock
     ;
     
+enterPackage
+	: ^(PACKAGE 
+		(ID 
+		{
+			NamespaceSymbol namespace = (NamespaceSymbol)currentScope.resolve($ID.text);
+			currentScope = namespace.scope;
+		}
+		)+ 
+	  )
+	;
+	
+exitPackage
+	: PACKAGE 
+		(ID 
+		{
+			currentScope = currentScope.pop();
+		}
+		)+ 
+	  
+	;
+    
 enterClass
 	: ^(CLASS cname=ID subclass=ID .*) 
 	{
-		currentClass = (ClassSymbol)$CLASS.symbol;
-		currentClass.superclass = (ClassSymbol)currentClass.scope.resolve($subclass.text);
+		currentClass = (ClassSymbol)currentScope.resolve($cname.text);
+		currentClass.superclass = (ClassSymbol)currentScope.resolve($subclass.text);
 		if(currentClass.superclass == null){
 			errorstream.addSymanticError($subclass.token, "Undefined class " + $subclass.text);
 		}

@@ -36,10 +36,15 @@ enterPackage
 	: ^(PACKAGE 
 		(ID 
 		{
-			NamespaceSymbol namespace = new NamespaceSymbol($ID.text);
-			currentScope.define(namespace);
-			currentScope = currentScope.push();
-			namespace.scope = currentScope;
+			NamespaceSymbol namespace = (NamespaceSymbol)currentScope.resolve($ID.text);
+			if(namespace == null){
+				namespace = new NamespaceSymbol($ID.text);
+				currentScope.define(namespace);
+				currentScope = currentScope.push();
+				namespace.scope = currentScope;
+			} else {
+				currentScope = namespace.scope;
+			}
 		}
 		)+ 
 	  )
@@ -58,13 +63,18 @@ exitPackage
 enterClass
 	: ^(CLASS cname=ID subclass=ID .*) 
 	{
-		ClassSymbol newclass = new ClassSymbol($cname.text);
-		$CLASS.symbol = newclass;
+		AbstractSymbol existingsymbol = currentScope.resolve($cname.text);
+		if(existingsymbol != null && existingsymbol instanceof ClassSymbol){
+			errorstream.addSymanticError($cname.token, "Redefinition of class " + $cname.text);
+		} else {
+			ClassSymbol newclass = new ClassSymbol($cname.text);
+			$CLASS.symbol = newclass;
 		
-		currentScope.define(newclass);
-		currentScope = currentScope.push();
+			currentScope.define(newclass);
+			currentScope = currentScope.push();
 		
-		newclass.scope = currentScope;
+			newclass.scope = currentScope;
+		}
 		
 	}
 	;

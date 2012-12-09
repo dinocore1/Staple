@@ -1,6 +1,6 @@
 package staple.runtime;
 
-class object {
+class object extends vvoid {
 
 	int refCount;
 
