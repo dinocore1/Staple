@@ -43,8 +43,8 @@ enterClass
 	: ^(CLASS cname=ID subclass=ID .*) 
 	{
 		currentClass = (ClassSymbol)$CLASS.symbol;
-		currentClass.subclass = (ClassSymbol)currentClass.scope.resolve($subclass.text);
-		if(currentClass.subclass == null){
+		currentClass.superclass = (ClassSymbol)currentClass.scope.resolve($subclass.text);
+		if(currentClass.superclass == null){
 			errorstream.addSymanticError($subclass.token, "Undefined class " + $subclass.text);
 		}
 		currentScope = currentClass.scope;

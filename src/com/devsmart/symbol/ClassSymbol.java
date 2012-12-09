@@ -8,7 +8,7 @@ import com.devsmart.type.ClassType;
 public class ClassSymbol extends AbstractSymbol {
 
 	public Scope scope;
-	public ClassSymbol subclass;
+	public ClassSymbol superclass;
 	public HashMap<String, VarableSymbol> fields = new HashMap<String, VarableSymbol>();
 	public HashMap<String, MethodSymbol> methods = new HashMap<String, MethodSymbol>();
 	public final ClassType type = new ClassType(this);

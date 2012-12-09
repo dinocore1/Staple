@@ -10,12 +10,31 @@ package com.devsmart;
 
 import com.devsmart.symbol.*;
 import com.devsmart.type.*;
+import com.devsmart.utils.*;
 }
 
 @members {
 
 	List mClassPackageName;
 	String mClassName;
+	
+	StringTemplate getFieldTemplate(VarableSymbol vs) {
+		StringTemplate retval = null;
+		switch(TypeFactory.getType(vs.type)){
+			case TypeFactory.TYPE_BOOL:
+        		retval = templateLib.getInstanceOf("bool_field_def",new STAttrMap().put("name", vs.getName()));
+            break;
+            
+            case TypeFactory.TYPE_INT:
+            	retval = templateLib.getInstanceOf("int_field_def",new STAttrMap().put("name", vs.getName()));
+            break;
+            		
+            case TypeFactory.TYPE_CLASS:
+            	retval = templateLib.getInstanceOf("obj_field_def",new STAttrMap().put("name", vs.getName()));
+            break;
+         }
+         return retval;
+	}
 }
 
 code_unit
@@ -30,35 +49,29 @@ code_unit
 	;
 	
 class_def
-	: ^(CLASS name=. 
+	: ^(CLASS name=. superclass=. . ^(METHODS methodDefs=methodDefinition*))
 	{
+		ClassSymbol classsym = (ClassSymbol)$CLASS.symbol;
 		mClassName = $name.getText();
 		ArrayList className = new ArrayList(mClassPackageName);
 		className.add($name);
+		
+		final ArrayList<String> fieldsstr = new ArrayList<String>();
+		Utils.dfClassVisitor(classsym, new Visitor(){
+			public void visit(Object o){
+				ClassSymbol c = (ClassSymbol)o;
+				for(VarableSymbol v : c.fields.values()){
+					fieldsstr.add(getFieldTemplate(v).toString());
+				}
+			}
+		});
+		
 	}
-	superclass=. ^(FIELDS fieldDefs=fieldDefinition*) ^(METHODS methodDefs=methodDefinition*))
-	 -> class_def(name={className}, superclass={$superclass}, fields={$fieldDefs.st}, code={$methodDefs.st})
+	
+	 -> class_def(name={className}, superclass={$superclass}, fields={fieldsstr}, code={$methodDefs.st})
 	;
 	
-fieldDefinition
-	: ^(t=typeDefinition name=ID)
-	{
-		VarableSymbol vs = (VarableSymbol)$name.symbol;
-		switch(TypeFactory.getType(vs.type)){
-			case TypeFactory.TYPE_BOOL:
-				retval.st = templateLib.getInstanceOf("bool_field_def",new STAttrMap().put("name", vs.getName()));
-			break;
-			
-			case TypeFactory.TYPE_INT:
-				retval.st = templateLib.getInstanceOf("int_field_def",new STAttrMap().put("name", vs.getName()));
-			break;
-			
-			case TypeFactory.TYPE_CLASS:
-				retval.st = templateLib.getInstanceOf("obj_field_def",new STAttrMap().put("name", vs.getName()));
-			break;
-		}
-	}
-	;
+
 	
 methodDefinition
 	: ^(FUNCTION name=ID returnType=methodReturnDefinition ^(FORMALARGS formals=formalArg*) code=block)

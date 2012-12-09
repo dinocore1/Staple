@@ -2,8 +2,10 @@ package com.test1;
 
 class test1 {
 	
+	int w;
+	
 	void myfunction(int beans) {
 		test1 i;
-		int q = 3 + 8;
+		int q = beans + 8;
 	}
 }
