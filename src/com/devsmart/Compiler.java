@@ -110,6 +110,25 @@ public class Compiler {
         return retval;
 	}
 	
+	public static boolean doBlockReorg(ErrorStream estream, Scope globalScope, CommonTree t) {
+		boolean retval = true;
+		
+		BlockReorg reorg = new BlockReorg(new CommonTreeNodeStream(t));
+		reorg.setTreeAdaptor(new StapleTreeAdapter());
+		t = (StapleTree) reorg.downup(t);
+        
+		if (config.verbose >= Config.VERBOSE_ALL) {
+			System.out.println("tree=" + t.toStringTree());
+		}
+        
+        if(estream.hasError()){
+        	estream.printMessages(System.out);
+        	retval = false;
+        }
+        
+        return retval;
+	}
+	
 	
 	public static int compile() throws Exception {
 		
@@ -124,10 +143,7 @@ public class Compiler {
         doSemPass2(estream, config.globalScope, t);
         
         
-        estream.printMessages(System.out);
-        if(estream.hasError()){
-        	return 1;
-        }
+        doBlockReorg(estream, config.globalScope, t);
         
         // Do Code Generation
         CodeGen codegen = new CodeGen(new CommonTreeNodeStream(t));

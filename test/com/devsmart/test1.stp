@@ -6,6 +6,6 @@ class test1 {
 	
 	void myfunction(int beans) {
 		test1 i;
-		int q = beans + 8;
+		i = 3;
 	}
 }

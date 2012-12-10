@@ -121,9 +121,10 @@ block
 statement
 	: block {retval.st = $block.st;}
 	| assignment -> statement(code={$assignment.st})
-	| vardef {retval.st = $vardef.st;} -> statement(code={$vardef.st})
+	| vardef -> statement(code={$vardef.st})
 	| integerOp {retval.st = $integerOp.st;}
 	| ID -> varref(name={$ID.text})
+	| call -> statement(code={$call.st})
 	;
 	
 assignment
@@ -163,5 +164,14 @@ typeDefinition
 	| 'int'
 	| 'bool'
 	| ID
+	;
+	
+callobj
+	: ID
+	| ^(FIELDACCESS ID ID)
+	;
+	
+call
+	: ^(CALL callobj mname=ID ^(ARGS argsv=.*)) -> call(obj={$callobj.st}, mname={$mname}, args={$argsv})
 	;
 	

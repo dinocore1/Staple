@@ -52,3 +52,5 @@ int_literal(value) ::= "<value>"
 method(name, return, formals, code) ::= <<
 <return> <name; separator="_">(<formals; separator=", ">) <code>
 >>
+
+call(obj, mname, args) ::= <<<mname>(<args; separator=", ">)>>

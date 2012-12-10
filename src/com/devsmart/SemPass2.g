@@ -200,6 +200,7 @@ typeTree returns [AbstractType value]
 				errorstream.addSymanticError($name.token, "Undefined symbol " + $name.text);
 			}
 			$value = vs.type;
+			$name.symbol = vs;
 		}
 	| THIS { $value = currentClass.type; }
 	| INT { $value = PrimitiveType.INT; }

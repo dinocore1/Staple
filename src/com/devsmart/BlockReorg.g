@@ -2,6 +2,7 @@ tree grammar BlockReorg;
 options {
 	tokenVocab = Staple;
 	ASTLabelType = StapleTree;
+	output = AST;
 	filter = true;
 }
 
@@ -24,21 +25,16 @@ import com.devsmart.type.*;
 }
 
 topdown
-	: enterBlock
+	: 
 	;
 	
 bottomup
-	: exitBlock
+	: objAssign
 	;
 	
-enterBlock
-	: ^(BLOCK .* ) 
+objAssign
+	: ^(ASSIGN lside=. rside=.)  
+	 	-> {  ((VarableSymbol)$lside.symbol).type instanceof ClassType }? ^(BLOCK ^(CALL $lside ID["release"] ^(ARGS $lside)) ^(ASSIGN $lside $rside) )
+		-> ^(ASSIGN $lside $rside ) 
 	;
 	
-exitBlock
-	: BLOCK
-	;	
-
-variableDefinition
-	:	^(VARDEF .*)
-	;
