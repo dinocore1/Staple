@@ -4,3 +4,5 @@ src/com/devsmart/StapleParser.java
 src/com/devsmart/SemPass1.java
 src/com/devsmart/SemPass2.java
 src/com/devsmart/CodeGen.java
+src/com/devsmart/BlockReorg.java
+src/com/devsmart/*.tokens

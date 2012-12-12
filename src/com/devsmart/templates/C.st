@@ -31,11 +31,8 @@ int_return_def() ::= "int"
 bool_return_def() ::= "BOOL"
 obj_return_def() ::= "void*"
 
-basic_block(code) ::= <<
-{
-	<code>
-}
->>
+basic_block(code) ::= <<{
+  <code>}>>
 
 assignment(lside, rside) ::= "<lside> = <rside>"
 
@@ -50,7 +47,8 @@ divide(lside, rside) ::= "<lside> / <rside>"
 int_literal(value) ::= "<value>"
 
 method(name, return, formals, code) ::= <<
-<return> <name; separator="_">(<formals; separator=", ">) <code>
+<return> <name; separator="_">(<formals; separator=", ">) 
+<code>
 >>
 
 call(obj, mname, args) ::= <<<mname>(<args; separator=", ">)>>

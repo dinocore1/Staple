@@ -6,6 +6,8 @@ class test1 {
 	
 	void myfunction(int beans) {
 		test1 i;
-		i = 3;
+		if(i != 5){
+			i = 3;
+		}
 	}
 }

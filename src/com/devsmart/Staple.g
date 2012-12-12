@@ -6,7 +6,7 @@ options {
 
 tokens {
 	UNIT; PACKAGE; IMPORT; CLASS; FIELDS; METHODS; FUNCTION; FORMALARGS; CALL;
-	VARDEF; ASSIGN; BLOCK; FIELDACCESS; THIS; NOT; ARGS; CREATEOBJ;
+	VARDEF; ASSIGN; BLOCK; FIELDACCESS; THIS; NOT; ARGS; CREATEOBJ; IF; ELSE;
 }
 
 @parser::header {
@@ -87,6 +87,9 @@ statement
 		( '=' rvalue=expression -> ^(ASSIGN $lvalue $rvalue) 
 		  |  -> postfixExpression 
 		) ';'
+	| 'if' '(' expression ')' 
+		p=block
+	  ('else' e=block)? -> ^(IF expression $p $e?)
 	;
 
 
