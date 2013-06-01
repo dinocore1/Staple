@@ -1,0 +1,16 @@
+
+functiondecl(name, returntype, isglobal, formals, instructions) ::= <<
+define <returntype> <if(isglobal)>@<endif><name>(<formals>) {
+  <instructions; separator="\n"> 
+}
+>>
+int32type() ::= "i32"
+localid(name) ::= "%<name>"
+
+intliteral(value) ::= "<value>"
+
+allocvar(name, type, num) ::= "<name> = alloca <type><if(num)>, <num><endif>"
+load(src, dest, type) ::= "<dest> = load <type>* <src>"
+store(src, dest, type) ::= "store <type> <src>, <type>* <dest>"
+add(result, left, right, type) ::= "<result> = add <type> <left>, <right>;"
+multiply(result, left, right, type) ::= "<result> = mul <type> <left>, <right>;"

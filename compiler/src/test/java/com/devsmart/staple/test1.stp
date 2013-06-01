@@ -1,0 +1,11 @@
+
+namespace com.devsmart.staple.test;
+
+int main() {
+	int a = 7 + 4 * 3 + 5;
+	int b;
+	b = 6;
+	
+	return a + b; 
+}
+
