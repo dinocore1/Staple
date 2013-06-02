@@ -10,20 +10,17 @@ import java.util.Set;
 
 import org.stringtemplate.v4.STGroup;
 
-import com.devsmart.staple.StapleParser.AssignExpressionContext;
-import com.devsmart.staple.StapleParser.CompileUnitContext;
-import com.devsmart.staple.StapleParser.FormalParameterContext;
-import com.devsmart.staple.StapleParser.GlobalFunctionContext;
-import com.devsmart.staple.StapleParser.LiteralContext;
-import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
-import com.devsmart.staple.StapleParser.MathExpressionContext;
-import com.devsmart.staple.StapleParser.ReturnStatementContext;
-import com.devsmart.staple.StapleParser.VarRefExpressionContext;
+import com.devsmart.staple.StapleParser.*;
 import com.devsmart.staple.instructions.AddInstruction;
 import com.devsmart.staple.instructions.AllocVariableInstruction;
+import com.devsmart.staple.instructions.BranchInstruction;
 import com.devsmart.staple.instructions.FunctionDeclareInstruction;
 import com.devsmart.staple.instructions.Instruction;
 import com.devsmart.staple.instructions.IntLiteral;
+import com.devsmart.staple.instructions.IntegerCompareInstruction;
+import com.devsmart.staple.instructions.IntegerCompareInstruction.Operation;
+import com.devsmart.staple.instructions.LabelFactory;
+import com.devsmart.staple.instructions.LabelInstruction;
 import com.devsmart.staple.instructions.LoadInstruction;
 import com.devsmart.staple.instructions.Location;
 import com.devsmart.staple.instructions.LocationFactory;
@@ -46,6 +43,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	private CompileContext mContext;
 	
 	private LocationFactory mLocationFactory = new LocationFactory();
+	private LabelFactory mLabelFactory = new LabelFactory();
 	private LinkedList< List<Instruction> > mCodeBlockStack = new LinkedList< List<Instruction> >();
 	
 	private Map<StapleSymbol, Set<Location> > addressDescriptor = new HashMap<StapleSymbol, Set<Location>>();
@@ -89,6 +87,9 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		mCodeBlockStack.peek().add(i);
 	}
 	
+	private void emit(List<Instruction> instructions){
+		mCodeBlockStack.peek().addAll(instructions);
+	}
 	
 
 	@Override
@@ -103,6 +104,8 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 
 	@Override
 	public Operand visitGlobalFunction(GlobalFunctionContext ctx) {
+		
+		mLocationFactory.resetTemps();
 		
 		FunctionSymbol symbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
 		FunctionDeclareInstruction instruction = new FunctionDeclareInstruction(symbol);
@@ -158,6 +161,58 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		return null;
 	}
 	
+	@Override
+	public Operand visitIfStatement(IfStatementContext ctx) {
+		
+		Operand cond = visit(ctx.cond);
+		
+		pushCodeBlock();
+		LabelInstruction positiveBlockLabel = mLabelFactory.createLabel();
+		emit(positiveBlockLabel);
+		visit(ctx.pos);
+		List<Instruction> positiveBasicBlock = popCodeBlock();
+		
+		List<Instruction> negitiveCodeBlock = null;
+		LabelInstruction negitiveBlockLabel = mLabelFactory.createLabel();
+		
+		pushCodeBlock();
+		emit(negitiveBlockLabel);
+		if(ctx.neg != null){
+			visit(ctx.neg);
+		}
+		negitiveCodeBlock = popCodeBlock();
+		
+		
+		BranchInstruction branchInstruction = new BranchInstruction(cond, positiveBlockLabel, negitiveBlockLabel);
+		emit(branchInstruction);
+		
+		emit(positiveBasicBlock);
+		if(negitiveCodeBlock != null){
+			emit(negitiveCodeBlock);
+		}
+		
+		return null;
+	}
+	
+	@Override
+	public Operand visitCompareExpression(CompareExpressionContext ctx) {
+		
+		IntegerCompareInstruction.Operation operation = IntegerCompareInstruction.Operation.Equal;
+		Operand left = visit(ctx.getChild(0));
+		Operand right = visit(ctx.getChild(2));
+		
+		
+		String opStr = ctx.getChild(1).getText();
+		if("==".equals(opStr)){
+			operation = IntegerCompareInstruction.Operation.Equal;
+		}
+		
+		Operand result = mLocationFactory.createTempLocation(PrimitiveType.BOOL);
+		IntegerCompareInstruction instruction = new IntegerCompareInstruction(operation, (Location) result, left, right);
+		emit(instruction);
+		
+		return result;
+	}
 	
 	@Override
 	public Operand visitAssignExpression(AssignExpressionContext ctx) {

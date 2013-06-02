@@ -15,6 +15,10 @@ public class RenderHelper {
 			retval = renderLocalVar(codegentemplate, ((TempLocation) obj).name);
 		} else if(obj instanceof IntLiteral) {
 			retval = renderIntLiteral(codegentemplate, ((IntLiteral) obj).value);
+		} else if(obj instanceof SymbolReference){
+			retval = renderLocalVar(codegentemplate, ((SymbolReference) obj).symbol.getName());
+		} else if(obj instanceof LabelInstruction){
+			retval = renderLocalVar(codegentemplate, ((LabelInstruction) obj).name);
 		}
 		
 		return retval;

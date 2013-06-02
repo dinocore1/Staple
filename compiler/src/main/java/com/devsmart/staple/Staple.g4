@@ -44,12 +44,16 @@ block
 
 statement
 	: block
-	| 'if'
+	| ifStatement
 	| 'for'
 	| 'break'
 	| localVariableDeclaration ';'
 	| returnStatement ';'
 	| expression ';'
+	;
+	
+ifStatement
+	: 'if' '(' cond=expression ')' pos=statement ('else' neg=statement)?
 	;
 	
 returnStatement
@@ -70,10 +74,9 @@ expression
 	| expression '.' ID # refExpression
 	| expression ('*'|'/') expression # mathExpression
 	| expression ('+'|'-') expression # mathExpression
+	| expression ('<=' | '>=' | '>' | '<' | '==') expression # compareExpression
 	| left=expression '='<assoc=right> right=expression # assignExpression
 	;
-	
-
 	
 primary
 	: '(' expression ')'

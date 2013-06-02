@@ -4,6 +4,12 @@ define <returntype> <if(isglobal)>@<endif><name>(<formals; separator=", ">) {
   <instructions; separator="\n"> 
 }
 >>
+label(name) ::= "<name>:"
+branch(condition, positive, negitive) ::= "br i1 <condition>, label <positive>, label <negitive>"
+intcompare(result, operation, type, left, right) ::= "<result> = icmp <operation> <type> <left>, <right>"
+equalOperator() ::= "eq"
+notEqualOperator() ::= "ne"
+
 int32type() ::= "i32"
 localid(name) ::= "%<name>"
 

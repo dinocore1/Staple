@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import com.devsmart.staple.StapleParser.BlockContext;
+import com.devsmart.staple.StapleParser.CompareExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.FormalParameterContext;
 import com.devsmart.staple.StapleParser.FormalParametersContext;
@@ -15,6 +16,7 @@ import com.devsmart.staple.StapleParser.VarRefExpressionContext;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
+import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
 import com.devsmart.staple.types.TypeFactory;
 
@@ -126,7 +128,14 @@ public class SemPass1Listener extends StapleBaseVisitor<Void> {
 		return null;
 	}
 
-
+	@Override
+	public Void visitCompareExpression(CompareExpressionContext ctx) {
+		
+		visitChildren(ctx);
+		mContext.typeTreeProperty.put(ctx, PrimitiveType.BOOL);
+		
+		return null;
+	}
 
 	@Override
 	public Void visitType(TypeContext ctx) {
@@ -140,52 +149,6 @@ public class SemPass1Listener extends StapleBaseVisitor<Void> {
 		return null;
 	}
 
-
-	
-	
-
-/*
-	@Override
-	public void enterGlobalFunction(GlobalFunctionContext ctx) {
-		String functionName = ctx.getChild(1).getText();
-		FunctionSymbol symbol = new FunctionSymbol(functionName);
-		mCurrentScope.define(symbol);
-		mCurrentScope = mCurrentScope.push();
-		symbol.scope = mCurrentScope;
-	}
-	
-	@Override
-	public void exitGlobalFunction(GlobalFunctionContext ctx) {
-		String functionName = ctx.getChild(1).getText();
-		mCurrentScope = mCurrentScope.pop();
-		
-		FunctionSymbol symbol = (FunctionSymbol) mCurrentScope.resolve(functionName);
-		symbol.returnType = typeProperty.get(ctx.getChild(0));
-		
-	}
-
-	@Override
-	public void exitLocalVariableDeclaration(LocalVariableDeclarationContext ctx) {
-		
-		StapleType varType = typeProperty.get(ctx.getChild(0));
-		String varName = ctx.getChild(1).getText();
-		LocalVarableSymbol varSymbol = new LocalVarableSymbol(varName, varType);
-		mCurrentScope.define(varSymbol);
-	}
-
-	@Override
-	public void exitType(TypeContext ctx) {
-		String typeStr = ctx.getText();
-		StapleType stpType = TypeFactory.getType(typeStr, mCurrentScope);
-		typeProperty.put(ctx, stpType);
-	}
-	
-	*/
-	
-	
-
-	
-	
 	
 
 }
