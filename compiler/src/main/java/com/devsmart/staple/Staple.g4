@@ -13,7 +13,7 @@ globalFunction
 	;
 	
 formalParameters
-	: '(' formalParameter? (',' formalParameter)* ')'
+	: '(' params+=formalParameter? (',' params+=formalParameter)* ')'
 	;
 
 formalParameter
@@ -48,8 +48,12 @@ statement
 	| 'for'
 	| 'break'
 	| localVariableDeclaration ';'
-	| 'return' expression? ';'
+	| returnStatement ';'
 	| expression ';'
+	;
+	
+returnStatement
+	: 'return' result=expression?
 	;
 	
 localVariableDeclaration

@@ -1,6 +1,6 @@
 
 functiondecl(name, returntype, isglobal, formals, instructions) ::= <<
-define <returntype> <if(isglobal)>@<endif><name>(<formals>) {
+define <returntype> <if(isglobal)>@<endif><name>(<formals; separator=", ">) {
   <instructions; separator="\n"> 
 }
 >>
@@ -12,5 +12,6 @@ intliteral(value) ::= "<value>"
 allocvar(name, type, num) ::= "<name> = alloca <type><if(num)>, <num><endif>"
 load(src, dest, type) ::= "<dest> = load <type>* <src>"
 store(src, dest, type) ::= "store <type> <src>, <type>* <dest>"
+return(result, type) ::= "ret <type> <result>"
 add(result, left, right, type) ::= "<result> = add <type> <left>, <right>;"
 multiply(result, left, right, type) ::= "<result> = mul <type> <left>, <right>;"

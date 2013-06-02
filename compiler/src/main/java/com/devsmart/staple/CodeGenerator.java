@@ -12,10 +12,12 @@ import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.StapleParser.AssignExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
+import com.devsmart.staple.StapleParser.FormalParameterContext;
 import com.devsmart.staple.StapleParser.GlobalFunctionContext;
 import com.devsmart.staple.StapleParser.LiteralContext;
 import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
 import com.devsmart.staple.StapleParser.MathExpressionContext;
+import com.devsmart.staple.StapleParser.ReturnStatementContext;
 import com.devsmart.staple.StapleParser.VarRefExpressionContext;
 import com.devsmart.staple.instructions.AddInstruction;
 import com.devsmart.staple.instructions.AllocVariableInstruction;
@@ -28,6 +30,7 @@ import com.devsmart.staple.instructions.LocationFactory;
 import com.devsmart.staple.instructions.MemoryAddress;
 import com.devsmart.staple.instructions.MultiplyInstruction;
 import com.devsmart.staple.instructions.Operand;
+import com.devsmart.staple.instructions.ReturnInstruction;
 import com.devsmart.staple.instructions.StoreInstruction;
 import com.devsmart.staple.instructions.SymbolReference;
 import com.devsmart.staple.instructions.TempLocation;
@@ -104,11 +107,23 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		FunctionSymbol symbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
 		FunctionDeclareInstruction instruction = new FunctionDeclareInstruction(symbol);
 		
+		visit(ctx.getChild(2));
+		
 		pushCodeBlock();
 		visit(ctx.getChild(3));
 		instruction.body = popCodeBlock();
 		
 		emit(instruction);
+		
+		return null;
+	}
+	
+	@Override
+	public Operand visitFormalParameter(FormalParameterContext ctx) {
+		
+		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
+		
+		addLocation(varSymbol, new TempLocation(varSymbol.getName(), varSymbol.type));
 		
 		return null;
 	}
@@ -154,11 +169,9 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		Operand right = visit(ctx.right);
 		
-		emit(new StoreInstruction(right, address, symbolRef.symbol));
-		
-		
 		if(right instanceof SymbolReference){
 			TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol);
+			right = rightTemp;
 			
 			HashSet<Location> l = new HashSet<Location>();
 			l.add(rightTemp);
@@ -167,6 +180,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 			addLocation(symbolRef.symbol, (Location) right);
 		}
 		
+		emit(new StoreInstruction(right, address, symbolRef.symbol));
 		
 		return null;
 	}
@@ -240,6 +254,19 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		}
 		
 		return retval;
+	}
+	
+	@Override
+	public Operand visitReturnStatement(ReturnStatementContext ctx) {
+		
+		Operand res = null;
+		if(ctx.result != null){
+			res = visit(ctx.result);
+		}
+		
+		emit(new ReturnInstruction(res));
+		
+		return null;
 	}
 	
 	@Override

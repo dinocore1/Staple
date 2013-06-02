@@ -1,15 +1,17 @@
 package com.devsmart.staple;
 
-import org.antlr.v4.runtime.tree.ParseTreeProperty;
+import java.util.ArrayList;
+
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import com.devsmart.staple.StapleParser.BlockContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.FormalParameterContext;
+import com.devsmart.staple.StapleParser.FormalParametersContext;
 import com.devsmart.staple.StapleParser.GlobalFunctionContext;
 import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
 import com.devsmart.staple.StapleParser.TypeContext;
 import com.devsmart.staple.StapleParser.VarRefExpressionContext;
-import com.devsmart.staple.instructions.Location;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
@@ -53,8 +55,14 @@ public class SemPass1Listener extends StapleBaseVisitor<Void> {
 		mCurrentScope = mCurrentScope.push();
 		symbol.scope = mCurrentScope;
 		
+		FormalParametersContext formalParamsNode = (FormalParametersContext)ctx.getChild(2);
+		
 		//visit formals
-		visit(ctx.getChild(2));
+		visit(formalParamsNode);
+		symbol.parameters = new ArrayList<LocalVarableSymbol>(formalParamsNode.params.size());
+		for(FormalParameterContext paramCtx : formalParamsNode.params){
+			symbol.parameters.add((LocalVarableSymbol) mContext.symbolTreeProperties.get(paramCtx));
+		}
 		
 		//visit body
 		visit(ctx.getChild(3));
@@ -86,6 +94,7 @@ public class SemPass1Listener extends StapleBaseVisitor<Void> {
 		StapleType varType = mContext.typeTreeProperty.get(ctx.getChild(0));
 		String varName = ctx.getChild(1).getText();
 		LocalVarableSymbol varSymbol = new LocalVarableSymbol(varName, varType);
+		mContext.symbolTreeProperties.put(ctx, varSymbol);
 		mCurrentScope.define(varSymbol);
 		
 		return null;
