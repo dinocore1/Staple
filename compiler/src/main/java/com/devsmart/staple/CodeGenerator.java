@@ -1,6 +1,7 @@
 package com.devsmart.staple;
 
 import java.io.ObjectOutputStream.PutField;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -14,11 +15,14 @@ import com.devsmart.staple.StapleParser.*;
 import com.devsmart.staple.instructions.AddInstruction;
 import com.devsmart.staple.instructions.AllocVariableInstruction;
 import com.devsmart.staple.instructions.BranchInstruction;
+import com.devsmart.staple.instructions.DivideInstruction;
+import com.devsmart.staple.instructions.FunctionCallInstruction;
 import com.devsmart.staple.instructions.FunctionDeclareInstruction;
 import com.devsmart.staple.instructions.Instruction;
 import com.devsmart.staple.instructions.IntLiteral;
 import com.devsmart.staple.instructions.IntegerCompareInstruction;
 import com.devsmart.staple.instructions.IntegerCompareInstruction.Operation;
+import com.devsmart.staple.instructions.InvokeFunctionInstruction;
 import com.devsmart.staple.instructions.LabelFactory;
 import com.devsmart.staple.instructions.LabelInstruction;
 import com.devsmart.staple.instructions.LoadInstruction;
@@ -29,6 +33,7 @@ import com.devsmart.staple.instructions.MultiplyInstruction;
 import com.devsmart.staple.instructions.Operand;
 import com.devsmart.staple.instructions.ReturnInstruction;
 import com.devsmart.staple.instructions.StoreInstruction;
+import com.devsmart.staple.instructions.SubtractInstruction;
 import com.devsmart.staple.instructions.SymbolReference;
 import com.devsmart.staple.instructions.TempLocation;
 import com.devsmart.staple.symbols.FunctionSymbol;
@@ -162,6 +167,29 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	}
 	
 	@Override
+	public Operand visitFunctionCall(FunctionCallContext ctx) {
+		
+		ArgumentsContext argsContext = (ArgumentsContext) ctx.getChild(1);
+		
+		List<Operand> arguments = new ArrayList<Operand>(argsContext.args.size());
+		for(ExpressionContext argExp : argsContext.args){
+			arguments.add(visit(argExp));
+		}
+		
+		FunctionSymbol targetSymbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
+		
+		TempLocation result = null;
+		if(targetSymbol.returnType != PrimitiveType.VOID){
+			result = mLocationFactory.createTempLocation(targetSymbol.returnType);
+		}
+		FunctionCallInstruction instruction = new FunctionCallInstruction(targetSymbol, result, arguments);
+		
+		emit(instruction);
+		
+		return result;
+	}
+	
+	@Override
 	public Operand visitIfStatement(IfStatementContext ctx) {
 		
 		Operand cond = visit(ctx.cond);
@@ -255,12 +283,15 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		}
 		
 		String operation = ctx.getChild(1).getText();
+		retval = mLocationFactory.createTempLocation(PrimitiveType.INT);
 		if("+".equals(operation)){
-			retval = mLocationFactory.createTempLocation(PrimitiveType.INT);
 			instruction = new AddInstruction(retval, left, right);
 		} else if("*".equals(operation)){
-			retval = mLocationFactory.createTempLocation(PrimitiveType.INT);
 			instruction = new MultiplyInstruction(retval, left, right);
+		} else if("-".equals(operation)){
+			instruction = new SubtractInstruction(retval, left, right);
+		} else if("/".equals(operation)){
+			instruction = new DivideInstruction(retval, left, right);
 		}
 		
 		emit(instruction);

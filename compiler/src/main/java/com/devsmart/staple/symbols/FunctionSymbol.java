@@ -10,6 +10,13 @@ import com.devsmart.staple.types.StapleType;
 
 public class FunctionSymbol extends AbstractSymbol {
 
+	public static enum Type {
+		Public,
+		Private,
+		Protected
+	}
+	
+	public Type type = Type.Public;
 	public Scope scope;
 	public StapleType returnType;
 	public List<LocalVarableSymbol> parameters = new ArrayList<LocalVarableSymbol>();

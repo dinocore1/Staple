@@ -3,6 +3,8 @@ package com.devsmart.staple.instructions;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 
+import com.devsmart.staple.symbols.FunctionSymbol;
+import com.devsmart.staple.symbols.FunctionSymbol.Type;
 import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
 
@@ -19,6 +21,13 @@ public class RenderHelper {
 			retval = renderLocalVar(codegentemplate, ((SymbolReference) obj).symbol.getName());
 		} else if(obj instanceof LabelInstruction){
 			retval = renderLocalVar(codegentemplate, ((LabelInstruction) obj).name);
+		} else if(obj instanceof FunctionSymbol){
+			FunctionSymbol fun = (FunctionSymbol) obj;
+			if(fun.type == Type.Public){
+				retval = renderGlobalVar(codegentemplate, fun.getName());
+			} else {
+				retval = renderLocalVar(codegentemplate, fun.getName());
+			}
 		}
 		
 		return retval;
@@ -26,6 +35,13 @@ public class RenderHelper {
 	
 	public static String renderLocalVar(STGroup codegentemplate, String name){
 		ST st = codegentemplate.getInstanceOf("localid");
+		st.add("name", name);
+		
+		return st.render();
+	}
+	
+	public static String renderGlobalVar(STGroup codegentemplate, String name){
+		ST st = codegentemplate.getInstanceOf("globalid");
 		st.add("name", name);
 		
 		return st.render();

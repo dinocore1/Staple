@@ -2,13 +2,13 @@ package com.devsmart.staple;
 
 import java.util.ArrayList;
 
-import org.antlr.v4.runtime.tree.ParseTree;
-
+import com.devsmart.staple.StapleParser.ArgumentsContext;
 import com.devsmart.staple.StapleParser.BlockContext;
 import com.devsmart.staple.StapleParser.CompareExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.FormalParameterContext;
 import com.devsmart.staple.StapleParser.FormalParametersContext;
+import com.devsmart.staple.StapleParser.FunctionCallContext;
 import com.devsmart.staple.StapleParser.GlobalFunctionContext;
 import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
 import com.devsmart.staple.StapleParser.TypeContext;
@@ -73,6 +73,20 @@ public class SemPass1Listener extends StapleBaseVisitor<Void> {
 		mCurrentScope = mCurrentScope.pop();
 		
 		mContext.symbolTreeProperties.put(ctx, symbol);
+		
+		return null;
+	}
+	
+	@Override
+	public Void visitFunctionCall(FunctionCallContext ctx) {
+		
+		visitChildren(ctx);
+		
+		String functionName = ctx.getChild(0).getText();
+		FunctionSymbol functionSymbol = (FunctionSymbol) mCurrentScope.resolve(functionName);
+		mContext.symbolTreeProperties.put(ctx, functionSymbol);
+		
+		ArgumentsContext argsContext = (ArgumentsContext) ctx.getChild(1);
 		
 		return null;
 	}

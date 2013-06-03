@@ -72,10 +72,15 @@ expression
 	: primary # primaryExpression
 	| ID # varRefExpression
 	| expression '.' ID # refExpression
+	| ID arguments # functionCall
 	| expression ('*'|'/') expression # mathExpression
 	| expression ('+'|'-') expression # mathExpression
 	| expression ('<=' | '>=' | '>' | '<' | '==') expression # compareExpression
 	| left=expression '='<assoc=right> right=expression # assignExpression
+	;
+	
+arguments
+	: '(' args+=expression? (',' args+=expression)* ')'
 	;
 	
 primary
