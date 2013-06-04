@@ -13,16 +13,23 @@ public class FunctionSymbol extends AbstractSymbol {
 	public static enum Type {
 		Public,
 		Private,
-		Protected
+		Protected,
+		External
 	}
 	
 	public Type type = Type.Public;
 	public Scope scope;
 	public StapleType returnType;
-	public List<LocalVarableSymbol> parameters = new ArrayList<LocalVarableSymbol>();
+	public List<StapleSymbol> parameters = new ArrayList<StapleSymbol>();
 
 	public FunctionSymbol(String name) {
 		super(name);
+	}
+
+	@Override
+	public StapleType getType() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

@@ -24,7 +24,7 @@ public class Compiler  {
         
     }
     
-    public static void compile(File file) throws IOException {
+    public static int compile(File file) throws IOException {
     	
     	CompileContext context = new CompileContext();
     	
@@ -40,8 +40,21 @@ public class Compiler  {
     	ParserRuleContext tree = parser.compileUnit();
     	
     	//Sem Pass 1
-    	SemPass1Listener listener = new SemPass1Listener(context);
-    	listener.visit(tree);
+    	SemPass1 sempass1 = new SemPass1(context);
+    	sempass1.visit(tree);
+    	
+    	if(context.errorStream.hasErrors()){
+    		context.errorStream.print(System.out);
+    		return 1;
+    	}
+    	
+    	SemPass2 sempass2 = new SemPass2(context);
+    	sempass2.visit(tree);
+    	
+    	if(context.errorStream.hasErrors()){
+    		context.errorStream.print(System.out);
+    		return 1;
+    	}
     	
     	//Code Generate
     	CodeGenerator codeGenerator = new CodeGenerator(context);
@@ -53,6 +66,8 @@ public class Compiler  {
 		
     	
     	System.out.println( tree.toStringTree(parser) );
+    	
+    	return 0;
     }
     
     

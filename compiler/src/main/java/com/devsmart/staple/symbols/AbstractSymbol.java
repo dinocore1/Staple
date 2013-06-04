@@ -1,6 +1,6 @@
 package com.devsmart.staple.symbols;
 
-public class AbstractSymbol implements StapleSymbol {
+public abstract class AbstractSymbol implements StapleSymbol {
 
 	protected String mName;
 	

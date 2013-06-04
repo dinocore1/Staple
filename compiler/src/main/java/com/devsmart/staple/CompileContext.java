@@ -13,6 +13,7 @@ import com.devsmart.staple.types.StapleType;
 
 public class CompileContext {
 
+	public ErrorStream errorStream = new ErrorStream();
 	public ParserRuleContext tree;
 	public ParseTreeProperty<StapleSymbol> symbolTreeProperties = new ParseTreeProperty<StapleSymbol>();
 	public ParseTreeProperty<StapleType> typeTreeProperty = new ParseTreeProperty<StapleType>();

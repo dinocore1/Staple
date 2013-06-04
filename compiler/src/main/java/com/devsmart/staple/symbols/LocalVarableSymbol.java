@@ -16,4 +16,9 @@ public class LocalVarableSymbol extends AbstractSymbol {
 		return type + " " + mName;
 	}
 
+	@Override
+	public StapleType getType() {
+		return type;
+	}
+
 }

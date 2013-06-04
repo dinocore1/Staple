@@ -1,9 +1,20 @@
 
+stringliteral(name, str, size) ::= "@.<name> = private unnamed_addr constant [<size> x i8] c\"<str>\""
+
 functiondecl(name, returntype, isglobal, formals, instructions) ::= <<
 define <returntype> <if(isglobal)>@<endif><name>(<formals; separator=", ">) {
   <instructions; separator="\n"> 
 }
 >>
+
+externfunctiondecl(name, returntype, formals) ::= <<
+declare <returntype> @<name>(<formals; separator=", ">)
+>>
+
+getpointer(result, type, obj, indices) ::= <<
+<result> = getelementptr <type>* <obj>, <indices; separator=", ">
+>>
+
 label(name) ::= "<name>:"
 branch(condition, positive, negitive) ::= "br i1 <condition>, label <positive>, label <negitive>"
 intcompare(result, operation, type, left, right) ::= "<result> = icmp <operation> <type> <left>, <right>"

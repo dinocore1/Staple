@@ -1,11 +1,15 @@
 grammar Staple;
 
 compileUnit
-	: namespace?  functions=globalFunction*
+	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction)*
 	;
 	
 namespace
 	: 'namespace' packages+=ID ('.' packages+=ID)* ';'
+	;
+	
+externalFunction
+	: 'extern' type name=ID formalParameters ';'
 	;
 	
 globalFunction
@@ -18,19 +22,19 @@ formalParameters
 
 formalParameter
 	: type ID
+	| '...'
 	;
 	
 type
-	: ID
-	| primitiveType
+	: ID '*'?
+	| primitiveType '*'?
 	;
 	
 primitiveType
-    :   'bool'
-    |   'char'
-    |   'byte'
-    |   'int'
-    | 	'void'
+    : 'bool'
+    | 'byte'
+    | 'int'
+    | 'void'
     ;
     
 functionBody
@@ -89,9 +93,9 @@ primary
 	;
 	
 literal
-	: INT
-	| StringLiteral
-	| booleanLiteral
+	: INT # intLiteral
+	| StringLiteral # stringLiteral
+	| booleanLiteral # boolLiteral
 	;
 	
 booleanLiteral

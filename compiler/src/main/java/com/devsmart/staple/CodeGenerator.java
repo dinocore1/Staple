@@ -1,6 +1,5 @@
 package com.devsmart.staple;
 
-import java.io.ObjectOutputStream.PutField;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,38 +8,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.antlr.v4.runtime.RuleContext;
 import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.StapleParser.*;
-import com.devsmart.staple.instructions.AddInstruction;
-import com.devsmart.staple.instructions.AllocVariableInstruction;
-import com.devsmart.staple.instructions.BranchInstruction;
-import com.devsmart.staple.instructions.DivideInstruction;
-import com.devsmart.staple.instructions.FunctionCallInstruction;
-import com.devsmart.staple.instructions.FunctionDeclareInstruction;
-import com.devsmart.staple.instructions.Instruction;
-import com.devsmart.staple.instructions.IntLiteral;
-import com.devsmart.staple.instructions.IntegerCompareInstruction;
-import com.devsmart.staple.instructions.IntegerCompareInstruction.Operation;
-import com.devsmart.staple.instructions.InvokeFunctionInstruction;
-import com.devsmart.staple.instructions.LabelFactory;
-import com.devsmart.staple.instructions.LabelInstruction;
-import com.devsmart.staple.instructions.LoadInstruction;
-import com.devsmart.staple.instructions.Location;
-import com.devsmart.staple.instructions.LocationFactory;
-import com.devsmart.staple.instructions.MemoryAddress;
-import com.devsmart.staple.instructions.MultiplyInstruction;
-import com.devsmart.staple.instructions.Operand;
-import com.devsmart.staple.instructions.ReturnInstruction;
-import com.devsmart.staple.instructions.StoreInstruction;
-import com.devsmart.staple.instructions.SubtractInstruction;
-import com.devsmart.staple.instructions.SymbolReference;
-import com.devsmart.staple.instructions.TempLocation;
-import com.devsmart.staple.symbols.FunctionSymbol;
-import com.devsmart.staple.symbols.LocalVarableSymbol;
-import com.devsmart.staple.symbols.StapleSymbol;
-import com.devsmart.staple.types.PrimitiveType;
-import com.devsmart.staple.types.StapleType;
+import com.devsmart.staple.instructions.*;
+import com.devsmart.staple.symbols.*;
+import com.devsmart.staple.types.*;
 
 
 public class CodeGenerator extends StapleBaseVisitor<Operand> {
@@ -101,8 +75,34 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	public Operand visitCompileUnit(CompileUnitContext ctx) {
 		
 		pushCodeBlock();
+		collectStringLiterals(ctx);
 		visitChildren(ctx);
 		mContext.code = popCodeBlock();
+		
+		return null;
+	}
+	
+	private void collectStringLiterals(RuleContext ctx) {
+		StringLiteralVisitor strLiteralCollector = new StringLiteralVisitor();
+		strLiteralCollector.visit(ctx);
+		
+		Set<StringLiteralSymbol> symbolSet = new HashSet<StringLiteralSymbol>();
+		
+		for(StringLiteralContext slc : strLiteralCollector.strings){
+			symbolSet.add((StringLiteralSymbol)mContext.symbolTreeProperties.get(slc));
+		}
+		
+		for(StringLiteralSymbol symbol : symbolSet){
+			emit(new StringLiteralDeclareInstruction( symbol ));
+		}
+	}
+	
+	@Override
+	public Operand visitExternalFunction(ExternalFunctionContext ctx) {
+		
+		FunctionSymbol functionSymbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
+		
+		emit(new ExternalFunctionInstruction(functionSymbol));
 		
 		return null;
 	}
@@ -129,9 +129,10 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	@Override
 	public Operand visitFormalParameter(FormalParameterContext ctx) {
 		
-		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
-		
-		addLocation(varSymbol, new TempLocation(varSymbol.getName(), varSymbol.type));
+		StapleSymbol varSymbol = mContext.symbolTreeProperties.get(ctx);
+		if(varSymbol instanceof LocalVarableSymbol){
+			addLocation(varSymbol, new TempLocation(varSymbol.getName(), ((LocalVarableSymbol) varSymbol).type));
+		}
 		
 		return null;
 	}
@@ -151,7 +152,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 			emit(new StoreInstruction(right, address, varSymbol));
 			
 			if(right instanceof SymbolReference){
-				TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol);
+				TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol, true);
 				
 				HashSet<Location> l = new HashSet<Location>();
 				l.add(rightTemp);
@@ -173,7 +174,11 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		List<Operand> arguments = new ArrayList<Operand>(argsContext.args.size());
 		for(ExpressionContext argExp : argsContext.args){
-			arguments.add(visit(argExp));
+			Operand op = visit(argExp);
+			if(op instanceof SymbolReference){
+				op = getTempLocation(((SymbolReference) op).symbol, true);
+			}
+			arguments.add(op);
 		}
 		
 		FunctionSymbol targetSymbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
@@ -253,7 +258,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		Operand right = visit(ctx.right);
 		
 		if(right instanceof SymbolReference){
-			TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol);
+			TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol, true);
 			right = rightTemp;
 			
 			HashSet<Location> l = new HashSet<Location>();
@@ -276,10 +281,10 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		Operand right = visit(ctx.getChild(2));
 		
 		if(left instanceof SymbolReference){
-			left = getTempLocation(((SymbolReference) left).symbol);
+			left = getTempLocation(((SymbolReference) left).symbol, true);
 		}
 		if(right instanceof SymbolReference){
-			right = getTempLocation(((SymbolReference) right).symbol);
+			right = getTempLocation(((SymbolReference) right).symbol, true);
 		}
 		
 		String operation = ctx.getChild(1).getText();
@@ -315,7 +320,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		return retval;
 	}
 	
-	private TempLocation getTempLocation(StapleSymbol symbol){
+	private TempLocation getTempLocation(StapleSymbol symbol, boolean createLoadIfNecessary){
 		TempLocation retval = null;
 		MemoryAddress address = null;
 		Set<Location> locations = addressDescriptor.get(symbol);
@@ -330,9 +335,9 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 			}
 		}
 		
-		if(retval == null){
+		if(retval == null && createLoadIfNecessary){
 			//emit at load
-			StapleType type = PrimitiveType.INT;
+			StapleType type = symbol.getType();
 			retval = mLocationFactory.createTempLocation(type);
 			LoadInstruction instruction = new LoadInstruction(address, retval, symbol);
 			emit(instruction);
@@ -363,14 +368,28 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	}
 	
 	@Override
-	public Operand visitLiteral(LiteralContext context) {
-		Operand retval = null;
-		if(context.getStart().getType() == StapleLexer.INT){
-			retval = new IntLiteral(Integer.parseInt(context.getText()));
-		}
+	public Operand visitIntLiteral(IntLiteralContext context) {
+		Operand retval = new IntLiteral(Integer.parseInt(context.getText()));
 		
 		return retval;
 		
+	}
+	
+	@Override
+	public Operand visitStringLiteral(StringLiteralContext ctx) {
+		StringLiteralSymbol symbol = (StringLiteralSymbol) mContext.symbolTreeProperties.get(ctx);
+		
+		TempLocation templocation = getTempLocation(symbol, false);
+		if(templocation == null){
+			templocation = mLocationFactory.createTempLocation(
+					new PointerType( ((ArrayType)symbol.getType()).baseType) );
+			
+			GetPointerInstruction inst = new GetPointerInstruction(templocation, new SymbolReference(symbol), new IntLiteral(0), new IntLiteral(0));
+			emit(inst);
+			addLocation(symbol, templocation);
+		}
+		
+		return templocation;
 	}
 
 	public void render(STGroup codegentemplate) {

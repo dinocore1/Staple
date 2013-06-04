@@ -14,13 +14,7 @@ public class SymbolReference implements Operand {
 
 	@Override
 	public StapleType getType() {
-		StapleType retval = null;
-		
-		if(symbol instanceof LocalVarableSymbol){
-			retval = ((LocalVarableSymbol) symbol).type;
-		}
-		
-		return retval;
+		return symbol.getType();
 	}
 
 }

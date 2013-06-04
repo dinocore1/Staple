@@ -5,6 +5,8 @@ import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.FunctionSymbol.Type;
+import com.devsmart.staple.types.ArrayType;
+import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
 
@@ -58,10 +60,18 @@ public class RenderHelper {
 		ST st = null;
 		String retval = "";
 		if(type == PrimitiveType.INT){
-			st = codegentemplate.getInstanceOf("int32type");
+			retval = "i32";
+		} else if(type == PrimitiveType.BYTE){
+			retval = "i8";
+		} else if(type == PrimitiveType.BOOL){
+			retval = "i1";
+		} else if(type instanceof PointerType){
+			retval = renderType(codegentemplate, ((PointerType) type).baseType) + "*";
+		} else if(type instanceof ArrayType) {
+			retval = String.format("[%d x %s]", 
+					((ArrayType)type).arrayLength, 
+					renderType(codegentemplate, ((ArrayType)type).baseType));
 		}
-		
-		retval = st.render();
 		
 		return retval;
 	}
