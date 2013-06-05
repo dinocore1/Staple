@@ -37,7 +37,7 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	@Override
 	public StapleType visitExternalFunction(ExternalFunctionContext ctx) {
 		FunctionSymbol functionSymbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
-		return new FunctionType(functionSymbol);
+		return functionSymbol.getType();
 	}
 	
 	@Override
@@ -48,7 +48,7 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		visitChildren(ctx);
 		mCurrentScope = mCurrentScope.pop();
 		
-		return new FunctionType(functionSymbol);
+		return functionSymbol.getType();
 	}
 	
 	@Override

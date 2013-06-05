@@ -21,6 +21,7 @@ import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.MultiVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
+import com.devsmart.staple.types.FunctionType;
 import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
@@ -52,26 +53,27 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		
 		String functionName = ctx.getChild(2).getText();
 		FunctionSymbol symbol = new FunctionSymbol(functionName);
-		symbol.type = FunctionSymbol.Type.External;
+		symbol.access = FunctionSymbol.Access.External;
 		mCurrentScope.define(symbol);
 		
 		//visit return type
 		visit(ctx.getChild(1));
 		symbol.returnType = mContext.typeTreeProperty.get(ctx.getChild(1));
 		
-		mCurrentScope = mCurrentScope.push();
+		
 		FormalParametersContext formalParamsNode = (FormalParametersContext)ctx.getChild(3);
 		
 		//visit formals
+		mCurrentScope = mCurrentScope.push();
 		visit(formalParamsNode);
+		mCurrentScope = mCurrentScope.pop();
 		symbol.parameters = new ArrayList<StapleSymbol>(formalParamsNode.params.size());
 		for(FormalParameterContext paramCtx : formalParamsNode.params){
 			StapleSymbol paramSymbol = mContext.symbolTreeProperties.get(paramCtx);
 			symbol.parameters.add(paramSymbol);
 		}
 		
-		
-		mCurrentScope = mCurrentScope.pop();
+		symbol.type = new FunctionType(symbol);
 		
 		mContext.symbolTreeProperties.put(ctx, symbol);
 		
@@ -109,6 +111,7 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		
 		mCurrentScope = mCurrentScope.pop();
 		
+		symbol.type = new FunctionType(symbol);
 		mContext.symbolTreeProperties.put(ctx, symbol);
 		
 		return null;

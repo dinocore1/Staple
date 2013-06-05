@@ -6,6 +6,7 @@ import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.symbols.FunctionSymbol;
+import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
 
 public class FunctionCallInstruction implements Instruction {
@@ -26,7 +27,7 @@ public class FunctionCallInstruction implements Instruction {
 		ST st = codegentemplate.getInstanceOf("call");
 		st.add("result", RenderHelper.render(codegentemplate, result));
 		st.add("name", RenderHelper.render(codegentemplate, targetSymbol));
-		st.add("type", targetSymbol.returnType == PrimitiveType.VOID ? null : RenderHelper.renderType(codegentemplate, targetSymbol.returnType));
+		st.add("type", RenderHelper.renderType(codegentemplate, new PointerType(targetSymbol.getType())));
 		st.add("args", new OperandRenderer(codegentemplate, arguments.iterator()));
 		
 		

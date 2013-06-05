@@ -5,22 +5,24 @@ import java.util.List;
 
 import com.devsmart.staple.Scope;
 import com.devsmart.staple.StapleParser.FormalParameterContext;
+import com.devsmart.staple.types.FunctionType;
 import com.devsmart.staple.types.StapleType;
 
 
 public class FunctionSymbol extends AbstractSymbol {
 
-	public static enum Type {
+	public static enum Access {
 		Public,
 		Private,
 		Protected,
 		External
 	}
 	
-	public Type type = Type.Public;
+	public Access access = Access.Public;
 	public Scope scope;
 	public StapleType returnType;
 	public List<StapleSymbol> parameters = new ArrayList<StapleSymbol>();
+	public FunctionType type;
 
 	public FunctionSymbol(String name) {
 		super(name);
@@ -28,8 +30,7 @@ public class FunctionSymbol extends AbstractSymbol {
 
 	@Override
 	public StapleType getType() {
-		// TODO Auto-generated method stub
-		return null;
+		return type;
 	}
 
 }

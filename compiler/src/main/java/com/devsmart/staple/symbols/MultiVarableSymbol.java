@@ -1,5 +1,6 @@
 package com.devsmart.staple.symbols;
 
+import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
 
 public class MultiVarableSymbol implements StapleSymbol {
@@ -11,8 +12,7 @@ public class MultiVarableSymbol implements StapleSymbol {
 
 	@Override
 	public StapleType getType() {
-		// TODO Auto-generated method stub
-		return null;
+		return PrimitiveType.ELIPSE;
 	}
 
 }

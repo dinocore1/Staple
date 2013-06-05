@@ -6,6 +6,7 @@ extern int printf(byte* fmt, ... );
 int main(int x, int y) {
   int r = fib(5);
   printf("fib 5: %d", r);
+  return 0;
 }
 
 int fib(int x) {
