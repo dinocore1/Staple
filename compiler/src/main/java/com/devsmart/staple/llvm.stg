@@ -1,5 +1,5 @@
 
-stringliteral(name, str, size) ::= "@.<name> = private unnamed_addr constant [<size> x i8] c\"<str>\""
+stringliteral(name, str, size) ::= "<name> = private unnamed_addr constant [<size> x i8] c\"<str>\""
 
 functiondecl(name, returntype, isglobal, formals, instructions) ::= <<
 define <returntype> <if(isglobal)>@<endif><name>(<formals; separator=", ">) {
@@ -24,7 +24,6 @@ notEqualOperator() ::= "ne"
 int32type() ::= "i32"
 localid(name) ::= "%<name>"
 globalid(name) ::= "@<name>"
-
 intliteral(value) ::= "<value>"
 
 allocvar(name, type, num) ::= "<name> = alloca <type><if(num)>, <num><endif>"

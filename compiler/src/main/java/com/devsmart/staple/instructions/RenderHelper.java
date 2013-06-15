@@ -9,6 +9,9 @@ import org.stringtemplate.v4.STGroup;
 import com.devsmart.common.StringUtils;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.FunctionSymbol.Access;
+import com.devsmart.staple.symbols.LocalVarableSymbol;
+import com.devsmart.staple.symbols.StapleSymbol;
+import com.devsmart.staple.symbols.StringLiteralSymbol;
 import com.devsmart.staple.types.ArrayType;
 import com.devsmart.staple.types.FunctionType;
 import com.devsmart.staple.types.PointerType;
@@ -24,13 +27,19 @@ public class RenderHelper {
 			retval = renderLocalVar(codegentemplate, ((TempLocation) obj).name);
 		} else if(obj instanceof IntLiteral) {
 			retval = renderIntLiteral(codegentemplate, ((IntLiteral) obj).value);
+		} else if(obj instanceof StringLiteralSymbol) {
+			retval = renderGlobalVar(codegentemplate, ((StringLiteralSymbol) obj).getName());
+		} else if(obj instanceof LocalVarableSymbol){
+			retval = renderLocalVar(codegentemplate, ((LocalVarableSymbol) obj).getName());
 		} else if(obj instanceof SymbolReference){
-			retval = renderLocalVar(codegentemplate, ((SymbolReference) obj).symbol.getName());
+			StapleSymbol symbol = ((SymbolReference) obj).symbol;
+			retval = render(codegentemplate, symbol);
+			//retval = renderLocalVar(codegentemplate, ((SymbolReference) obj).symbol.getName());
 		} else if(obj instanceof LabelInstruction){
 			retval = renderLocalVar(codegentemplate, ((LabelInstruction) obj).name);
 		} else if(obj instanceof FunctionSymbol){
 			FunctionSymbol fun = (FunctionSymbol) obj;
-			if(fun.access == Access.Public){
+			if(fun.access == Access.Public || fun.access == Access.External){
 				retval = renderGlobalVar(codegentemplate, fun.getName());
 			} else {
 				retval = renderLocalVar(codegentemplate, fun.getName());
@@ -39,7 +48,7 @@ public class RenderHelper {
 		
 		return retval;
 	}
-	
+
 	public static String renderLocalVar(STGroup codegentemplate, String name){
 		ST st = codegentemplate.getInstanceOf("localid");
 		st.add("name", name);

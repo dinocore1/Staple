@@ -4,8 +4,8 @@ namespace com.devsmart.staple.test;
 extern int printf(byte* fmt, ... );
 
 int main(int x, int y) {
-  int r = fib(5);
-  printf("fib 5: %d", r);
+  int r = fib(8);
+  printf("fib 8: %d\n", r);
   return 0;
 }
 

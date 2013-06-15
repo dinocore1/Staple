@@ -106,7 +106,7 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		}
 		
 		//visit body
-		visit(ctx.getChild(3));
+		//visit(ctx.getChild(3));
 		
 		
 		mCurrentScope = mCurrentScope.pop();
@@ -117,17 +117,6 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		return null;
 	}
 	
-	
-	@Override
-	public Void visitBlock(BlockContext ctx) {
-		
-		mCurrentScope = mCurrentScope.push();
-		mContext.symbolTreeProperties.put(ctx, new BlockSymbol(mCurrentScope));
-		visitChildren(ctx);
-		mCurrentScope = mCurrentScope.pop();
-		
-		return null;
-	}
 
 
 	@Override
@@ -151,40 +140,6 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		return null;
 	}
 	
-
-	@Override
-	public Void visitLocalVariableDeclaration(LocalVariableDeclarationContext ctx) {
-		
-		visitChildren(ctx);
-		
-		StapleType varType = mContext.typeTreeProperty.get(ctx.getChild(0));
-		String varName = ctx.getChild(1).getText();
-		LocalVarableSymbol varSymbol = new LocalVarableSymbol(varName, varType);
-		mContext.symbolTreeProperties.put(ctx, varSymbol);
-		mCurrentScope.define(varSymbol);
-		
-		
-		return null;
-	}
-	
-	@Override
-	public Void visitVarRefExpression(VarRefExpressionContext ctx) {
-		
-		String name = ctx.getText();
-		StapleSymbol symbol = mCurrentScope.resolve(name);
-		mContext.symbolTreeProperties.put(ctx, symbol);
-		
-		return null;
-	}
-
-	@Override
-	public Void visitCompareExpression(CompareExpressionContext ctx) {
-		
-		visitChildren(ctx);
-		mContext.typeTreeProperty.put(ctx, PrimitiveType.BOOL);
-		
-		return null;
-	}
 
 	@Override
 	public Void visitType(TypeContext ctx) {

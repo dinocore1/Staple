@@ -3,18 +3,25 @@ package com.devsmart.staple;
 import java.util.HashMap;
 
 import com.devsmart.staple.StapleParser.BlockContext;
+import com.devsmart.staple.StapleParser.CompareExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.ExternalFunctionContext;
 import com.devsmart.staple.StapleParser.FunctionCallContext;
 import com.devsmart.staple.StapleParser.GlobalFunctionContext;
+import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
 import com.devsmart.staple.StapleParser.StringLiteralContext;
+import com.devsmart.staple.StapleParser.TypeContext;
+import com.devsmart.staple.StapleParser.VarRefExpressionContext;
 import com.devsmart.staple.symbols.BlockSymbol;
 import com.devsmart.staple.symbols.FunctionSymbol;
+import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
 import com.devsmart.staple.symbols.StringLiteralSymbol;
 import com.devsmart.staple.types.FunctionType;
+import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
+import com.devsmart.staple.types.TypeFactory;
 
 public class SemPass2 extends StapleBaseVisitor<StapleType> {
 
@@ -54,8 +61,8 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	@Override
 	public StapleType visitBlock(BlockContext ctx) {
 		
-		BlockSymbol blockSymbol = (BlockSymbol) mContext.symbolTreeProperties.get(ctx);
-		mCurrentScope = blockSymbol.scope;
+		mCurrentScope = mCurrentScope.push();
+		mContext.symbolTreeProperties.put(ctx, new BlockSymbol(mCurrentScope));
 		visitChildren(ctx);
 		mCurrentScope = mCurrentScope.pop();
 		
@@ -85,6 +92,40 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	}
 	
 	@Override
+	public StapleType visitLocalVariableDeclaration(LocalVariableDeclarationContext ctx) {
+		
+		visitChildren(ctx);
+		
+		StapleType varType = mContext.typeTreeProperty.get(ctx.getChild(0));
+		String varName = ctx.getChild(1).getText();
+		LocalVarableSymbol varSymbol = new LocalVarableSymbol(varName, varType);
+		mContext.symbolTreeProperties.put(ctx, varSymbol);
+		mCurrentScope.define(varSymbol);
+		
+		
+		return PrimitiveType.VOID;
+	}
+	
+	@Override
+	public StapleType visitVarRefExpression(VarRefExpressionContext ctx) {
+		
+		String name = ctx.getText();
+		StapleSymbol symbol = mCurrentScope.resolve(name);
+		mContext.symbolTreeProperties.put(ctx, symbol);
+		
+		return symbol.getType();
+	}
+
+	@Override
+	public StapleType visitCompareExpression(CompareExpressionContext ctx) {
+		
+		visitChildren(ctx);
+		mContext.typeTreeProperty.put(ctx, PrimitiveType.BOOL);
+		
+		return PrimitiveType.BOOL;
+	}
+	
+	@Override
 	public StapleType visitStringLiteral(StringLiteralContext ctx){
 		
 		
@@ -101,4 +142,21 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		
 		return symbol.getType();
 	}
+	
+	@Override
+	public StapleType visitType(TypeContext ctx) {
+		
+		String baseType = ctx.getChild(0).getText();
+		StapleType stpType = TypeFactory.getType(baseType, mCurrentScope);
+		
+		if(ctx.getChild(1) != null){
+			stpType = new PointerType(stpType);
+		}
+		
+		mContext.typeTreeProperty.put(ctx, stpType);
+
+		return stpType;
+	}
+	
+	
 }

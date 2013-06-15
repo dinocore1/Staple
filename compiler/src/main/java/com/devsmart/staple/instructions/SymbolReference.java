@@ -1,6 +1,5 @@
 package com.devsmart.staple.instructions;
 
-import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
 import com.devsmart.staple.types.StapleType;
 

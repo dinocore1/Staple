@@ -19,7 +19,7 @@ public class StringLiteralDeclareInstruction implements Instruction {
 		String cstr = symbol.getLiteral() + "\\00";
 		
 		ST st = codegentemplate.getInstanceOf("stringliteral");
-		st.add("name", symbol.getName());
+		st.add("name", RenderHelper.render(codegentemplate, symbol));
 		st.add("str", cstr);
 		st.add("size", symbol.getLiteral().length()+1);
 		
