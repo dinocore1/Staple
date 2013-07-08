@@ -111,7 +111,7 @@ StringLiteral
     
 fragment
 EscapeSequence
-    :   '\\' ('b'|'t'|'n'|'f'|'r'|'\"'|'\''|'\\')
+    :   '\\' ('b'|'t'|'n'|'f'|'r'|'\"'|'\''|'\\'|HEX HEX)
     ;
 
 WS: [ \t\r\n]+ -> skip ;
@@ -135,3 +135,4 @@ LETTER
 
 
 INT : '0'..'9'+ ;
+HEX : [a-zA-Z09];

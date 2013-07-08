@@ -16,12 +16,12 @@ public class StringLiteralDeclareInstruction implements Instruction {
 	@Override
 	public String render(STGroup codegentemplate) {
 		
-		String cstr = symbol.getLiteral() + "\\00";
+		String cstr = symbol.getLiteral();
 		
 		ST st = codegentemplate.getInstanceOf("stringliteral");
 		st.add("name", RenderHelper.render(codegentemplate, symbol));
 		st.add("str", cstr);
-		st.add("size", symbol.getLiteral().length()+1);
+		st.add("size", symbol.type.arrayLength);
 		
 		return st.render();
 	}
