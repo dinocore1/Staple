@@ -25,4 +25,9 @@ public class TempLocation implements Operand, Location {
 	public StapleType getType() {
 		return type;
 	}
+
+	@Override
+	public String getName() {
+		return name;
+	}
 }

@@ -111,6 +111,11 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		
 		String name = ctx.getText();
 		StapleSymbol symbol = mCurrentScope.resolve(name);
+		if(symbol == null){
+			mContext.errorStream.error("undefined symbol: " + ctx.getText(), ctx.start);
+			return null;
+		}
+		
 		mContext.symbolTreeProperties.put(ctx, symbol);
 		
 		return symbol.getType();

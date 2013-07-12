@@ -115,9 +115,10 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		FunctionSymbol symbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
 		FunctionDeclareInstruction instruction = new FunctionDeclareInstruction(symbol);
 		
+		pushCodeBlock();
+		
 		visit(ctx.getChild(2));
 		
-		pushCodeBlock();
 		visit(ctx.getChild(3));
 		instruction.body = popCodeBlock();
 		
@@ -129,10 +130,19 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	@Override
 	public Operand visitFormalParameter(FormalParameterContext ctx) {
 		
-		StapleSymbol varSymbol = mContext.symbolTreeProperties.get(ctx);
-		if(varSymbol instanceof LocalVarableSymbol){
-			addLocation(varSymbol, new TempLocation(varSymbol.getName(), ((LocalVarableSymbol) varSymbol).type));
-		}
+		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
+		TempLocation paramLocation = new TempLocation(varSymbol.getName(), varSymbol.type);
+		
+		//TempLocation tempLocation = new TempLocation("s"+varSymbol.getName(), varSymbol.type );
+		TempLocation tempLocation = mLocationFactory.createTempLocation(varSymbol.type);
+		
+		emit(new AllocVariableInstruction(tempLocation));
+		addLocation(varSymbol, paramLocation);
+		
+		MemoryAddress address = new MemoryAddress(tempLocation.getName(), tempLocation.getType());
+		emit(new StoreInstruction(paramLocation, address));
+		addLocation(varSymbol, address);
+		
 		
 		return null;
 	}
@@ -144,12 +154,12 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		AllocVariableInstruction instruction = new AllocVariableInstruction(varSymbol);
 		emit(instruction);
 		
-		MemoryAddress address = new MemoryAddress(varSymbol.type);
+		MemoryAddress address = new MemoryAddress(varSymbol.getName(), varSymbol.type);
 		
 		if(ctx.init != null){
 			Operand right = visit(ctx.init);
 			
-			emit(new StoreInstruction(right, address, varSymbol));
+			emit(new StoreInstruction(right, address));
 			
 			if(right instanceof SymbolReference){
 				TempLocation rightTemp = getTempLocation(((SymbolReference) right).symbol, true);
@@ -252,8 +262,8 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		Operand left = visit(ctx.left);
 		SymbolReference symbolRef = (SymbolReference)left;
-		MemoryAddress address = getSymbolMemoryAddress(symbolRef.symbol); 
 		
+		Location address = getSymbolMemoryAddress(symbolRef.symbol);
 		
 		Operand right = visit(ctx.right);
 		
@@ -264,11 +274,15 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 			HashSet<Location> l = new HashSet<Location>();
 			l.add(rightTemp);
 			addressDescriptor.put(symbolRef.symbol, l);
-		} else if(right instanceof TempLocation){
+		}
+		
+		addressDescriptor.remove(symbolRef.symbol);
+		addLocation(symbolRef.symbol, address);
+		if(right instanceof TempLocation){
 			addLocation(symbolRef.symbol, (Location) right);
 		}
 		
-		emit(new StoreInstruction(right, address, symbolRef.symbol));
+		emit(new StoreInstruction(right, address));
 		
 		return null;
 	}
@@ -320,6 +334,15 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		return retval;
 	}
 	
+	/**
+	 * Returns a temporay location for <code>symbol</code>. If <code>createLoadIfNecessary</code>
+	 * is true, this method will all emit a new LoadInstruction
+	 * 
+	 * @see LoadInstruction
+	 * @param symbol
+	 * @param createLoadIfNecessary
+	 * @return
+	 */
 	private TempLocation getTempLocation(StapleSymbol symbol, boolean createLoadIfNecessary){
 		TempLocation retval = null;
 		MemoryAddress address = null;
