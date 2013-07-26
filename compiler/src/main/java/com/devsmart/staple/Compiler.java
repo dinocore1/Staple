@@ -2,6 +2,7 @@ package com.devsmart.staple;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 import org.antlr.v4.runtime.ANTLRFileStream;
@@ -13,22 +14,31 @@ import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.stringtemplate.v4.STGroup;
 import org.stringtemplate.v4.STGroupFile;
 
-/**
- * Hello world!
- *
- */
+
 public class Compiler  {
 	
     public static void main( String[] args ) {
     	
-        
+        if(args.length > 0){
+        	File file = new File(args[0]);
+        	if(!file.exists() || !file.isFile()){
+        		System.out.println("file: " + file.getAbsolutePath() + " does not exist!");
+        		System.exit(1);
+        	}
+        	try {
+				compile(file);
+			} catch (IOException e) {
+				System.exit(1);
+			}
+        }
     }
     
     public static int compile(File file) throws IOException {
     	
     	CompileContext context = new CompileContext();
     	
-    	context.codegentemplate = new STGroupFile(Compiler.class.getResource("llvm.stg"), "UTF-8", '<', '>');
+    	URL fileurl = ClassLoader.getSystemResource("llvm.stg");
+    	context.codegentemplate = new STGroupFile(fileurl, "UTF-8", '<', '>');
     	context.file = file;
     	
     	CharStream input = new ANTLRFileStream(file.getAbsolutePath());

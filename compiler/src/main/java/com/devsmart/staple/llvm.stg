@@ -30,10 +30,10 @@ allocvar(name, type, num) ::= "<name> = alloca <type><if(num)>, <num><endif>"
 load(src, dest, type) ::= "<dest> = load <type>* <src>"
 store(src, dest, type) ::= "store <type> <src>, <type>* <dest>"
 return(result, type) ::= "ret <type> <result>"
-add(result, left, right, type) ::= "<result> = add <type> <left>, <right>;"
-multiply(result, left, right, type) ::= "<result> = mul <type> <left>, <right>;"
-subtract(result, left, right, type) ::= "<result> = sub <type> <left>, <right>;"
-divide(result, left, right, type) ::= "<result> = sdiv <type> <left>, <right>;"
+add(result, left, right, type) ::= "<result> = add <type> <left>, <right>"
+multiply(result, left, right, type) ::= "<result> = mul <type> <left>, <right>"
+subtract(result, left, right, type) ::= "<result> = sub <type> <left>, <right>"
+divide(result, left, right, type) ::= "<result> = sdiv <type> <left>, <right>"
 call(result, name, type, args) ::= <<
 <if(type)><result> = <endif>call <type> <name>(<args; separator=", ">)
 >>
