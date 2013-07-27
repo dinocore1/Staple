@@ -1,0 +1,11 @@
+
+
+namespace staple.runtime;
+
+extern int printf(byte* fmt,...);
+
+int hi() {
+  printf("hello world");
+  return 0;
+}
+
