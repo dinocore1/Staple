@@ -80,6 +80,7 @@ expression
 	| expression ('*'|'/') expression # mathExpression
 	| expression ('+'|'-') expression # mathExpression
 	| expression ('<=' | '>=' | '>' | '<' | '==') expression # compareExpression
+	| expression ('&' | '|' | '^' | '>>' | '<<') expression # mathExpression
 	| left=expression '='<assoc=right> right=expression # assignExpression
 	;
 	

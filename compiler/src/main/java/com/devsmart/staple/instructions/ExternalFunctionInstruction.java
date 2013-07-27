@@ -20,7 +20,8 @@ public class ExternalFunctionInstruction implements Instruction {
 		st.add("returntype", RenderHelper.renderType(codegentemplate, symbol.returnType));
 		st.add("formals", new ArgsRenderer(codegentemplate, symbol.parameters.iterator()));
 		
-		return st.render();
+		String retval = st.render();
+		return retval;
 	}
 
 }

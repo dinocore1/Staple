@@ -2,22 +2,18 @@ package com.devsmart.staple;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.util.concurrent.ExecutionException;
 
 import org.antlr.v4.runtime.ANTLRFileStream;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
-import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.ParseTreeWalker;
-import org.stringtemplate.v4.STGroup;
-import org.stringtemplate.v4.STGroupFile;
 
 
 public class Compiler  {
 	
     public static void main( String[] args ) {
+    	
+    	CompileContext context = CompileContext.defaultContext();
     	
         if(args.length > 0){
         	File file = new File(args[0]);
@@ -25,23 +21,19 @@ public class Compiler  {
         		System.out.println("file: " + file.getAbsolutePath() + " does not exist!");
         		System.exit(1);
         	}
+        	context.file = file;
         	try {
-				compile(file);
+				compile(context);
 			} catch (IOException e) {
 				System.exit(1);
 			}
         }
     }
     
-    public static int compile(File file) throws IOException {
+    public static int compile(CompileContext context) throws IOException {
     	
-    	CompileContext context = new CompileContext();
     	
-    	URL fileurl = ClassLoader.getSystemResource("llvm.stg");
-    	context.codegentemplate = new STGroupFile(fileurl, "UTF-8", '<', '>');
-    	context.file = file;
-    	
-    	CharStream input = new ANTLRFileStream(file.getAbsolutePath());
+    	CharStream input = new ANTLRFileStream(context.file.getAbsolutePath());
     	StapleLexer lex = new StapleLexer(input);
     	CommonTokenStream tokens = new CommonTokenStream(lex);
     	StapleParser parser = new StapleParser(tokens);
@@ -69,13 +61,13 @@ public class Compiler  {
     	//Code Generate
     	CodeGenerator codeGenerator = new CodeGenerator(context);
     	codeGenerator.visit(tree);
-    	codeGenerator.render(context.codegentemplate);
+    	codeGenerator.render(context.codegentemplate, context.codeOutput);
     	
     	//ParserRuleContext tree = parser.compileUnit();
-    	tree.inspect(parser);
+    	//tree.inspect(parser);
 		
     	
-    	System.out.println( tree.toStringTree(parser) );
+    	//System.out.println( tree.toStringTree(parser) );
     	
     	return 0;
     }

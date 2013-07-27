@@ -23,7 +23,8 @@ public class StringLiteralDeclareInstruction implements Instruction {
 		st.add("str", cstr);
 		st.add("size", symbol.type.arrayLength);
 		
-		return st.render();
+		String retval = st.render();
+		return retval;
 	}
 
 }

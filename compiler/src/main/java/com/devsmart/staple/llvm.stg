@@ -1,14 +1,14 @@
 
-stringliteral(name, str, size) ::= "<name> = private unnamed_addr constant [<size> x i8] c\"<str>\""
+stringliteral(name, str, size) ::= "<name> = private unnamed_addr constant [<size> x i8] c\"<str>\"<\n>"
 
 functiondecl(name, returntype, isglobal, formals, instructions) ::= <<
 define <returntype> <if(isglobal)>@<endif><name>(<formals; separator=", ">) {
   <instructions; separator="\n"> 
-}
+}<\n>
 >>
 
 externfunctiondecl(name, returntype, formals) ::= <<
-declare <returntype> @<name>(<formals; separator=", ">)
+declare <returntype> @<name>(<formals; separator=", ">)<\n>
 >>
 
 getpointer(result, type, obj, indices) ::= <<
@@ -34,6 +34,9 @@ add(result, left, right, type) ::= "<result> = add <type> <left>, <right>"
 multiply(result, left, right, type) ::= "<result> = mul <type> <left>, <right>"
 subtract(result, left, right, type) ::= "<result> = sub <type> <left>, <right>"
 divide(result, left, right, type) ::= "<result> = sdiv <type> <left>, <right>"
+bitand(result, left, right, type) ::= "<result> = and <type> <left>, <right>"
+bitor(result, left, right, type) ::= "<result> = or <type> <left>, <right>"
+bitxor(result, left, right, type) ::= "<result> = xor <type> <left>, <right>"
 call(result, name, type, args) ::= <<
 <if(type)><result> = <endif>call <type> <name>(<args; separator=", ">)
 >>

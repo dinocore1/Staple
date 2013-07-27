@@ -1,5 +1,7 @@
 package com.devsmart.staple;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -311,6 +313,12 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 			instruction = new SubtractInstruction(retval, left, right);
 		} else if("/".equals(operation)){
 			instruction = new DivideInstruction(retval, left, right);
+		} else if("&".equals(operation)){
+			instruction = new BitAndInstruction(retval, left, right);
+		} else if("|".equals(operation)){
+			instruction = new BitOrInstruction(retval, left, right);
+		} else if("^".equals(operation)){
+			instruction = new BitXorInstruction(retval, left, right);
 		}
 		
 		emit(instruction);
@@ -415,11 +423,12 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		return templocation;
 	}
 
-	public void render(STGroup codegentemplate) {
+	public void render(STGroup codegentemplate, Writer output) throws IOException {
 		
 		for(Instruction i : mContext.code){
-			System.out.println(i.render(codegentemplate));
+			output.write(i.render(codegentemplate));
 		}
+		output.flush();
 		
 	}
 	
