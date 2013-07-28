@@ -18,8 +18,8 @@ public class StoreInstruction implements Instruction {
 	public String render(STGroup codegentemplate) {
 		ST st = codegentemplate.getInstanceOf("store");
 		st.add("src", RenderHelper.render(codegentemplate, src));
-		st.add("dest", RenderHelper.renderLocalVar(codegentemplate, dest.getName()));
-		st.add("type", RenderHelper.renderType(codegentemplate, dest.getType()));
+		st.add("dest", RenderHelper.render(codegentemplate, dest));
+		st.add("type", RenderHelper.renderType(codegentemplate, src.getType()));
 		
 		return st.render();
 	}

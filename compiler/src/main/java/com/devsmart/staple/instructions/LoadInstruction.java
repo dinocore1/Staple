@@ -3,26 +3,22 @@ package com.devsmart.staple.instructions;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 
-import com.devsmart.staple.symbols.StapleSymbol;
-
 public class LoadInstruction implements Instruction {
 	
-	private MemoryAddress src;
-	private Register dest;
-	private StapleSymbol symbol;
+	private Location src;
+	private Location dest;
 
-	public LoadInstruction(MemoryAddress src, Register dest, StapleSymbol symbol){
+	public LoadInstruction(Location src, Location dest){
 		this.src = src;
 		this.dest = dest;
-		this.symbol = symbol;
 	}
 
 	@Override
 	public String render(STGroup codegentemplate) {
 		ST st = codegentemplate.getInstanceOf("load");
-		st.add("src", RenderHelper.renderLocalVar(codegentemplate, symbol.getName()));
+		st.add("src", RenderHelper.render(codegentemplate, src));
 		st.add("dest", RenderHelper.render(codegentemplate, dest));
-		st.add("type", RenderHelper.renderType(codegentemplate, dest.getType()));
+		st.add("type", RenderHelper.renderType(codegentemplate, src.getType()));
 		
 		return st.render();
 	}
