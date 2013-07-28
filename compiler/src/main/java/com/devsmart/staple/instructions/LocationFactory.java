@@ -6,8 +6,8 @@ public class LocationFactory {
 
 	private int mCounter = 1;
 	
-	public TempLocation createTempLocation(StapleType type) {
-		return new TempLocation(String.valueOf(mCounter++), type);
+	public Register createTempLocation(StapleType type) {
+		return new Register(String.valueOf(mCounter++), type);
 	}
 	
 	public void resetTemps() {

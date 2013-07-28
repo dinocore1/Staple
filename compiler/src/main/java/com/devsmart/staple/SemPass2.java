@@ -8,7 +8,9 @@ import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.ExternalFunctionContext;
 import com.devsmart.staple.StapleParser.FunctionCallContext;
 import com.devsmart.staple.StapleParser.GlobalFunctionContext;
+import com.devsmart.staple.StapleParser.IntLiteralContext;
 import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
+import com.devsmart.staple.StapleParser.LogicExpressionContext;
 import com.devsmart.staple.StapleParser.StringLiteralContext;
 import com.devsmart.staple.StapleParser.TypeContext;
 import com.devsmart.staple.StapleParser.VarRefExpressionContext;
@@ -124,7 +126,41 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	@Override
 	public StapleType visitCompareExpression(CompareExpressionContext ctx) {
 		
-		visitChildren(ctx);
+		StapleType left = visit(ctx.left);
+		if(PrimitiveType.INT != left){
+			mContext.errorStream.error("operand must be integer type", ctx.left.start);
+			return null;
+		}
+		
+		StapleType right = visit(ctx.right);
+		if(PrimitiveType.INT != right){
+			mContext.errorStream.error("operand must be integer type", ctx.right.start);
+			return null;
+		}
+		
+		
+		
+		mContext.typeTreeProperty.put(ctx, PrimitiveType.BOOL);
+		
+		return PrimitiveType.BOOL;
+	}
+	
+	@Override
+	public StapleType visitLogicExpression(LogicExpressionContext ctx){
+		
+		StapleType left = visit(ctx.left);
+		if(PrimitiveType.BOOL != left){
+			mContext.errorStream.error("operand must be bool type", ctx.left.start);
+			return null;
+		}
+		
+		StapleType right = visit(ctx.right);
+		if(PrimitiveType.BOOL != right){
+			mContext.errorStream.error("operand must be bool type", ctx.right.start);
+			return null;
+		}
+		
+		
 		mContext.typeTreeProperty.put(ctx, PrimitiveType.BOOL);
 		
 		return PrimitiveType.BOOL;
@@ -146,6 +182,12 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		mContext.symbolTreeProperties.put(ctx, symbol);
 		
 		return symbol.getType();
+	}
+	
+	@Override
+	public StapleType visitIntLiteral(IntLiteralContext ctx) {
+		mContext.typeTreeProperty.put(ctx, PrimitiveType.INT);
+		return PrimitiveType.INT;
 	}
 	
 	@Override

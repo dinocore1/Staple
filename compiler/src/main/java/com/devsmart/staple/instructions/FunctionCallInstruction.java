@@ -7,7 +7,6 @@ import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.types.PointerType;
-import com.devsmart.staple.types.PrimitiveType;
 
 public class FunctionCallInstruction implements Instruction {
 

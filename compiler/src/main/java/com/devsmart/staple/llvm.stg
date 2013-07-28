@@ -20,6 +20,10 @@ branch(condition, positive, negitive) ::= "br i1 <condition>, label <positive>, 
 intcompare(result, operation, type, left, right) ::= "<result> = icmp <operation> <type> <left>, <right>"
 equalOperator() ::= "eq"
 notEqualOperator() ::= "ne"
+greaterThanOperator() ::= "sgt"
+lessThanOperator() ::= "slt"
+greaterThanEqualOperator() ::= "sge"
+lessThanEqualOperator() ::= "sle"
 
 int32type() ::= "i32"
 localid(name) ::= "%<name>"
@@ -39,4 +43,8 @@ bitor(result, left, right, type) ::= "<result> = or <type> <left>, <right>"
 bitxor(result, left, right, type) ::= "<result> = xor <type> <left>, <right>"
 call(result, name, type, args) ::= <<
 <if(type)><result> = <endif>call <type> <name>(<args; separator=", ">)
+>>
+select(result, selector, left, right, type) ::= "<result> = select i1 <selector>, <type> <left>, <type> <right>"
+phi(result, args, type) ::= <<
+<result> = phi <type> <args; separator=", ">
 >>

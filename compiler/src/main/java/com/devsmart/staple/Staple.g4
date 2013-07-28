@@ -79,8 +79,9 @@ expression
 	| ID arguments # functionCall
 	| expression ('*'|'/') expression # mathExpression
 	| expression ('+'|'-') expression # mathExpression
-	| expression ('<=' | '>=' | '>' | '<' | '==') expression # compareExpression
 	| expression ('&' | '|' | '^' | '>>' | '<<') expression # mathExpression
+	| left=expression ('<=' | '>=' | '>' | '<' | '==' | '!=') right=expression # compareExpression
+	| left=expression op=('&&' | '||') right=expression # logicExpression
 	| left=expression '='<assoc=right> right=expression # assignExpression
 	;
 	

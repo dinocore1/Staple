@@ -8,10 +8,10 @@ import com.devsmart.staple.symbols.StapleSymbol;
 public class LoadInstruction implements Instruction {
 	
 	private MemoryAddress src;
-	private TempLocation dest;
+	private Register dest;
 	private StapleSymbol symbol;
 
-	public LoadInstruction(MemoryAddress src, TempLocation dest, StapleSymbol symbol){
+	public LoadInstruction(MemoryAddress src, Register dest, StapleSymbol symbol){
 		this.src = src;
 		this.dest = dest;
 		this.symbol = symbol;

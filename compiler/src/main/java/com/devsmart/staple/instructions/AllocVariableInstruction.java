@@ -22,7 +22,7 @@ public class AllocVariableInstruction implements Instruction {
 		mType = type;
 	}
 	
-	public AllocVariableInstruction(TempLocation tempLocation) {
+	public AllocVariableInstruction(Register tempLocation) {
 		mName = tempLocation.name;
 		mType = tempLocation.getType();
 	}

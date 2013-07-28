@@ -2,7 +2,6 @@ package com.devsmart.staple.instructions;
 
 import java.util.ArrayList;
 
-import org.abego.treelayout.internal.util.java.lang.string.StringUtil;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 
@@ -23,8 +22,8 @@ public class RenderHelper {
 	public static String render(STGroup codegentemplate, Object obj) {
 		String retval = null;
 		
-		if(obj instanceof TempLocation) {
-			retval = renderLocalVar(codegentemplate, ((TempLocation) obj).name);
+		if(obj instanceof Register) {
+			retval = renderLocalVar(codegentemplate, ((Register) obj).name);
 		} else if(obj instanceof IntLiteral) {
 			retval = renderIntLiteral(codegentemplate, ((IntLiteral) obj).value);
 		} else if(obj instanceof StringLiteralSymbol) {

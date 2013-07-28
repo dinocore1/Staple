@@ -33,7 +33,7 @@ public class IntegerCompareInstruction implements Instruction {
 		ST st = codegentemplate.getInstanceOf("intcompare");
 		st.add("result", RenderHelper.render(codegentemplate, result));
 		st.add("operation", renderOperation(codegentemplate));
-		st.add("type", RenderHelper.renderType(codegentemplate, PrimitiveType.INT));
+		st.add("type", RenderHelper.renderType(codegentemplate, left.getType()));
 		st.add("left", RenderHelper.render(codegentemplate, left));
 		st.add("right", RenderHelper.render(codegentemplate, right));
 		
@@ -46,6 +46,21 @@ public class IntegerCompareInstruction implements Instruction {
 		switch(operation){
 		case Equal:
 			st = codegentemplate.getInstanceOf("equalOperator");
+			break;
+		case NotEqual:
+			st = codegentemplate.getInstanceOf("notEqualOperator");
+			break;
+		case GreaterThan:
+			st = codegentemplate.getInstanceOf("greaterThanOperator");
+			break;
+		case LessThan:
+			st = codegentemplate.getInstanceOf("lessThanOperator");
+			break;
+		case GreaterThanEqual:
+			st = codegentemplate.getInstanceOf("greaterThanEqualOperator");
+			break;
+		case LessThanEqual:
+			st = codegentemplate.getInstanceOf("lessThanEqualOperator");
 			break;
 		}
 		

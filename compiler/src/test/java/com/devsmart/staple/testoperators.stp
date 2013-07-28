@@ -11,6 +11,12 @@ int main(int x, int y) {
   printf("8 | 3 = %d\n", 8 | 3);
   printf("8 ^ 3 = %d\n", 8 ^ 3);
   
+  int x = 0;
+  int y = 3;
+  if(x>0 || y>3){
+  	printf("yes!\n");
+  }
+  
   return 0;
 }
 
