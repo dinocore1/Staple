@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.devsmart.staple.Scope;
-import com.devsmart.staple.StapleParser.FormalParameterContext;
 import com.devsmart.staple.types.FunctionType;
 import com.devsmart.staple.types.StapleType;
 

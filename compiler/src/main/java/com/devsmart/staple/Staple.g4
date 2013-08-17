@@ -1,7 +1,7 @@
 grammar Staple;
 
 compileUnit
-	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction)*
+	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction | classDef+=classDefinition)*
 	;
 	
 namespace
@@ -9,10 +9,22 @@ namespace
 	;
 	
 externalFunction
-	: 'extern' type name=ID formalParameters ';'
+	: 'extern' returnType=type name=ID params=formalParameters ';'
 	;
 	
 globalFunction
+	: returnType=type name=ID params=formalParameters body=functionBody
+	;
+	
+classDefinition
+	: 'class' name=ID '{'  (members+=memberVarableDeclaration | functions+=memberFunction)*  '}'
+	;
+	
+memberVarableDeclaration
+	: type ID
+	;
+	
+memberFunction
 	: type name=ID formalParameters functionBody
 	;
 	
