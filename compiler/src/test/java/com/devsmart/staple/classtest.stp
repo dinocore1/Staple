@@ -1,0 +1,17 @@
+
+namespace com.devsmart.staple.test;
+
+extern int printf(byte* fmt, ... );
+
+int main(int x, int y) {
+  return 0;
+}
+
+class Rad {
+	int cool;
+	
+	void pizza() {
+	}
+}
+
+

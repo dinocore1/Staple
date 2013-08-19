@@ -27,4 +27,14 @@ public class CompilerTest {
 		Assert.assertTrue(!context.errorStream.hasErrors());
 		
 	}
+	
+	@Test
+	public void testClass() throws IOException {
+		
+		CompileContext context = CompileContext.defaultContext();
+		context.file = new File("src/test/java/com/devsmart/staple/classtest.stp");
+		Compiler.compile(context);
+		Assert.assertTrue(!context.errorStream.hasErrors());
+		
+	}
 }

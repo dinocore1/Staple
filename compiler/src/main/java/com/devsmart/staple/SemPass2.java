@@ -6,6 +6,7 @@ import java.util.HashMap;
 import org.antlr.v4.runtime.tree.ParseTree;
 
 import com.devsmart.staple.StapleParser.BlockContext;
+import com.devsmart.staple.StapleParser.ClassDefinitionContext;
 import com.devsmart.staple.StapleParser.CompareExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.ExternalFunctionContext;
@@ -15,20 +16,14 @@ import com.devsmart.staple.StapleParser.GlobalFunctionContext;
 import com.devsmart.staple.StapleParser.IntLiteralContext;
 import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
 import com.devsmart.staple.StapleParser.LogicExpressionContext;
+import com.devsmart.staple.StapleParser.MemberFunctionContext;
+import com.devsmart.staple.StapleParser.MemberVarableDeclarationContext;
 import com.devsmart.staple.StapleParser.StringLiteralContext;
 import com.devsmart.staple.StapleParser.TypeContext;
 import com.devsmart.staple.StapleParser.VarRefExpressionContext;
-import com.devsmart.staple.symbols.BlockSymbol;
-import com.devsmart.staple.symbols.FunctionSymbol;
-import com.devsmart.staple.symbols.LocalVarableSymbol;
-import com.devsmart.staple.symbols.MultiVarableSymbol;
-import com.devsmart.staple.symbols.StapleSymbol;
-import com.devsmart.staple.symbols.StringLiteralSymbol;
-import com.devsmart.staple.types.FunctionType;
-import com.devsmart.staple.types.PointerType;
-import com.devsmart.staple.types.PrimitiveType;
-import com.devsmart.staple.types.StapleType;
-import com.devsmart.staple.types.TypeFactory;
+import com.devsmart.staple.symbols.*;
+import com.devsmart.staple.types.*;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 
 public class SemPass2 extends StapleBaseVisitor<StapleType> {
 
@@ -52,7 +47,6 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	public StapleType visitExternalFunction(ExternalFunctionContext ctx) {
 		
 		FunctionSymbol symbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
-		mCurrentScope.define(symbol);
 		
 		//visit return type
 		symbol.returnType = visit(ctx.returnType);
@@ -68,9 +62,6 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		}
 		
 		symbol.type = new FunctionType(symbol);
-		
-		mContext.symbolTreeProperties.put(ctx, symbol);
-		
 		return symbol.type;
 	}
 	
@@ -78,7 +69,6 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	public StapleType visitGlobalFunction(GlobalFunctionContext ctx) {
 		
 		FunctionSymbol symbol = (FunctionSymbol) mContext.symbolTreeProperties.get(ctx);
-		mCurrentScope.define(symbol);
 		
 		//visit return type
 		symbol.returnType = visit(ctx.returnType);
@@ -98,10 +88,62 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		mCurrentScope = mCurrentScope.pop();
 		
 		symbol.type = new FunctionType(symbol);
+		return symbol.type;
+	}
+	
+	@Override
+	public StapleType visitMemberFunction(MemberFunctionContext ctx) {
+		
+		final String functionName = ctx.name.getText();
+		FunctionSymbol symbol = new FunctionSymbol(functionName);
+		symbol.access = FunctionSymbol.Access.Protected;
+		mCurrentScope.define(symbol);
 		mContext.symbolTreeProperties.put(ctx, symbol);
+		
+		//visit return type
+		symbol.returnType = visit(ctx.returnType);
+		
+		mCurrentScope = mCurrentScope.push();
+		symbol.scope = mCurrentScope;
+		
+		//visit formals
+		visit(ctx.params);
+		symbol.parameters = new ArrayList<StapleSymbol>(ctx.params.params.size());
+		for(FormalParameterContext paramCtx : ctx.params.params){
+			symbol.parameters.add((LocalVarableSymbol) mContext.symbolTreeProperties.get(paramCtx));
+		}
+		
+		visit(ctx.body);
+		
+		mCurrentScope = mCurrentScope.pop();
+		
+		symbol.type = new FunctionType(symbol);
+		return symbol.type;
+	}
+	
+	@Override
+	public StapleType visitClassDefinition(ClassDefinitionContext ctx) {
+		
+		ClassSymbol symbol = (ClassSymbol)mContext.symbolTreeProperties.get(ctx);
+		
+		//visit members
+		symbol.members = new ArrayList<MemberVarableSymbol>(ctx.members.size());
+		for(MemberVarableDeclarationContext memberCtx : ctx.members){
+			visit(memberCtx);
+			symbol.members.add((MemberVarableSymbol) mContext.symbolTreeProperties.get(memberCtx));
+		}
+		
+		//visit functions
+		symbol.functions = new ArrayList<FunctionSymbol>(ctx.functions.size());
+		for(MemberFunctionContext functionCtx : ctx.functions){
+			visit(functionCtx);
+			symbol.functions.add((FunctionSymbol) mContext.symbolTreeProperties.get(functionCtx));
+		}
 		
 		return symbol.type;
 	}
+	
+	
 	
 	@Override
 	public StapleType visitBlock(BlockContext ctx) {
@@ -134,6 +176,19 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 			mContext.errorStream.error(functionName + " is not a function", ctx.start);
 			return null;
 		}
+	}
+	
+	@Override
+	public StapleType visitMemberVarableDeclaration(MemberVarableDeclarationContext ctx) {
+		visitChildren(ctx);
+		
+		StapleType varType = mContext.typeTreeProperty.get(ctx.getChild(0));
+		String varName = ctx.getChild(1).getText();
+		MemberVarableSymbol varSymbol = new MemberVarableSymbol(varName, varType);
+		mContext.symbolTreeProperties.put(ctx, varSymbol);
+		mCurrentScope.define(varSymbol);
+		
+		return PrimitiveType.VOID;
 	}
 	
 	@Override

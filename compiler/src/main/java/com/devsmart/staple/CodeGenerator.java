@@ -50,7 +50,6 @@ import com.devsmart.staple.instructions.LabelInstruction;
 import com.devsmart.staple.instructions.LoadInstruction;
 import com.devsmart.staple.instructions.Location;
 import com.devsmart.staple.instructions.LocationFactory;
-import com.devsmart.staple.instructions.MemoryAddress;
 import com.devsmart.staple.instructions.MultiplyInstruction;
 import com.devsmart.staple.instructions.Operand;
 import com.devsmart.staple.instructions.PhiInstruction;
@@ -67,7 +66,6 @@ import com.devsmart.staple.symbols.StringLiteralSymbol;
 import com.devsmart.staple.types.ArrayType;
 import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
-import com.devsmart.staple.types.StapleType;
 
 
 public class CodeGenerator extends StapleBaseVisitor<Operand> {

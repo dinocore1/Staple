@@ -21,11 +21,11 @@ classDefinition
 	;
 	
 memberVarableDeclaration
-	: type ID
+	: type ID ';'
 	;
 	
 memberFunction
-	: type name=ID formalParameters functionBody
+	: returnType=type name=ID params=formalParameters body=functionBody
 	;
 	
 formalParameters
