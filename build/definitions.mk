@@ -42,3 +42,17 @@ $(o_file) : $(s_file)
 	$(CC) -c $(s_file) -o $(o_file)
 endef
 
+define objs-to-a
+$(local_static_libfile): $(OBJS)
+	ar rcs -o $(local_static_libfile) $(OBJS)
+endef
+
+define a-to-so
+$(local_shared_libfile): $(local_static_libfile)
+	$(CC) -shared -Wl,-soname,$(notdir $(local_shared_libfile)) -o $(local_shared_libfile) $(local_static_libfile)
+endef
+
+define create-exe
+$(local_exefile): $(OBJS)
+	$(CC) -o $(local_exefile) $(OBJS)
+endef

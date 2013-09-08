@@ -8,9 +8,14 @@ $(LOCAL_OUTPUT_DIR_PATH):
 	$(SILENT)touch $@
 
 local_staple_src := $(filter %.stp, $(LOCAL_SRC))
+local_obj := $(addprefix $(LOCAL_OUTPUT_DIR)/, $(local_staple_src:%.stp=%.o))
+ 
+ifneq ($(strip $(LOCAL_STATIC_LIBS)),)
+local_static_libs := $(addprefix $(OUT)/, $(join $(LOCAL_STATIC_LIBS)/, lib$(LOCAL_STATIC_LIBS).a))
+endif
 
-OBJS += $(addprefix $(LOCAL_OUTPUT_DIR)/, $(local_staple_src:%.stp=%.o))
 
+OBJS += $(local_obj) $(local_static_libs)
 
 STP_INCLUDES := $(addprefix -I , $(LOCAL_PATH) $(LOCAL_INCLUDE))
 

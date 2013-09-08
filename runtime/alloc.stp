@@ -1,9 +1,10 @@
 namespace staple.runtime;
 
+
 #include "stdc.h"
 
 int hi() {
-  printf("hello world");
+  printf("hello world! this is awesome\n");
   return 0;
 }
 
