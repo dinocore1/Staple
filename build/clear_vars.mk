@@ -1,0 +1,7 @@
+
+local_static_libs :=
+OBJS :=
+LOCAL_MODULE :=
+LOCAL_INCLUDE :=
+LOCAL_SRC :=
+LOCAL_STATIC_LIBS :=
