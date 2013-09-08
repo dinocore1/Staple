@@ -1,9 +1,6 @@
 
 SILENT?=@
 
-
-
-
 define my-dir
 $(subst $(ROOT)/,,$(strip \
   $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))

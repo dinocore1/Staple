@@ -1,6 +1,8 @@
 
 .PHONY: all clean
 
+SILENT?=@
+
 ROOT := $(PWD)
 OUT := bin
 
@@ -10,7 +12,7 @@ all:
 
 
 $(STP_JAR): 
-	cd compiler && mvn package
+	cd compiler && mvn package >/dev/null
 	mkdir -p $(OUT)
 	cp compiler/target/Staple-1.0-SNAPSHOT.jar $(STP_JAR)
 

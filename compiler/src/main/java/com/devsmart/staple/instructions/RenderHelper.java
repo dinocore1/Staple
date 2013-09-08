@@ -74,6 +74,8 @@ public class RenderHelper {
 		String retval = "";
 		if(type == PrimitiveType.INT){
 			retval = "i32";
+		} else if(type == PrimitiveType.VOID){
+			retval = "void";
 		} else if(type == PrimitiveType.BYTE){
 			retval = "i8";
 		} else if(type == PrimitiveType.BOOL){

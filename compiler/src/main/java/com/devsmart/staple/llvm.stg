@@ -42,7 +42,7 @@ bitand(result, left, right, type) ::= "<result> = and <type> <left>, <right>"
 bitor(result, left, right, type) ::= "<result> = or <type> <left>, <right>"
 bitxor(result, left, right, type) ::= "<result> = xor <type> <left>, <right>"
 call(result, name, type, args) ::= <<
-<if(type)><result> = <endif>call <type> <name>(<args; separator=", ">)
+<if(result)><result> = <endif>call <type> <name>(<args; separator=", ">)
 >>
 select(result, selector, left, right, type) ::= "<result> = select i1 <selector>, <type> <left>, <type> <right>"
 phi(result, args, type) ::= <<

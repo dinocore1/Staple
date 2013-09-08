@@ -20,6 +20,13 @@ stpp_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.stpp)
 ll_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.ll)
 s_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.s)
 
+define output-dir
+$(LOCAL_OUTPUT_DIR_PATH):
+	@echo "making $(LOCAL_OUTPUT_DIR)"
+	$(SILENT)mkdir -p $(LOCAL_OUTPUT_DIR)
+	$(SILENT)touch $(LOCAL_OUTPUT_DIR_PATH)
+endef
+
 define stp-to-stpp
 $(stpp_file): $(LOCAL_OUTPUT_DIR_PATH) $(stp_file) 
 	$(CPP) $(STP_INCLUDES) $(stp_file) > $(stpp_file)

@@ -2,10 +2,7 @@
 
 LOCAL_OUTPUT_DIR_PATH := $(LOCAL_OUTPUT_DIR)/dir
 
-$(LOCAL_OUTPUT_DIR_PATH):
-	@echo "making $(LOCAL_OUTPUT_DIR)"
-	$(SILENT)mkdir -p $(LOCAL_OUTPUT_DIR)
-	$(SILENT)touch $@
+$(eval $(call output-dir))
 
 local_staple_src := $(filter %.stp, $(LOCAL_SRC))
 local_obj := $(addprefix $(LOCAL_OUTPUT_DIR)/, $(local_staple_src:%.stp=%.o))

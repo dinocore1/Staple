@@ -2,7 +2,9 @@
 namespace com.devsmart.staple.test;
 
 extern int printf(byte* fmt, ... );
+extern void hi();
 
+/*
 int main(int x, int y) {
   int r = fib(8);
   printf("fib 8: %d\n", r);
@@ -17,6 +19,11 @@ int fib(int x) {
 	} else {
 	  return fib(x-1) + fib(x-2);
 	}
+}
+*/
+
+int dohi() {
+	hi();
 }
 
 
