@@ -2,6 +2,8 @@ package com.devsmart.staple;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 
@@ -125,6 +127,16 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	public StapleType visitClassDefinition(ClassDefinitionContext ctx) {
 		
 		ClassSymbol symbol = (ClassSymbol)mContext.symbolTreeProperties.get(ctx);
+		String extend = ctx.extend == null ? null : ctx.extend.getText();
+		
+		if(extend != null){
+			StapleSymbol extendSymbol = mCurrentScope.resolve(extend);
+			if(extendSymbol instanceof ClassSymbol){
+				symbol.extend = (ClassSymbol) extendSymbol;
+			} else {
+				mContext.errorStream.error("undefined class '" + extend + "'", ctx.extend);
+			}
+		}
 		
 		//visit members
 		symbol.members = new ArrayList<MemberVarableSymbol>(ctx.members.size());

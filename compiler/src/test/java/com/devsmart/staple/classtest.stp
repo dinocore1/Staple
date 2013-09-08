@@ -7,11 +7,15 @@ int main(int x, int y) {
   return 0;
 }
 
-class Rad {
+class Rad extends Object {
 	int cool;
 	
 	void pizza() {
 	}
+}
+
+class Object {
+	int refCount;
 }
 
 

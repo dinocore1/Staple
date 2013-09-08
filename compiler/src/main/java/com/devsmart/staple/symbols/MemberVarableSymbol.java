@@ -21,4 +21,21 @@ public class MemberVarableSymbol extends AbstractSymbol {
 		return type;
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		boolean retval = false;
+		if(obj instanceof MemberVarableSymbol){
+			retval = this.mName.equals(((MemberVarableSymbol) obj).mName);
+		}
+		
+		return retval;
+	}
+
+	@Override
+	public int hashCode() {
+		return mName.hashCode();
+	}
+	
+	
+
 }

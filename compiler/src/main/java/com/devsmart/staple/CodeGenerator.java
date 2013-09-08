@@ -15,6 +15,7 @@ import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.StapleParser.ArgumentsContext;
 import com.devsmart.staple.StapleParser.AssignExpressionContext;
+import com.devsmart.staple.StapleParser.ClassDefinitionContext;
 import com.devsmart.staple.StapleParser.CompareExpressionContext;
 import com.devsmart.staple.StapleParser.CompileUnitContext;
 import com.devsmart.staple.StapleParser.ExpressionContext;
@@ -36,6 +37,7 @@ import com.devsmart.staple.instructions.BitAndInstruction;
 import com.devsmart.staple.instructions.BitOrInstruction;
 import com.devsmart.staple.instructions.BitXorInstruction;
 import com.devsmart.staple.instructions.BranchInstruction;
+import com.devsmart.staple.instructions.ClassStructDeclareInstruction;
 import com.devsmart.staple.instructions.DivideInstruction;
 import com.devsmart.staple.instructions.ExternalFunctionInstruction;
 import com.devsmart.staple.instructions.FunctionCallInstruction;
@@ -59,6 +61,7 @@ import com.devsmart.staple.instructions.StoreInstruction;
 import com.devsmart.staple.instructions.StringLiteralDeclareInstruction;
 import com.devsmart.staple.instructions.SubtractInstruction;
 import com.devsmart.staple.instructions.SymbolReference;
+import com.devsmart.staple.symbols.ClassSymbol;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
@@ -143,6 +146,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		pushCodeBlock();
 		collectStringLiterals(ctx);
+		collectClassStructs(ctx);
 		visitChildren(ctx);
 		mContext.code = popCodeBlock();
 		
@@ -162,6 +166,17 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		for(StringLiteralSymbol symbol : symbolSet){
 			emit(new StringLiteralDeclareInstruction( symbol ));
 		}
+	}
+	
+	private void collectClassStructs(RuleContext ctx) {
+		ClassStructVisitor classCollector = new ClassStructVisitor();
+		classCollector.visit(ctx);
+		
+		for(ClassDefinitionContext classCtx : classCollector.classes){
+			ClassSymbol classSym = (ClassSymbol) mContext.symbolTreeProperties.get(classCtx);
+			emit(new ClassStructDeclareInstruction(classSym));
+		}
+		
 	}
 	
 	@Override

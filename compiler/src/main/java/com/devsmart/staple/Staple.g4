@@ -17,7 +17,7 @@ globalFunction
 	;
 	
 classDefinition
-	: 'class' name=ID '{'  (members+=memberVarableDeclaration | functions+=memberFunction)*  '}'
+	: 'class' name=ID ('extends' extend=ID)? '{'  (members+=memberVarableDeclaration | functions+=memberFunction)*  '}'
 	;
 	
 memberVarableDeclaration
