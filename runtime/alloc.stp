@@ -1,8 +1,6 @@
-
-
 namespace staple.runtime;
 
-extern int printf(byte* fmt,...);
+#include "stdc.h"
 
 int hi() {
   printf("hello world");

@@ -1,22 +1,21 @@
 
-.phony: dirs clean
-
-all: dirs
+.PHONY: all clean
 
 ROOT := $(PWD)
-OUT := $(ROOT)/bin
+OUT := bin
 
 STP_JAR := $(OUT)/staple-compiler.jar
 
-dirs:
+all: 
+
+
+$(STP_JAR): 
+	cd compiler && mvn package
 	mkdir -p $(OUT)
+	cp compiler/target/Staple-1.0-SNAPSHOT.jar $(STP_JAR)
+
 
 clean:
 	rm -rf $(OUT)
 
-$(STP_JAR): dirs 
-	cd compiler && mvn package
-	cp compiler/target/Staple-1.0-SNAPSHOT.jar $(STP_JAR)
-
-include build/staple.mk 
-
+include build/staple.mk

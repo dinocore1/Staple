@@ -1,19 +1,16 @@
 
-%.ll : %.stp
-	java -jar $(STP_JAR) $< > $@
+SILENT?=@
 
-%.s : %.ll
-	llc $(LCC_CFLAGS) $< -o $@
 
-%.o : %.s
-	gcc -c $< -o $@
 
 
 define my-dir
-$(strip \
+$(subst $(ROOT)/,,$(strip \
   $(patsubst %/,%,$(dir $(lastword $(MAKEFILE_LIST))))
-)
+))
 endef
+
+include $(call my-dir)/definitions.mk
 
 current-makefiles = $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 
