@@ -5,11 +5,11 @@ import org.stringtemplate.v4.STGroup;
 
 public class StoreInstruction implements Instruction {
 
-	private Location dest;
+	private Operand dest;
 	private Operand src;
 
 
-	public StoreInstruction(Operand src, Location dest) {
+	public StoreInstruction(Operand src, Operand dest) {
 		this.dest = dest;
 		this.src = src;
 	}

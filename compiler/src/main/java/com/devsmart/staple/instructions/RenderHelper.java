@@ -12,10 +12,12 @@ import com.devsmart.staple.symbols.LocalVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
 import com.devsmart.staple.symbols.StringLiteralSymbol;
 import com.devsmart.staple.types.ArrayType;
+import com.devsmart.staple.types.ClassType;
 import com.devsmart.staple.types.FunctionType;
 import com.devsmart.staple.types.PointerType;
 import com.devsmart.staple.types.PrimitiveType;
 import com.devsmart.staple.types.StapleType;
+import com.devsmart.staple.types.StructType;
 
 public class RenderHelper {
 	
@@ -84,6 +86,10 @@ public class RenderHelper {
 			retval = "...";
 		} else if(type instanceof PointerType){
 			retval = renderType(codegentemplate, ((PointerType) type).baseType) + "*";
+		} else if(type instanceof StructType){
+			retval = "%" + ((StructType)type).mName;
+		} else if(type instanceof ClassType){
+			retval = "%" + ((ClassType)type).mName;
 		} else if(type instanceof ArrayType) {
 			retval = String.format("[%d x %s]", 
 					((ArrayType)type).arrayLength, 

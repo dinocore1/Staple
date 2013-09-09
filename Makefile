@@ -12,7 +12,7 @@ all:
 
 
 $(STP_JAR): 
-	cd compiler && mvn package >/dev/null
+	cd compiler && mvn package
 	mkdir -p $(OUT)
 	cp compiler/target/Staple-1.0-SNAPSHOT.jar $(STP_JAR)
 

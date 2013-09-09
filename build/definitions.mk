@@ -16,6 +16,7 @@ LCC:=llc
 #	$(CC) -c $< -o $@
 
 stp_file = $(LOCAL_PATH)/$(stp_src)
+dep_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.d)
 stpp_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.stpp)
 ll_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.ll)
 s_file = $(LOCAL_OUTPUT_DIR)/$(stp_src:%.stp=%.s)
@@ -25,6 +26,13 @@ $(LOCAL_OUTPUT_DIR_PATH):
 	@echo "making $(LOCAL_OUTPUT_DIR)"
 	$(SILENT)mkdir -p $(LOCAL_OUTPUT_DIR)
 	$(SILENT)touch $(LOCAL_OUTPUT_DIR_PATH)
+endef
+
+define stp-to-d
+$(dep_file): $(LOCAL_OUTPUT_DIR_PATH) $(stp_file) 
+	$(CPP) -M -MT '$(stpp_file)' $(STP_INCLUDES) $(stp_file) > $(dep_file)
+
+-include $(dep_file)
 endef
 
 define stp-to-stpp

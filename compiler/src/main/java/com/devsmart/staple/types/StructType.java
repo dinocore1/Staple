@@ -1,10 +1,12 @@
 package com.devsmart.staple.types;
 
-public class ClassType implements StapleType {
+import com.devsmart.staple.symbols.*;
+
+public class StructType implements StapleType {
 
 	public final String mName;
 	
-	public ClassType(String name) {
+	public StructType(String name) {
 		mName = name;
 	}
 	
@@ -12,4 +14,5 @@ public class ClassType implements StapleType {
 	public String toString() {
 		return mName;
 	}
+	
 }

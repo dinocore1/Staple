@@ -1,6 +1,7 @@
 package com.devsmart.staple.types;
 
 import com.devsmart.staple.Scope;
+import com.devsmart.staple.symbols.StapleSymbol;
 
 public class TypeFactory {
 
@@ -17,6 +18,9 @@ public class TypeFactory {
 			retval = PrimitiveType.ELIPSE;
 		} else if("byte".equals(typeStr)){
 			retval = PrimitiveType.BYTE;
+		} else {
+			StapleSymbol symbol = mCurrentScope.resolve(typeStr);
+			retval = symbol.getType();
 		}
 		
 		return retval;

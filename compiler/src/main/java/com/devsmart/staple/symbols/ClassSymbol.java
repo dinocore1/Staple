@@ -25,6 +25,19 @@ public class ClassSymbol extends AbstractSymbol {
 		return type;
 	}
 	
+	public MemberVarableSymbol getMemberByName(String name){
+		MemberVarableSymbol retval = null;
+		
+		for(MemberVarableSymbol sym : getAllMembers()){
+			if(sym.mName.equals(name)){
+				retval = sym;
+				break;
+			}
+		}
+		
+		return retval;
+	}
+	
 	public static void gatherAllMembers(ClassSymbol classSym, List<MemberVarableSymbol> members) {
 		if(classSym.extend != null){
 			gatherAllMembers(classSym.extend, members);

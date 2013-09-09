@@ -20,6 +20,7 @@ public class CompileContext {
 	public ErrorStream errorStream = new ErrorStream();
 	public Writer codeOutput = new OutputStreamWriter(System.out);
 	public ParserRuleContext tree;
+	public ParseTreeProperty<Object> helperTreeProperties = new ParseTreeProperty<Object>();
 	public ParseTreeProperty<StapleSymbol> symbolTreeProperties = new ParseTreeProperty<StapleSymbol>();
 	public ParseTreeProperty<StapleType> typeTreeProperty = new ParseTreeProperty<StapleType>();
 	public Scope globalScope = new Scope(null);

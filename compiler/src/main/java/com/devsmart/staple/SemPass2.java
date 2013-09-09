@@ -7,31 +7,16 @@ import java.util.List;
 
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import com.devsmart.staple.StapleParser.BlockContext;
-import com.devsmart.staple.StapleParser.ClassDefinitionContext;
-import com.devsmart.staple.StapleParser.CompareExpressionContext;
-import com.devsmart.staple.StapleParser.CompileUnitContext;
-import com.devsmart.staple.StapleParser.ExternalFunctionContext;
-import com.devsmart.staple.StapleParser.FormalParameterContext;
-import com.devsmart.staple.StapleParser.FunctionCallContext;
-import com.devsmart.staple.StapleParser.GlobalFunctionContext;
-import com.devsmart.staple.StapleParser.IntLiteralContext;
-import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
-import com.devsmart.staple.StapleParser.LogicExpressionContext;
-import com.devsmart.staple.StapleParser.MemberFunctionContext;
-import com.devsmart.staple.StapleParser.MemberVarableDeclarationContext;
-import com.devsmart.staple.StapleParser.StringLiteralContext;
-import com.devsmart.staple.StapleParser.TypeContext;
-import com.devsmart.staple.StapleParser.VarRefExpressionContext;
+import com.devsmart.staple.StapleParser.*;
 import com.devsmart.staple.symbols.*;
 import com.devsmart.staple.types.*;
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 
 public class SemPass2 extends StapleBaseVisitor<StapleType> {
 
 	private CompileContext mContext;
 	private Scope mCurrentScope;
 	private HashMap<String, StringLiteralSymbol> mStringLiteralMap = new HashMap<String, StringLiteralSymbol>();
+	private ClassSymbol mCurrentClassSymbol;
 	
 	public SemPass2(CompileContext context){
 		mContext = context;
@@ -94,6 +79,21 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	}
 	
 	@Override
+	public StapleType visitStructDefinition(StructDefinitionContext ctx) {
+		
+		StructSymbol symbol = (StructSymbol)mContext.symbolTreeProperties.get(ctx);
+		
+		//visit members
+		symbol.members = new ArrayList<MemberVarableSymbol>(ctx.members.size());
+		for(MemberVarableDeclarationContext memberCtx : ctx.members){
+			visit(memberCtx);
+			symbol.members.add((MemberVarableSymbol) mContext.symbolTreeProperties.get(memberCtx));
+		}
+		
+		return symbol.type;
+	}
+	
+	@Override
 	public StapleType visitMemberFunction(MemberFunctionContext ctx) {
 		
 		final String functionName = ctx.name.getText();
@@ -110,7 +110,14 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		
 		//visit formals
 		visit(ctx.params);
-		symbol.parameters = new ArrayList<StapleSymbol>(ctx.params.params.size());
+		symbol.parameters = new ArrayList<StapleSymbol>(ctx.params.params.size()+1);
+		
+		//add the 'this' formal
+		LocalVarableSymbol thisformal = new LocalVarableSymbol("this", new PointerType(mCurrentClassSymbol.type));
+		mCurrentScope.define(thisformal);
+		symbol.parameters.add(thisformal);
+		
+		
 		for(FormalParameterContext paramCtx : ctx.params.params){
 			symbol.parameters.add((LocalVarableSymbol) mContext.symbolTreeProperties.get(paramCtx));
 		}
@@ -126,33 +133,33 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	@Override
 	public StapleType visitClassDefinition(ClassDefinitionContext ctx) {
 		
-		ClassSymbol symbol = (ClassSymbol)mContext.symbolTreeProperties.get(ctx);
+		mCurrentClassSymbol = (ClassSymbol)mContext.symbolTreeProperties.get(ctx);
 		String extend = ctx.extend == null ? null : ctx.extend.getText();
 		
 		if(extend != null){
 			StapleSymbol extendSymbol = mCurrentScope.resolve(extend);
 			if(extendSymbol instanceof ClassSymbol){
-				symbol.extend = (ClassSymbol) extendSymbol;
+				mCurrentClassSymbol.extend = (ClassSymbol) extendSymbol;
 			} else {
 				mContext.errorStream.error("undefined class '" + extend + "'", ctx.extend);
 			}
 		}
 		
 		//visit members
-		symbol.members = new ArrayList<MemberVarableSymbol>(ctx.members.size());
+		mCurrentClassSymbol.members = new ArrayList<MemberVarableSymbol>(ctx.members.size());
 		for(MemberVarableDeclarationContext memberCtx : ctx.members){
 			visit(memberCtx);
-			symbol.members.add((MemberVarableSymbol) mContext.symbolTreeProperties.get(memberCtx));
+			mCurrentClassSymbol.members.add((MemberVarableSymbol) mContext.symbolTreeProperties.get(memberCtx));
 		}
 		
 		//visit functions
-		symbol.functions = new ArrayList<FunctionSymbol>(ctx.functions.size());
+		mCurrentClassSymbol.functions = new ArrayList<FunctionSymbol>(ctx.functions.size());
 		for(MemberFunctionContext functionCtx : ctx.functions){
 			visit(functionCtx);
-			symbol.functions.add((FunctionSymbol) mContext.symbolTreeProperties.get(functionCtx));
+			mCurrentClassSymbol.functions.add((FunctionSymbol) mContext.symbolTreeProperties.get(functionCtx));
 		}
 		
-		return symbol.type;
+		return mCurrentClassSymbol.type;
 	}
 	
 	
@@ -277,6 +284,43 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	}
 	
 	@Override
+	public StapleType visitDeRefExpression(DeRefExpressionContext ctx) {
+		
+		
+		StapleType retval = null;
+		StapleType leftType = visit(ctx.l);
+		String name = ctx.r.getText();
+		
+		if(leftType instanceof PointerType){
+			leftType = ((PointerType) leftType).baseType;
+		}
+		
+		if(leftType instanceof StructType){
+			StructSymbol leftSymbol = (StructSymbol)mCurrentScope.resolve(((StructType) leftType).mName);
+			
+			MemberVarableSymbol member = leftSymbol.getMemberByName(name);
+			if(member != null){
+				retval = member.getType();
+				mContext.helperTreeProperties.put(ctx, new DeRefHelper(leftSymbol, name));
+			} else {
+				mContext.errorStream.error("Struct '"+ leftSymbol.getName() +"' does not have member: " + name, ctx.r);
+			}
+		} else if(leftType instanceof ClassType){
+			ClassSymbol leftSymbol = (ClassSymbol)mCurrentScope.resolve(((ClassType) leftType).mName);
+			
+			MemberVarableSymbol member = leftSymbol.getMemberByName(name);
+			if(member != null){
+				retval = member.getType();
+				mContext.helperTreeProperties.put(ctx, new DeRefHelper(leftSymbol, name));
+			} else {
+				mContext.errorStream.error("Class '" + leftSymbol.getName() + "' does not have member: " + name, ctx.r);
+			}
+		}
+		
+		return retval;
+	}
+	
+	@Override
 	public StapleType visitStringLiteral(StringLiteralContext ctx){
 		
 		
@@ -326,7 +370,8 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		String baseType = ctx.getChild(0).getText();
 		StapleType stpType = TypeFactory.getType(baseType, mCurrentScope);
 		
-		if(ctx.getChild(1) != null){
+		String astrix = ctx.getChild(1) == null ? null : ctx.getChild(1).getText();
+		if(astrix != null && "*".equals(astrix)){
 			stpType = new PointerType(stpType);
 		}
 		

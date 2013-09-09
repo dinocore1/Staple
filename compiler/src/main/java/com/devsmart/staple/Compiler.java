@@ -69,7 +69,7 @@ public class Compiler  {
     	
 		
     	
-    	//System.out.println( tree.toStringTree(parser) );
+    	System.out.println( tree.toStringTree(parser) );
     	
     	return 0;
     }

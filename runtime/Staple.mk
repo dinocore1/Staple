@@ -4,7 +4,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := stapleruntime
 LOCAL_INCLUDE := $(LOCAL_PATH)/include
-LOCAL_SRC := alloc.stp
+LOCAL_SRC := dispatch.stp alloc.stp
 include $(BUILD_LIB)
 
 

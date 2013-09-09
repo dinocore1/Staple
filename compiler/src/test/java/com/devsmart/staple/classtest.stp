@@ -1,21 +1,33 @@
 
 namespace com.devsmart.staple.test;
 
+extern byte* malloc(int size);
 extern int printf(byte* fmt, ... );
 
-int main(int x, int y) {
-  return 0;
+struct LinkedListStruct {
+	LinkedListStruct* prev;
+	LinkedListStruct* next;
+	byte* data;
+}
+
+int main() {
+	LinkedListStruct a;
+	a.next.prev = malloc(5);
+	return 0;
 }
 
 class Rad extends Object {
 	int cool;
 	
 	void pizza() {
+		printf("hello from Rad", this);
 	}
 }
 
 class Object {
 	int refCount;
 }
+
+
 
 

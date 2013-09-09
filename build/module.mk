@@ -16,6 +16,7 @@ OBJS += $(local_obj) $(local_static_libs)
 
 STP_INCLUDES := $(addprefix -I , $(LOCAL_PATH) $(LOCAL_INCLUDE))
 
+$(foreach stp_src, $(local_staple_src), $(eval $(call stp-to-d)))
 $(foreach stp_src, $(local_staple_src), $(eval $(call stp-to-stpp)))
 $(foreach stp_src, $(local_staple_src), $(eval $(call stpp-to-ll)))
 $(foreach stp_src, $(local_staple_src), $(eval $(call ll-to-s)))

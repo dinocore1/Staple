@@ -1,7 +1,7 @@
 grammar Staple;
 
 compileUnit
-	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction | classDef+=classDefinition)*
+	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction | structDef+=structDefinition | classDef+=classDefinition)*
 	;
 	
 namespace
@@ -14,6 +14,10 @@ externalFunction
 	
 globalFunction
 	: returnType=type name=ID params=formalParameters body=functionBody
+	;
+
+structDefinition
+	: 'struct' name=ID '{' (members+=memberVarableDeclaration)* '}'
 	;
 	
 classDefinition
@@ -87,7 +91,7 @@ variableInitializer
 expression
 	: primary # primaryExpression
 	| ID # varRefExpression
-	| expression '.' ID # refExpression
+	| l=expression '.' r=ID # deRefExpression
 	| ID arguments # functionCall
 	| expression ('*'|'/') expression # mathExpression
 	| expression ('+'|'-') expression # mathExpression
