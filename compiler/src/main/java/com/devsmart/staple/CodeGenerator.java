@@ -498,14 +498,16 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		DeRefHelper derefhelper = (DeRefHelper)mContext.helperTreeProperties.get(ctx);
 		
-		Register templocation = mLocationFactory.createTempLocation(derefhelper.getMemberVarableSymbol().getType());
+		Register templocation;
 		
 		
 		
 		Instruction inst;
 		if(left.getType() instanceof PointerType){
+			templocation = mLocationFactory.createTempLocation(new PointerType(derefhelper.getMemberVarableSymbol().getType()));
 			inst = new GetPointerInstruction(templocation, left, new IntLiteral(0), new IntLiteral(derefhelper.getOffset()));
 		} else {
+			templocation = mLocationFactory.createTempLocation(derefhelper.getMemberVarableSymbol().getType());
 			inst = new ExtractValueInstruction(templocation, left, derefhelper.getOffset());
 		}
 		emit(inst);
