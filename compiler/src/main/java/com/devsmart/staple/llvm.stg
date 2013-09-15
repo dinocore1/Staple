@@ -12,7 +12,11 @@ declare <returntype> @<name>(<formals; separator=", ">)<\n>
 >>
 
 getpointer(result, type, obj, indices) ::= <<
-<result> = getelementptr <type>* <obj>, <indices; separator=", ">
+<result> = getelementptr <type> <obj>, <indices; separator=", ">
+>>
+
+extractvalue(result, type, obj, indices) ::= <<
+<result> = extractvalue <type> <obj>, <indices; separator=", ">
 >>
 
 label(name) ::= "<name>:"

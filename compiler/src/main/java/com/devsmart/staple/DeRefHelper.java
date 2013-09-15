@@ -35,6 +35,7 @@ public class DeRefHelper {
 				this.index = index;
 				break;
 			}
+			index++;
 		}
 		
 	}

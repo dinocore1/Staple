@@ -3,18 +3,18 @@ package com.devsmart.staple.instructions;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroup;
 
-import com.devsmart.staple.types.StapleType;
+import com.devsmart.staple.types.PointerType;
 
 public class AllocVariableInstruction implements Instruction {
 
 	
 	private Register result;
-	private StapleType type;
+	private PointerType type;
 	int num;
 
-	public AllocVariableInstruction(Register result, StapleType type, int num) {
+	public AllocVariableInstruction(Register result, int num) {
 		this.result = result;
-		this.type = type;
+		this.type = (PointerType) result.getType();
 		this.num = num;
 	}
 
@@ -22,7 +22,7 @@ public class AllocVariableInstruction implements Instruction {
 	public String render(STGroup codegentemplate) {
 		ST st = codegentemplate.getInstanceOf("allocvar");
 		st.add("result", RenderHelper.render(codegentemplate, result));
-		st.add("type", RenderHelper.renderType(codegentemplate, type));
+		st.add("type", RenderHelper.renderType(codegentemplate, type.baseType));
 		if(num > 1){
 			st.add("num", String.valueOf(num));
 		}

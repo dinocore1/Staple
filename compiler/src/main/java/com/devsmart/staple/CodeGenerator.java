@@ -5,12 +5,14 @@ import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.antlr.v4.runtime.RuleContext;
+import org.antlr.v4.runtime.misc.Pair;
 import org.stringtemplate.v4.STGroup;
 
 import com.devsmart.staple.instructions.*;
@@ -27,44 +29,62 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	private LabelFactory mLabelFactory = new LabelFactory();
 	private LinkedList< List<Instruction> > mCodeBlockStack = new LinkedList< List<Instruction> >();
 	
-	private Map<StapleSymbol, Set<Location> > addressDescriptor = new HashMap<StapleSymbol, Set<Location>>();
+	
+	private Set<Pair<StapleSymbol, Register>> registers = new HashSet<Pair<StapleSymbol, Register>>();
 	
 
 	public CodeGenerator(CompileContext context) {
 		mContext = context;
 	}
 	
-	private void addLocation(StapleSymbol symbol, Location location){
-		Set<Location> locations = addressDescriptor.get(symbol);
-		if(locations == null){
-			locations = new HashSet<Location>();
-			addressDescriptor.put(symbol, locations);
-		}
-		locations.add(location);
+	private void addLocation(StapleSymbol symbol, Register register){
+		registers.add(new Pair<StapleSymbol, Register>(symbol, register));
 	}
 	
-	private void removeLocation(StapleSymbol symbol, Location location){
-		Set<Location> locations = addressDescriptor.get(symbol);
-		if(locations != null){
-			locations.remove(location);
-		}
-	}
-	
-	private Location getSymbolMemoryAddress(StapleSymbol symbol){
-		Location retval = null;
+	private Register getValueOf(StapleSymbol symbol){
 		
-		Set<Location> locations = addressDescriptor.get(symbol);
-		if(locations != null){
-			for(Location l : locations){
-				if(l.getType() instanceof PointerType){
-					retval = l;
-					break;
+		Register pointer = null;
+		Pair<StapleSymbol, Register> pair;
+		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
+		
+		while(it.hasNext()){
+			pair = it.next();
+			if(pair.a.equals(symbol)){
+				if(symbol.getType() instanceof PointerType &&
+						pair.b.getType() instanceof PointerType){
+					return pair.b;
+				} else {
+					pointer = pair.b;
 				}
 			}
 		}
 		
-		return retval;
+		if(pointer != null){
+			Register r = mLocationFactory.createTempLocation(symbol.getType());
+			emit(new LoadInstruction(pointer, r));
+			registers.add(new Pair<StapleSymbol, Register>(symbol, r));
+			return r;
+		}
+		
+		return null;
 	}
+	
+	private Location getPointerTo(StapleSymbol symbol){
+		Pair<StapleSymbol, Register> pair;
+		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
+		
+		while(it.hasNext()){
+			pair = it.next();
+			if(pair.a.equals(symbol)){
+				if((pair.b.getType() instanceof PointerType)){
+					return pair.b;
+				}
+			}
+		}
+		
+		return null;
+	}
+	
 
 	/**
 	 * pushes a new codeblock on the stack. Returns the previous top of the stack
@@ -202,14 +222,11 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	public Operand visitFormalParameter(FormalParameterContext ctx) {
 		
 		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
+		addLocation(varSymbol, new Register(varSymbol.getName(), varSymbol.getType()));
+		
 		Register dest = mLocationFactory.createTempLocation(new PointerType(varSymbol.getType()));
-		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, varSymbol.getType(), 1);
+		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, 1);
 		emit(instruction);
-		
-		emit(new StoreInstruction(
-				new Register(varSymbol.getName(), varSymbol.getType()),
-				dest));
-		
 		addLocation(varSymbol, dest);
 		
 		return null;
@@ -219,15 +236,9 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	public Operand visitVarRefExpression(VarRefExpressionContext ctx) {
 		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
 		
-		if(varSymbol.type instanceof PointerType){
-			return new Register(varSymbol.getName(), varSymbol.type);
-		}
+		Register retval = getValueOf(varSymbol);
 		
-		Location src = getSymbolMemoryAddress(varSymbol);
-		Register dest = mLocationFactory.createTempLocation(varSymbol.getType());
-		emit(new LoadInstruction(src, dest));
-		
-		return dest;
+		return retval;
 	}
 	
 	@Override
@@ -236,7 +247,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
 		
 		Register dest = mLocationFactory.createTempLocation(new PointerType(varSymbol.getType()));
-		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, varSymbol.getType(), 1);
+		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, 1);
 		emit(instruction);
 		
 		addLocation(varSymbol, dest);
@@ -346,10 +357,27 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	@Override
 	public Operand visitAssignExpression(AssignExpressionContext ctx) {
 		
-		Operand left = visit(ctx.left);
-		Operand right = visit(ctx.right);
+		Register left = (Register) visit(ctx.left);
+		Register right = (Register) visit(ctx.right);
 		
 		emit(new StoreInstruction(right, left));
+		
+		StapleSymbol symbol = null;
+		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
+		while(it.hasNext()){
+			Pair<StapleSymbol, Register> p = it.next();
+			if(p.b.equals(left)){
+				it.remove();
+			}
+			if(p.b.equals(right)){
+				symbol = p.a;
+			}
+		}
+		
+		if(symbol != null){
+			addLocation(symbol, left);
+		}
+		
 		
 		return null;
 	}
@@ -472,7 +500,14 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		Register templocation = mLocationFactory.createTempLocation(derefhelper.getMemberVarableSymbol().getType());
 		
-		GetPointerInstruction inst = new GetPointerInstruction(templocation, left, new IntLiteral(derefhelper.getOffset()));
+		
+		
+		Instruction inst;
+		if(left.getType() instanceof PointerType){
+			inst = new GetPointerInstruction(templocation, left, new IntLiteral(0), new IntLiteral(derefhelper.getOffset()));
+		} else {
+			inst = new ExtractValueInstruction(templocation, left, derefhelper.getOffset());
+		}
 		emit(inst);
 		
 		return templocation;

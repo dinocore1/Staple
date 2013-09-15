@@ -16,6 +16,7 @@ int main() {
 	return 0;
 }
 
+/*
 class Rad extends Object {
 	int cool;
 	
@@ -27,6 +28,7 @@ class Rad extends Object {
 class Object {
 	int refCount;
 }
+*/
 
 
 
