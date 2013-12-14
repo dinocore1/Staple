@@ -8,7 +8,7 @@ import org.junit.Test;
 
 public class CompilerTest {
 
-	
+	/*
 	@Test
 	public void testCompiler() throws IOException {
 		
@@ -27,7 +27,7 @@ public class CompilerTest {
 		Assert.assertTrue(!context.errorStream.hasErrors());
 		
 	}
-	
+	*/
 	@Test
 	public void testClass() throws IOException {
 		

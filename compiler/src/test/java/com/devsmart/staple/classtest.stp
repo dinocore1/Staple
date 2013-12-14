@@ -4,7 +4,7 @@ namespace com.devsmart.staple.test;
 extern byte* malloc(int size);
 extern int printf(byte* fmt, ... );
 
-struct LinkedListStruct {
+class LinkedListStruct {
 	LinkedListStruct* prev;
 	LinkedListStruct* next;
 	byte* data;
@@ -12,6 +12,7 @@ struct LinkedListStruct {
 
 int main() {
 	LinkedListStruct a;
+	a.next = malloc(5);
 	a.next.prev = malloc(5);
 	return 0;
 }

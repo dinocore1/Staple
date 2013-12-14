@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.URL;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -20,9 +21,9 @@ public class CompileContext {
 	public ErrorStream errorStream = new ErrorStream();
 	public Writer codeOutput = new OutputStreamWriter(System.out);
 	public ParserRuleContext tree;
-	public ParseTreeProperty<Object> helperTreeProperties = new ParseTreeProperty<Object>();
 	public ParseTreeProperty<StapleSymbol> symbolTreeProperties = new ParseTreeProperty<StapleSymbol>();
 	public ParseTreeProperty<StapleType> typeTreeProperty = new ParseTreeProperty<StapleType>();
+	public List<StapleType> types = new LinkedList<StapleType>();
 	public Scope globalScope = new Scope(null);
 	public File file;
 	public STGroup codegentemplate;

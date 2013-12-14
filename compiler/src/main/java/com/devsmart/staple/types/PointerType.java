@@ -1,6 +1,6 @@
 package com.devsmart.staple.types;
 
-public class PointerType implements StapleType {
+public class PointerType extends StapleType {
 
 	public final StapleType baseType;
 

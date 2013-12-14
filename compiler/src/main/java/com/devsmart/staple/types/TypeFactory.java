@@ -1,11 +1,12 @@
 package com.devsmart.staple.types;
 
+import com.devsmart.staple.CompileContext;
 import com.devsmart.staple.Scope;
 import com.devsmart.staple.symbols.StapleSymbol;
 
 public class TypeFactory {
 
-	public static StapleType getType(String typeStr, Scope mCurrentScope) {
+	public static StapleType getType(String typeStr, CompileContext context) {
 		
 		StapleType retval = null;
 		if("bool".equals(typeStr)){
@@ -19,11 +20,16 @@ public class TypeFactory {
 		} else if("byte".equals(typeStr)){
 			retval = PrimitiveType.BYTE;
 		} else {
-			StapleSymbol symbol = mCurrentScope.resolve(typeStr);
-			retval = symbol.getType();
+			for(StapleType type : context.types){
+				if(type instanceof ClassType && ((ClassType)type).mName.equals(typeStr)){
+					retval = type;
+					break;
+				}
+			}
 		}
 		
 		return retval;
 	}
+	
 
 }

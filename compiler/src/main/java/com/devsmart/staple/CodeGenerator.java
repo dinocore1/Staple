@@ -28,9 +28,8 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	private LocationFactory mLocationFactory = new LocationFactory();
 	private LabelFactory mLabelFactory = new LabelFactory();
 	private LinkedList< List<Instruction> > mCodeBlockStack = new LinkedList< List<Instruction> >();
-	
-	
 	private Set<Pair<StapleSymbol, Register>> registers = new HashSet<Pair<StapleSymbol, Register>>();
+	boolean getPointer = false;
 	
 
 	public CodeGenerator(CompileContext context) {
@@ -69,17 +68,28 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		return null;
 	}
 	
-	private Location getPointerTo(StapleSymbol symbol){
+	private Register getPointerTo(StapleSymbol symbol){
 		Pair<StapleSymbol, Register> pair;
 		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
+		Register valueRegister = null;
 		
 		while(it.hasNext()){
 			pair = it.next();
 			if(pair.a.equals(symbol)){
-				if((pair.b.getType() instanceof PointerType)){
+				StapleType btype = pair.b.getType();
+				if(btype instanceof PointerType && pair.a.getType().equals(((PointerType) btype).baseType)){
 					return pair.b;
+				} else {
+					valueRegister = pair.b;
 				}
 			}
+		}
+		
+		if(valueRegister != null){
+			Register retval = mLocationFactory.createTempLocation(new PointerType(valueRegister.getType()));
+			emit(new GetPointerInstruction(retval, valueRegister, new IntLiteral(0)));
+			registers.add(new Pair<StapleSymbol, Register>(symbol, retval));
+			return retval;
 		}
 		
 		return null;
@@ -114,7 +124,6 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		pushCodeBlock();
 		collectStringLiterals(ctx);
-		collectStructs(ctx);
 		collectClassStructs(ctx);
 		visitChildren(ctx);
 		mContext.code = popCodeBlock();
@@ -137,25 +146,27 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		}
 	}
 	
-	private void collectStructs(RuleContext ctx){
-		StructVisitor structCollector = new StructVisitor();
-		structCollector.visit(ctx);
-		
-		for(StructDefinitionContext structCtx : structCollector.structs){
-			StructSymbol structSym = (StructSymbol) mContext.symbolTreeProperties.get(structCtx);
-			emit(new StructDeclarationInstruction(structSym));
-		}
-	}
-	
 	private void collectClassStructs(RuleContext ctx) {
 		ClassStructVisitor classCollector = new ClassStructVisitor();
 		classCollector.visit(ctx);
 		
 		for(ClassDefinitionContext classCtx : classCollector.classes){
-			ClassSymbol classSym = (ClassSymbol) mContext.symbolTreeProperties.get(classCtx);
-			emit(new ClassStructDeclareInstruction(classSym));
+			ClassType classType = (ClassType) mContext.typeTreeProperty.get(classCtx);
+			emit(new ClassStructDeclareInstruction(classType));
 		}
 		
+	}
+	
+	private Register bitcast(Register r, StapleType toType){
+		
+		if(r.getType().equals(toType)){
+			return r;
+		}
+		
+		Register retval = mLocationFactory.createTempLocation(toType);
+		emit(new BitcastInstruction(retval, r));
+		
+		return retval;
 	}
 	
 	@Override
@@ -231,15 +242,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		return null;
 	}
-	
-	@Override
-	public Operand visitVarRefExpression(VarRefExpressionContext ctx) {
-		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
-		
-		Register retval = getValueOf(varSymbol);
-		
-		return retval;
-	}
+
 	
 	@Override
 	public Operand visitLocalVariableDeclaration(LocalVariableDeclarationContext ctx){
@@ -263,10 +266,8 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	@Override
 	public Operand visitFunctionCall(FunctionCallContext ctx) {
 		
-		ArgumentsContext argsContext = (ArgumentsContext) ctx.getChild(1);
-		
-		List<Operand> arguments = new ArrayList<Operand>(argsContext.args.size());
-		for(ExpressionContext argExp : argsContext.args){
+		List<Operand> arguments = new ArrayList<Operand>(ctx.args.args.size());
+		for(RvalueContext argExp : ctx.args.args){
 			Operand op = visit(argExp);
 			arguments.add(op);
 		}
@@ -357,26 +358,29 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	@Override
 	public Operand visitAssignExpression(AssignExpressionContext ctx) {
 		
+		StapleSymbol leftSymbol = mContext.symbolTreeProperties.get(ctx.left);
+		
+		getPointer = true;
 		Register left = (Register) visit(ctx.left);
+		
+		getPointer = false;
 		Register right = (Register) visit(ctx.right);
 		
-		emit(new StoreInstruction(right, left));
+		PointerType leftType = (PointerType) left.getType();
 		
-		StapleSymbol symbol = null;
+		Register storageRegister = bitcast(right, leftSymbol.getType());
+		
+		emit(new StoreInstruction(storageRegister, left));
+		
 		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
 		while(it.hasNext()){
 			Pair<StapleSymbol, Register> p = it.next();
-			if(p.b.equals(left)){
+			if(p.a.equals(leftSymbol)){
 				it.remove();
-			}
-			if(p.b.equals(right)){
-				symbol = p.a;
 			}
 		}
 		
-		if(symbol != null){
-			addLocation(symbol, left);
-		}
+		addLocation(leftSymbol, storageRegister);
 		
 		
 		return null;
@@ -491,29 +495,6 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 	}
 	
-	@Override
-	public Operand visitDeRefExpression(DeRefExpressionContext ctx) {
-		
-		Operand left = visit(ctx.l);
-		
-		DeRefHelper derefhelper = (DeRefHelper)mContext.helperTreeProperties.get(ctx);
-		
-		Register templocation;
-		
-		
-		
-		Instruction inst;
-		if(left.getType() instanceof PointerType){
-			templocation = mLocationFactory.createTempLocation(new PointerType(derefhelper.getMemberVarableSymbol().getType()));
-			inst = new GetPointerInstruction(templocation, left, new IntLiteral(0), new IntLiteral(derefhelper.getOffset()));
-		} else {
-			templocation = mLocationFactory.createTempLocation(derefhelper.getMemberVarableSymbol().getType());
-			inst = new ExtractValueInstruction(templocation, left, derefhelper.getOffset());
-		}
-		emit(inst);
-		
-		return templocation;
-	}
 	
 	@Override
 	public Operand visitStringLiteral(StringLiteralContext ctx) {

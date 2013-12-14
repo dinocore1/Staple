@@ -1,8 +1,16 @@
 package com.devsmart.staple.types;
 
-public class ClassType implements StapleType {
+import java.util.ArrayList;
+
+import com.devsmart.staple.symbols.MemberVarableSymbol;
+
+
+public class ClassType extends StapleType {
 
 	public final String mName;
+	public ClassType extendsType;
+	public ArrayList<MemberVarableType> members;
+	public ArrayList<FunctionType> functions;
 	
 	public ClassType(String name) {
 		mName = name;
@@ -11,5 +19,30 @@ public class ClassType implements StapleType {
 	@Override
 	public String toString() {
 		return mName;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		boolean retval = false;
+		if(o instanceof ClassType){
+			retval = mName.equals(((ClassType) o).mName);
+		}
+		return retval;
+	}
+
+	public MemberVarableType getMemberByName(String text) {
+		MemberVarableType retval = null;
+		for(MemberVarableType member : members) {
+			if(member.name.equals(text)){
+				retval = member;
+				break;
+			}
+		}
+		return retval;
+	}
+
+	public Iterable<MemberVarableType> getAllMembers() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 }

@@ -1,5 +1,7 @@
 package com.devsmart.staple.types;
 
-public interface StapleType {
+public abstract class StapleType {
 
+	
+	
 }

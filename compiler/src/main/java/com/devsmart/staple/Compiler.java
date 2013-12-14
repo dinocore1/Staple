@@ -41,7 +41,7 @@ public class Compiler  {
     	//Parse
     	ParserRuleContext tree = parser.compileUnit();
     	
-    	//tree.inspect(parser);
+    	tree.inspect(parser);
     	
     	//Sem Pass 1
     	SemPass1 sempass1 = new SemPass1(context);
@@ -67,7 +67,6 @@ public class Compiler  {
     	
     	//ParserRuleContext tree = parser.compileUnit();
     	
-		
     	
     	System.out.println( tree.toStringTree(parser) );
     	

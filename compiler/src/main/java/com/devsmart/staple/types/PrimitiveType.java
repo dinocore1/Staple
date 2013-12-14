@@ -1,6 +1,6 @@
 package com.devsmart.staple.types;
 
-public class PrimitiveType implements StapleType {
+public class PrimitiveType extends StapleType {
 	
 	public static final PrimitiveType VOID = new PrimitiveType("void");
 	public static final PrimitiveType BOOL = new PrimitiveType("bool");
@@ -18,5 +18,6 @@ public class PrimitiveType implements StapleType {
 	public String toString() {
 		return mName;
 	}
+
 	
 }

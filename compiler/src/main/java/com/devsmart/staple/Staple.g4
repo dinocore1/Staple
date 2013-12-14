@@ -1,7 +1,7 @@
 grammar Staple;
 
 compileUnit
-	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction | structDef+=structDefinition | classDef+=classDefinition)*
+	: namespace?  (globalfun+=globalFunction | externalfun+=externalFunction | classDef+=classDefinition)*
 	;
 	
 namespace
@@ -14,10 +14,6 @@ externalFunction
 	
 globalFunction
 	: returnType=type name=ID params=formalParameters body=functionBody
-	;
-
-structDefinition
-	: 'struct' name=ID '{' (members+=memberVarableDeclaration)* '}'
 	;
 	
 classDefinition
@@ -73,36 +69,45 @@ statement
 	;
 	
 ifStatement
-	: 'if' '(' cond=expression ')' pos=statement ('else' neg=statement)?
+	: 'if' '(' cond=rvalue ')' pos=statement ('else' neg=statement)?
 	;
 	
 returnStatement
-	: 'return' result=expression?
+	: 'return' result=rvalue?
 	;
 	
 localVariableDeclaration
-    : type ID ('=' init=variableInitializer)?
+    : type ID ('=' init=rvalue)?
     ;
-    
-variableInitializer
-	: expression
-	;
 
 expression
+	: left=lvalue '='<assoc=right> right=rvalue # assignExpression
+	;
+	
+lvalue
+	: name=ID # varRef
+	| name=ID m=memberRef_p[{new ClassMemberDeRef($name)}] # memberRef
+	;
+	
+memberRef_p[ClassMemberDeRef base]
+	: '.' m=ID {base.members.add($m);} memberRef_p[base]?
+	;
+	
+	
+rvalue
 	: primary # primaryExpression
-	| ID # varRefExpression
-	| l=expression '.' r=ID # deRefExpression
-	| ID arguments # functionCall
-	| expression ('*'|'/') expression # mathExpression
-	| expression ('+'|'-') expression # mathExpression
-	| expression ('&' | '|' | '^' | '>>' | '<<') expression # mathExpression
-	| left=expression ('<=' | '>=' | '>' | '<' | '==' | '!=') right=expression # compareExpression
-	| left=expression op=('&&' | '||') right=expression # logicExpression
-	| left=expression '='<assoc=right> right=expression # assignExpression
+	| name=ID # deRef
+	| base=ID '.' member=ID # deRef
+	| name=ID args=arguments # functionCall
+	| rvalue ('*'|'/') rvalue # mathExpression
+	| rvalue ('+'|'-') rvalue # mathExpression
+	| rvalue ('&' | '|' | '^' | '>>' | '<<') rvalue # mathExpression
+	| left=rvalue ('<=' | '>=' | '>' | '<' | '==' | '!=') right=rvalue # compareExpression
+	| left=rvalue op=('&&' | '||') right=rvalue # logicExpression
 	;
 	
 arguments
-	: '(' args+=expression? (',' args+=expression)* ')'
+	: '(' args+=rvalue? (',' args+=rvalue)* ')'
 	;
 	
 primary

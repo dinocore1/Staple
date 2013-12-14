@@ -2,7 +2,7 @@ package com.devsmart.staple.symbols;
 
 public abstract class AbstractSymbol implements StapleSymbol {
 
-	protected String mName;
+	public String mName;
 	
 	public AbstractSymbol(String name) {
 		mName = name;

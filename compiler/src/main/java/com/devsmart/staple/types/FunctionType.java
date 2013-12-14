@@ -6,7 +6,7 @@ import java.util.Iterator;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
 
-public class FunctionType implements StapleType {
+public class FunctionType extends StapleType {
 
 	public final StapleType returnType;
 	public final StapleType[] arguments;

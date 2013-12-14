@@ -1,13 +1,8 @@
 package com.devsmart.staple;
 
-import com.devsmart.staple.StapleParser.ClassDefinitionContext;
-import com.devsmart.staple.StapleParser.CompileUnitContext;
-import com.devsmart.staple.StapleParser.ExternalFunctionContext;
-import com.devsmart.staple.StapleParser.GlobalFunctionContext;
-import com.devsmart.staple.StapleParser.StructDefinitionContext;
-import com.devsmart.staple.symbols.ClassSymbol;
-import com.devsmart.staple.symbols.FunctionSymbol;
-import com.devsmart.staple.symbols.StructSymbol;
+import com.devsmart.staple.StapleParser.*;
+import com.devsmart.staple.symbols.*;
+import com.devsmart.staple.types.*;
 
 public class SemPass1 extends StapleBaseVisitor<Void> {
 	
@@ -27,26 +22,14 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
 		return null;
 	}
 	
-	@Override
-	public Void visitStructDefinition(StructDefinitionContext ctx) {
-		String name = ctx.name.getText();
-		StructSymbol symbol = new StructSymbol(name);
-		mCurrentScope.define(symbol);
-		
-		mContext.symbolTreeProperties.put(ctx, symbol);
-		
-		return null;
-	}
 	
 	@Override
 	public Void visitClassDefinition(ClassDefinitionContext ctx) {
 		
 		String name = ctx.name.getText();
-		ClassSymbol symbol = new ClassSymbol(name);
-		mCurrentScope.define(symbol);
-		
-		mContext.symbolTreeProperties.put(ctx, symbol);
-		
+		ClassType type = new ClassType(name);
+		mContext.types.add(type);
+		mContext.typeTreeProperty.put(ctx, type);
 		return null;
 	}
 
