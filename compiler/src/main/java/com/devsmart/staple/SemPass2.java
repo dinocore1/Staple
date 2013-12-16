@@ -8,6 +8,7 @@ import java.util.List;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+import com.devsmart.staple.StapleParser.VarValueContext;
 import com.devsmart.staple.StapleParser.*;
 import com.devsmart.staple.instructions.Operand;
 import com.devsmart.staple.symbols.*;
@@ -137,8 +138,10 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		mCurrentClassType.members = new ArrayList<MemberVarableType>(ctx.members.size());
 		for(MemberVarableDeclarationContext memberCtx : ctx.members){
 			MemberVarableType membertype = (MemberVarableType) visit(memberCtx);
+			membertype.computeOffset(mCurrentClassType);
 			mCurrentClassType.members.add(membertype);
 		}
+		
 		
 		//visit functions
 		mCurrentClassType.functions = new ArrayList<FunctionType>(ctx.functions.size());
@@ -191,7 +194,7 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 		
 		StapleType varType = mContext.typeTreeProperty.get(ctx.getChild(0));
 		String varName = ctx.getChild(1).getText();
-		MemberVarableType varSymbol = new MemberVarableType(varName, varType);
+		MemberVarableType varSymbol = new MemberVarableType(mCurrentClassType, varName, varType);
 		mContext.typeTreeProperty.put(ctx, varSymbol);
 		
 		return varSymbol;
@@ -213,103 +216,73 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	}
 	
 	@Override
-	public StapleType visitVarRef(VarRefContext ctx) {
+	public StapleType visitVarDeRef(VarDeRefContext ctx) {
 		String varName = ctx.name.getText();
 		StapleSymbol symbol = mCurrentScope.resolve(varName);
 		if(symbol == null){
 			mContext.errorStream.error(String.format("No symbol: '%s'", varName), ctx.name);
 			return null;
 		}
+		mContext.symbolTreeProperties.put(ctx, symbol);
 		return symbol.getType();
 	}
 	
 
 	@Override
-	public StapleType visitMemberRef(MemberRefContext ctx) {
+	public StapleType visitVarValue(VarValueContext ctx) {
+		
+		String name = ctx.name.getText();
+		StapleSymbol symbol = mCurrentScope.resolve(name);
+		if(symbol == null){
+			mContext.errorStream.error("undefined symbol: '" + name + "'", ctx.name);
+			return null;
+		}
+		mContext.symbolTreeProperties.put(ctx, symbol);
+		return symbol.getType();
+		
+	}
+
+	@Override
+	public StapleType visitMemberDeRef(MemberDeRefContext ctx) {
 		
 		StapleType retval = null;
-		
-		String varName = ctx.m.base.base.getText();
-		StapleSymbol symbol = mCurrentScope.resolve(varName);
-		if(symbol == null){
+		String varName = ctx.m.deref.base.getText();
+		StapleSymbol baseSymbol = mCurrentScope.resolve(varName);
+		if(baseSymbol == null){
 			mContext.errorStream.error(String.format("No symbol: '%s'", varName), ctx.name);
 			return null;
 		}
-		if(!(symbol.getType() instanceof ClassType)) {
+		if(!(baseSymbol.getType() instanceof ClassType)) {
 			mContext.errorStream.error(String.format("'%s' is not a class type", varName), ctx.name);
 			return null;
 		}
 		
-		ClassType classType = (ClassType)symbol.getType();
-		for(int i=0;i<ctx.m.base.members.size();i++){
-			Token memberToken = ctx.m.base.members.get(i);
-			MemberVarableType member = classType.getMemberByName(memberToken.getText());
-			if(i < ctx.m.base.members.size()-1){
-				//should be a class type
-				
-				if(!(member.getType() instanceof PointerType)){
-					mContext.errorStream.error(String.format("'%s' is not a pointer type", memberToken.getText()), memberToken);
-					return null;
-				} else {
-					PointerType pointer = (PointerType) member.getType();
-					if(!(pointer.baseType instanceof ClassType)){
-						mContext.errorStream.error(String.format("'%s' is not a pointer to a class", memberToken.getText()), memberToken);
-						return null;
-					}
-					classType = (ClassType)pointer.baseType;
-				}
-			} else {
-				retval = member;
-				break;
-			}
+		ClassType classType = (ClassType)baseSymbol.getType();
+		MemberVarableType member = classType.getMemberByName(ctx.m.deref.member.getText());
+		ctx.m.deref.memberSymbol = new MemberVarableSymbol(baseSymbol, member);
+		mContext.symbolTreeProperties.put(ctx, ctx.m.deref.memberSymbol);
+		
+		retval = visit(ctx.m);
+			
+		return retval;
+	}
+	
+	@Override
+	public StapleType visitMemberDeRef_p(MemberDeRef_pContext ctx) {
+		StapleType retval = null;
+		
+		if(ctx.r == null){
+			retval = ctx.deref.memberSymbol.member;
+		} else {
+			MemberVarableType member = ctx.deref.memberSymbol.member.base.getMemberByName(ctx.r.deref.member.getText());
+			ctx.r.deref.memberSymbol = new MemberVarableSymbol(ctx.deref.memberSymbol, member);
+			mContext.symbolTreeProperties.put(ctx, ctx.r.deref.memberSymbol);
+			retval = visit(ctx.r);
 		}
 		
 		return retval;
 	}
 	
-	@Override
-	public StapleType visitMemberRef_p(MemberRef_pContext ctx) {
-		return mCurrentClassType;
-		
-		
-	}
-	
-	@Override
-	public StapleType visitDeRef(DeRefContext ctx) {
-		
-		if(ctx.name != null){
-			String name = ctx.name.getText();
-			StapleSymbol symbol = mCurrentScope.resolve(name);
-			if(symbol == null){
-				mContext.errorStream.error("undefined symbol: '" + name + "'", ctx.name);
-				return null;
-			}
-			mContext.symbolTreeProperties.put(ctx, symbol);
-			return symbol.getType();
-		}
-		
-		if(ctx.base != null){
-			String base = ctx.base.getText();
-			StapleSymbol basesymbol = mCurrentScope.resolve(base);
-			if(basesymbol == null) {
-				mContext.errorStream.error("undefined symbol: '" + base + "'", ctx.base);
-				return null;
-			}
-			if(!(basesymbol instanceof ClassSymbol)){
-				mContext.errorStream.error(String.format("'%s' is not a classtype", base), ctx.base);
-				return null;
-			} else {
-				ClassSymbol baseclasssymbol = (ClassSymbol)basesymbol;
-				MemberVarableType membersymbol = baseclasssymbol.type.getMemberByName(ctx.member.getText());
-				mContext.symbolTreeProperties.put(ctx, new MemberVarableSymbol(ctx.member.getText(), membersymbol));
-				return membersymbol.getType();
-			}
-			
-		}
-		
-		return null;
-	}
-
 	@Override
 	public StapleType visitCompareExpression(CompareExpressionContext ctx) {
 		

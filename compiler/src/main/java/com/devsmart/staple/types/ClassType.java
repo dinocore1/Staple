@@ -42,7 +42,13 @@ public class ClassType extends StapleType {
 	}
 
 	public Iterable<MemberVarableType> getAllMembers() {
-		// TODO Auto-generated method stub
-		return null;
+		ArrayList<MemberVarableType> memberList = new ArrayList<MemberVarableType>();
+		if(extendsType != null) {
+			for(MemberVarableType m : extendsType.getAllMembers()){
+				memberList.add(m);
+			}
+		}
+		memberList.addAll(members);
+		return memberList;
 	}
 }

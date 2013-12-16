@@ -85,19 +85,19 @@ expression
 	;
 	
 lvalue
-	: name=ID # varRef
-	| name=ID m=memberRef_p[{new ClassMemberDeRef($name)}] # memberRef
+	: name=ID # varDeRef
+	| name=ID m=memberDeRef_p[{new ClassMemberDeRef($name)}] # memberDeRef
 	;
 	
-memberRef_p[ClassMemberDeRef base]
-	: '.' m=ID {base.members.add($m);} memberRef_p[base]?
+memberDeRef_p[ClassMemberDeRef deref]
+	: '.' m=ID {deref.member = $m;} 
+	| '.' m=ID {deref.member = $m;} r=memberDeRef_p[{new ClassMemberDeRef($m)}]
 	;
-	
 	
 rvalue
 	: primary # primaryExpression
-	| name=ID # deRef
-	| base=ID '.' member=ID # deRef
+	| name=ID # varValue
+	| name=ID '.' member=ID # memberValue
 	| name=ID args=arguments # functionCall
 	| rvalue ('*'|'/') rvalue # mathExpression
 	| rvalue ('+'|'-') rvalue # mathExpression

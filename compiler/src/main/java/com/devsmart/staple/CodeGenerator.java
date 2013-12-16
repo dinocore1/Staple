@@ -3,22 +3,82 @@ package com.devsmart.staple;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.antlr.v4.runtime.RuleContext;
 import org.antlr.v4.runtime.misc.Pair;
 import org.stringtemplate.v4.STGroup;
 
-import com.devsmart.staple.instructions.*;
-import com.devsmart.staple.StapleParser.*;
-import com.devsmart.staple.symbols.*;
-import com.devsmart.staple.types.*;
+import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
+
+import com.devsmart.staple.StapleParser.AssignExpressionContext;
+import com.devsmart.staple.StapleParser.ClassDefinitionContext;
+import com.devsmart.staple.StapleParser.CompareExpressionContext;
+import com.devsmart.staple.StapleParser.CompileUnitContext;
+import com.devsmart.staple.StapleParser.ExternalFunctionContext;
+import com.devsmart.staple.StapleParser.FormalParameterContext;
+import com.devsmart.staple.StapleParser.FunctionCallContext;
+import com.devsmart.staple.StapleParser.GlobalFunctionContext;
+import com.devsmart.staple.StapleParser.IfStatementContext;
+import com.devsmart.staple.StapleParser.IntLiteralContext;
+import com.devsmart.staple.StapleParser.LocalVariableDeclarationContext;
+import com.devsmart.staple.StapleParser.LogicExpressionContext;
+import com.devsmart.staple.StapleParser.MathExpressionContext;
+import com.devsmart.staple.StapleParser.MemberDeRefContext;
+import com.devsmart.staple.StapleParser.MemberDeRef_pContext;
+import com.devsmart.staple.StapleParser.MemberFunctionContext;
+import com.devsmart.staple.StapleParser.ReturnStatementContext;
+import com.devsmart.staple.StapleParser.RvalueContext;
+import com.devsmart.staple.StapleParser.StringLiteralContext;
+import com.devsmart.staple.StapleParser.VarDeRefContext;
+import com.devsmart.staple.StapleParser.VarValueContext;
+import com.devsmart.staple.instructions.AddInstruction;
+import com.devsmart.staple.instructions.AllocVariableInstruction;
+import com.devsmart.staple.instructions.BitAndInstruction;
+import com.devsmart.staple.instructions.BitOrInstruction;
+import com.devsmart.staple.instructions.BitXorInstruction;
+import com.devsmart.staple.instructions.BitcastInstruction;
+import com.devsmart.staple.instructions.BranchInstruction;
+import com.devsmart.staple.instructions.ClassStructDeclareInstruction;
+import com.devsmart.staple.instructions.DivideInstruction;
+import com.devsmart.staple.instructions.ExternalFunctionInstruction;
+import com.devsmart.staple.instructions.FunctionCallInstruction;
+import com.devsmart.staple.instructions.FunctionDeclareInstruction;
+import com.devsmart.staple.instructions.GetPointerInstruction;
+import com.devsmart.staple.instructions.Instruction;
+import com.devsmart.staple.instructions.IntLiteral;
+import com.devsmart.staple.instructions.IntegerCompareInstruction;
+import com.devsmart.staple.instructions.JumpInstruction;
+import com.devsmart.staple.instructions.LabelFactory;
+import com.devsmart.staple.instructions.LabelInstruction;
+import com.devsmart.staple.instructions.LoadInstruction;
+import com.devsmart.staple.instructions.Location;
+import com.devsmart.staple.instructions.LocationFactory;
+import com.devsmart.staple.instructions.MultiplyInstruction;
+import com.devsmart.staple.instructions.Operand;
+import com.devsmart.staple.instructions.PhiInstruction;
+import com.devsmart.staple.instructions.Register;
+import com.devsmart.staple.instructions.ReturnInstruction;
+import com.devsmart.staple.instructions.StoreInstruction;
+import com.devsmart.staple.instructions.StringLiteralDeclareInstruction;
+import com.devsmart.staple.instructions.SubtractInstruction;
+import com.devsmart.staple.instructions.SymbolReference;
+import com.devsmart.staple.symbols.FunctionSymbol;
+import com.devsmart.staple.symbols.LocalVarableSymbol;
+import com.devsmart.staple.symbols.MemberVarableSymbol;
+import com.devsmart.staple.symbols.StapleSymbol;
+import com.devsmart.staple.symbols.StringLiteralSymbol;
+import com.devsmart.staple.types.ArrayType;
+import com.devsmart.staple.types.ClassType;
+import com.devsmart.staple.types.MemberVarableType;
+import com.devsmart.staple.types.PointerType;
+import com.devsmart.staple.types.PrimitiveType;
+import com.devsmart.staple.types.StapleType;
+import com.sun.org.apache.xalan.internal.xsltc.compiler.sym;
 
 
 public class CodeGenerator extends StapleBaseVisitor<Operand> {
@@ -28,71 +88,69 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	private LocationFactory mLocationFactory = new LocationFactory();
 	private LabelFactory mLabelFactory = new LabelFactory();
 	private LinkedList< List<Instruction> > mCodeBlockStack = new LinkedList< List<Instruction> >();
-	private Set<Pair<StapleSymbol, Register>> registers = new HashSet<Pair<StapleSymbol, Register>>();
-	boolean getPointer = false;
-	
+	private Set<Pair<StapleSymbol, Register>> valueRegisters = new HashSet<Pair<StapleSymbol, Register>>();
+	private Set<Pair<StapleSymbol, Register>> locationRegisters = new HashSet<Pair<StapleSymbol, Register>>();
 
 	public CodeGenerator(CompileContext context) {
 		mContext = context;
 	}
 	
-	private void addLocation(StapleSymbol symbol, Register register){
-		registers.add(new Pair<StapleSymbol, Register>(symbol, register));
+	private void setRegisterValue(Register register, StapleSymbol symbol) {
+		//remove any register that previously held this symbol
+		Iterator<Pair<StapleSymbol, Register>> it = valueRegisters.iterator();
+		while(it.hasNext()){
+			Pair<StapleSymbol, Register> p = it.next();
+			if(p.a.equals(symbol)){
+				it.remove();
+			}
+		}
+		valueRegisters.add(new Pair<StapleSymbol, Register>(symbol, register));
 	}
 	
-	private Register getValueOf(StapleSymbol symbol){
-		
-		Register pointer = null;
-		Pair<StapleSymbol, Register> pair;
-		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
-		
-		while(it.hasNext()){
-			pair = it.next();
-			if(pair.a.equals(symbol)){
-				if(symbol.getType() instanceof PointerType &&
-						pair.b.getType() instanceof PointerType){
-					return pair.b;
-				} else {
-					pointer = pair.b;
-				}
+	private Register getSymbolValue(StapleSymbol symbol) {
+		Register retval = null;
+		for(Pair<StapleSymbol, Register> p : valueRegisters){
+			if(p.a.equals(symbol)){
+				retval = p.b;
+				break;
 			}
 		}
 		
-		if(pointer != null){
-			Register r = mLocationFactory.createTempLocation(symbol.getType());
-			emit(new LoadInstruction(pointer, r));
-			registers.add(new Pair<StapleSymbol, Register>(symbol, r));
-			return r;
-		}
-		
-		return null;
-	}
-	
-	private Register getPointerTo(StapleSymbol symbol){
-		Pair<StapleSymbol, Register> pair;
-		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
-		Register valueRegister = null;
-		
-		while(it.hasNext()){
-			pair = it.next();
-			if(pair.a.equals(symbol)){
-				StapleType btype = pair.b.getType();
-				if(btype instanceof PointerType && pair.a.getType().equals(((PointerType) btype).baseType)){
-					return pair.b;
-				} else {
-					valueRegister = pair.b;
-				}
+		if(retval == null){
+			//try a load
+			Register location = getSymbolLocation(symbol);
+			if(location != null) {
+				retval = mLocationFactory.createTempLocation(symbol.getType());
+				LoadInstruction load = new LoadInstruction(location, retval);
+				emit(load);
+				setRegisterValue(retval, symbol);
 			}
 		}
 		
-		if(valueRegister != null){
-			Register retval = mLocationFactory.createTempLocation(new PointerType(valueRegister.getType()));
-			emit(new GetPointerInstruction(retval, valueRegister, new IntLiteral(0)));
-			registers.add(new Pair<StapleSymbol, Register>(symbol, retval));
-			return retval;
+		return retval;
+	}
+	
+	private void setRegisterLocation(Register register, StapleSymbol symbol) {
+		//remove any register that previously held this symbol
+		Iterator<Pair<StapleSymbol, Register>> it = locationRegisters.iterator();
+		while(it.hasNext()){
+			Pair<StapleSymbol, Register> p = it.next();
+			if(p.a.equals(symbol)){
+				it.remove();
+			}
 		}
-		
-		return null;
+		locationRegisters.add(new Pair<StapleSymbol, Register>(symbol, register));
+	}
+	
+	private Register getSymbolLocation(StapleSymbol symbol) {
+		Register retval = null;
+		for(Pair<StapleSymbol, Register> p : locationRegisters){
+			if(p.a.equals(symbol)){
+				retval = p.b;
+				break;
+			}
+		}
+		return retval;
 	}
 	
 
@@ -233,12 +291,12 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	public Operand visitFormalParameter(FormalParameterContext ctx) {
 		
 		LocalVarableSymbol varSymbol = (LocalVarableSymbol) mContext.symbolTreeProperties.get(ctx);
-		addLocation(varSymbol, new Register(varSymbol.getName(), varSymbol.getType()));
+		setRegisterValue(new Register(varSymbol.getName(), varSymbol.getType()), varSymbol);
 		
-		Register dest = mLocationFactory.createTempLocation(new PointerType(varSymbol.getType()));
-		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, 1);
+		Register location = mLocationFactory.createTempLocation(new PointerType(varSymbol.getType()));
+		AllocVariableInstruction instruction = new AllocVariableInstruction(location, 1);
 		emit(instruction);
-		addLocation(varSymbol, dest);
+		setRegisterLocation(location, varSymbol);
 		
 		return null;
 	}
@@ -253,11 +311,12 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		AllocVariableInstruction instruction = new AllocVariableInstruction(dest, 1);
 		emit(instruction);
 		
-		addLocation(varSymbol, dest);
+		setRegisterLocation(dest, varSymbol);
 		
 		if(ctx.init != null){
-			Operand right = visit(ctx.init);
+			Register right = (Register) visit(ctx.init);
 			emit(new StoreInstruction(right, dest));
+			setRegisterValue(right, varSymbol);
 		}
 		
 		return null;
@@ -356,31 +415,82 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 	}
 	
 	@Override
+	public Operand visitMemberDeRef(MemberDeRefContext ctx) {
+		
+		MemberVarableSymbol memberVarSymbol = (MemberVarableSymbol) mContext.symbolTreeProperties.get(ctx);
+		
+		getSymbolValue(memberVarSymbol.baseSymbol);
+		Register baseLocation = getSymbolLocation(memberVarSymbol.baseSymbol);
+		
+		Register result = mLocationFactory.createTempLocation(memberVarSymbol.getType());
+		GetPointerInstruction getpointer = new GetPointerInstruction(result, baseLocation, new IntLiteral(0), new IntLiteral(memberVarSymbol.member.getOffset()));
+		emit(getpointer);
+		
+		setRegisterLocation(result, memberVarSymbol);
+		
+		Operand r = visit(ctx.m);
+		if(r != null){
+			return r;
+		}
+		
+		return result;
+	}
+	
+	@Override
+	public Operand visitMemberDeRef_p(MemberDeRef_pContext ctx) {
+		
+		Register result = null;
+		MemberVarableSymbol memberVarSymbol = (MemberVarableSymbol) mContext.symbolTreeProperties.get(ctx);
+		if(memberVarSymbol != null) {
+			Register baseLocation = getSymbolValue(memberVarSymbol.baseSymbol);
+			//Register baseLocation = getSymbolLocation(memberVarSymbol.baseSymbol);
+			
+			result = mLocationFactory.createTempLocation(memberVarSymbol.getType());
+			GetPointerInstruction getpointer = new GetPointerInstruction(result, baseLocation, new IntLiteral(0), new IntLiteral(memberVarSymbol.member.getOffset()));
+			emit(getpointer);
+			
+			setRegisterLocation(result, memberVarSymbol);
+			
+			Operand r = visit(ctx.r);
+			if(r != null){
+				return r;
+			}
+		}
+		return result;
+	}
+	
+	@Override
+	public Operand visitVarValue(VarValueContext ctx) {
+		StapleSymbol varSymbol = mContext.symbolTreeProperties.get(ctx);
+		
+		Register r = getSymbolValue(varSymbol);
+		return r;
+	}
+	
+	@Override
+	public Operand visitVarDeRef(VarDeRefContext ctx) {
+		StapleSymbol varSymbol = mContext.symbolTreeProperties.get(ctx);
+		Register r = getSymbolLocation(varSymbol);
+		return r;
+	}
+	
+	@Override
 	public Operand visitAssignExpression(AssignExpressionContext ctx) {
 		
 		StapleSymbol leftSymbol = mContext.symbolTreeProperties.get(ctx.left);
 		
-		getPointer = true;
-		Register left = (Register) visit(ctx.left);
+		Operand right = visit(ctx.right);
 		
-		getPointer = false;
-		Register right = (Register) visit(ctx.right);
-		
-		PointerType leftType = (PointerType) left.getType();
-		
-		Register storageRegister = bitcast(right, leftSymbol.getType());
-		
-		emit(new StoreInstruction(storageRegister, left));
-		
-		Iterator<Pair<StapleSymbol, Register>> it = registers.iterator();
-		while(it.hasNext()){
-			Pair<StapleSymbol, Register> p = it.next();
-			if(p.a.equals(leftSymbol)){
-				it.remove();
-			}
+		if(right instanceof Register){
+			right = bitcast((Register) right, leftSymbol.getType());
 		}
 		
-		addLocation(leftSymbol, storageRegister);
+		Register left = (Register)visit(ctx.left);
+		
+		emit(new StoreInstruction(right, left));
+		
+		setRegisterValue(left, leftSymbol);
+		//setRegisterLocation(left, leftSymbol);
 		
 		
 		return null;
@@ -505,7 +615,7 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		GetPointerInstruction inst = new GetPointerInstruction(templocation, new SymbolReference(symbol), new IntLiteral(0), new IntLiteral(0));
 		emit(inst);
-		addLocation(symbol, templocation);
+		setRegisterLocation(templocation, symbol);
 		
 		return templocation;
 	}

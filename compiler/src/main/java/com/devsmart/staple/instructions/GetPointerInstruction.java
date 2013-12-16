@@ -12,6 +12,12 @@ public class GetPointerInstruction implements Instruction {
 	private Operand obj;
 	private List<Operand> index;
 	
+	public GetPointerInstruction(Location result, Operand obj, List<Operand> indexs) {
+		this.result = result;
+		this.obj = obj;
+		this.index = indexs;
+	}
+	
 	public GetPointerInstruction(Location result, Operand obj, Operand... index) {
 		this.result = result;
 		this.obj = obj;

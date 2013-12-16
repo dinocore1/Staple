@@ -1,15 +1,15 @@
 package com.devsmart.staple;
 
-import java.util.ArrayList;
-
 import org.antlr.v4.runtime.Token;
+
+import com.devsmart.staple.symbols.MemberVarableSymbol;
 
 
 public class ClassMemberDeRef {
 
-	
 	public Token base;
-	public ArrayList<Token> members = new ArrayList<Token>();
+	public Token member;
+	public MemberVarableSymbol memberSymbol;
 
 	public ClassMemberDeRef(Token name) {
 		this.base = name;
