@@ -4,13 +4,13 @@ import java.util.Iterator;
 
 public class MemberVarableType extends StapleType {
 
-	public final ClassType base;
+	public final ClassType classType;
 	public final String name;
 	public final StapleType type;
 	private int offset;
 	
-	public MemberVarableType(ClassType base, String name, StapleType type) {
-		this.base = base;
+	public MemberVarableType(ClassType classType, String name, StapleType type) {
+		this.classType = classType;
 		this.name = name;
 		this.type = type;
 	}

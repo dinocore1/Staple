@@ -244,23 +244,29 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 
 	@Override
 	public StapleType visitMemberDeRef(MemberDeRefContext ctx) {
-		
 		StapleType retval = null;
-		String varName = ctx.m.deref.base.getText();
-		StapleSymbol baseSymbol = mCurrentScope.resolve(varName);
-		if(baseSymbol == null){
-			mContext.errorStream.error(String.format("No symbol: '%s'", varName), ctx.name);
-			return null;
-		}
-		if(!(baseSymbol.getType() instanceof ClassType)) {
-			mContext.errorStream.error(String.format("'%s' is not a class type", varName), ctx.name);
-			return null;
-		}
 		
-		ClassType classType = (ClassType)baseSymbol.getType();
-		MemberVarableType member = classType.getMemberByName(ctx.m.deref.member.getText());
-		ctx.m.deref.memberSymbol = new MemberVarableSymbol(baseSymbol, member);
-		mContext.symbolTreeProperties.put(ctx, ctx.m.deref.memberSymbol);
+		String memberName = ctx.m.deref.getName();
+		MemberVarableSymbol memberSymbol = (MemberVarableSymbol) mCurrentScope.resolve(memberName);
+		
+		if(memberSymbol == null){
+			String varName = ctx.m.deref.getBase();
+			StapleSymbol baseSymbol = mCurrentScope.resolve(varName);
+			if(baseSymbol == null){
+				mContext.errorStream.error(String.format("No symbol: '%s'", varName), ctx.name);
+				return null;
+			}
+			if(!(baseSymbol.getType() instanceof ClassType)) {
+				mContext.errorStream.error(String.format("'%s' is not a class type", varName), ctx.name);
+				return null;
+			}
+			
+			ClassType classType = (ClassType)baseSymbol.getType();
+			MemberVarableType member = classType.getMemberByName(ctx.m.deref.getMember());
+			memberSymbol = new MemberVarableSymbol(baseSymbol, member);
+			mCurrentScope.define(memberSymbol);
+		}
+		mContext.symbolTreeProperties.put(ctx, memberSymbol);
 		
 		retval = visit(ctx.m);
 			
@@ -271,12 +277,24 @@ public class SemPass2 extends StapleBaseVisitor<StapleType> {
 	public StapleType visitMemberDeRef_p(MemberDeRef_pContext ctx) {
 		StapleType retval = null;
 		
+		String baseSymbolName = ctx.deref.getName();
+		MemberVarableSymbol base = (MemberVarableSymbol) mCurrentScope.resolve(baseSymbolName);
+		
 		if(ctx.r == null){
-			retval = ctx.deref.memberSymbol.member;
+			retval = base.type.getType();
 		} else {
-			MemberVarableType member = ctx.deref.memberSymbol.member.base.getMemberByName(ctx.r.deref.member.getText());
-			ctx.r.deref.memberSymbol = new MemberVarableSymbol(ctx.deref.memberSymbol, member);
-			mContext.symbolTreeProperties.put(ctx, ctx.r.deref.memberSymbol);
+			String nextSymbolname = ctx.r.deref.getName();
+			MemberVarableSymbol memberSymbol = (MemberVarableSymbol) mCurrentScope.resolve(nextSymbolname);
+			if(memberSymbol == null){
+				MemberVarableType member = base.type.classType.getMemberByName(ctx.r.deref.getMember());
+				if(member == null){
+					mContext.errorStream.error(String.format("class: '%s' does not have member: '%s'", base.type.classType.mName, ctx.r.deref.getMember()), ctx.r.deref.parts.get(ctx.r.deref.parts.size()-1));
+					return null;
+				}
+				memberSymbol = new MemberVarableSymbol(base, member);
+				mCurrentScope.define(memberSymbol);
+			}
+			mContext.symbolTreeProperties.put(ctx, memberSymbol);
 			retval = visit(ctx.r);
 		}
 		

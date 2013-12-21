@@ -419,14 +419,13 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		MemberVarableSymbol memberVarSymbol = (MemberVarableSymbol) mContext.symbolTreeProperties.get(ctx);
 		
-		getSymbolValue(memberVarSymbol.baseSymbol);
 		Register baseLocation = getSymbolLocation(memberVarSymbol.baseSymbol);
 		
-		Register result = mLocationFactory.createTempLocation(memberVarSymbol.getType());
-		GetPointerInstruction getpointer = new GetPointerInstruction(result, baseLocation, new IntLiteral(0), new IntLiteral(memberVarSymbol.member.getOffset()));
+		Register result = mLocationFactory.createTempLocation(new PointerType(memberVarSymbol.type.type));
+		GetPointerInstruction getpointer = new GetPointerInstruction(result, baseLocation, new IntLiteral(0), new IntLiteral(memberVarSymbol.type.getOffset()));
 		emit(getpointer);
 		
-		setRegisterLocation(result, memberVarSymbol);
+		//setRegisterLocation(result, memberVarSymbol);
 		
 		Operand r = visit(ctx.m);
 		if(r != null){
@@ -442,11 +441,14 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		Register result = null;
 		MemberVarableSymbol memberVarSymbol = (MemberVarableSymbol) mContext.symbolTreeProperties.get(ctx);
 		if(memberVarSymbol != null) {
-			Register baseLocation = getSymbolValue(memberVarSymbol.baseSymbol);
-			//Register baseLocation = getSymbolLocation(memberVarSymbol.baseSymbol);
+			Register baseLocation = getSymbolLocation(memberVarSymbol.baseSymbol);
 			
-			result = mLocationFactory.createTempLocation(memberVarSymbol.getType());
-			GetPointerInstruction getpointer = new GetPointerInstruction(result, baseLocation, new IntLiteral(0), new IntLiteral(memberVarSymbol.member.getOffset()));
+			Register tempLoad = mLocationFactory.createTempLocation(((PointerType)baseLocation.getType()).baseType);
+			LoadInstruction load = new LoadInstruction(baseLocation, tempLoad);
+			emit(load);
+			
+			result = mLocationFactory.createTempLocation(new PointerType(memberVarSymbol.type.type));
+			GetPointerInstruction getpointer = new GetPointerInstruction(result, tempLoad, new IntLiteral(0), new IntLiteral(memberVarSymbol.type.getOffset()));
 			emit(getpointer);
 			
 			setRegisterLocation(result, memberVarSymbol);
@@ -489,8 +491,8 @@ public class CodeGenerator extends StapleBaseVisitor<Operand> {
 		
 		emit(new StoreInstruction(right, left));
 		
-		setRegisterValue(left, leftSymbol);
-		//setRegisterLocation(left, leftSymbol);
+		//setRegisterValue(left, leftSymbol);
+		setRegisterLocation(left, leftSymbol);
 		
 		
 		return null;

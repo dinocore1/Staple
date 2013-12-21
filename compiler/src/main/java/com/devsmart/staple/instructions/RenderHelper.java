@@ -9,6 +9,7 @@ import com.devsmart.common.StringUtils;
 import com.devsmart.staple.symbols.FunctionSymbol;
 import com.devsmart.staple.symbols.FunctionSymbol.Access;
 import com.devsmart.staple.symbols.LocalVarableSymbol;
+import com.devsmart.staple.symbols.MemberVarableSymbol;
 import com.devsmart.staple.symbols.StapleSymbol;
 import com.devsmart.staple.symbols.StringLiteralSymbol;
 import com.devsmart.staple.types.ArrayType;

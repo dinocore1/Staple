@@ -90,8 +90,8 @@ lvalue
 	;
 	
 memberDeRef_p[ClassMemberDeRef deref]
-	: '.' m=ID {deref.member = $m;} 
-	| '.' m=ID {deref.member = $m;} r=memberDeRef_p[{new ClassMemberDeRef($m)}]
+	: '.' m=ID {deref.parts.add($m);} 
+	| '.' m=ID {deref.parts.add($m);} r=memberDeRef_p[{new ClassMemberDeRef(deref)}]
 	;
 	
 rvalue
