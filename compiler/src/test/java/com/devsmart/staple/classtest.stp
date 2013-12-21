@@ -13,7 +13,6 @@ class LinkedListStruct {
 int main() {
 	LinkedListStruct a;
 	a.next = malloc(15);
-	a.next = 0;
 	a.next.prev = malloc(15);
 	a.next.prev.next = malloc(15);
 	return 0;
