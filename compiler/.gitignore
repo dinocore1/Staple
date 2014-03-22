@@ -1,2 +1,10 @@
 target
 bin
+
+build/
+out/
+.gradle/
+src/generated-sources/
+*.iml
+*.ipr
+*.iws

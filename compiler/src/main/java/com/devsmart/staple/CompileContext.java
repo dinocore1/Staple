@@ -34,7 +34,7 @@ public class CompileContext {
 	public static CompileContext defaultContext() {
 		CompileContext retval = new CompileContext();
 		
-		URL codeOutputStringTemplate = ClassLoader.getSystemResource("llvm.stg");
+		URL codeOutputStringTemplate = ClassLoader.getSystemResource("com/devsmart/staple/llvm.stg");
 		retval.codegentemplate = new STGroupFile(codeOutputStringTemplate, "UTF-8", '<', '>');
     	
 		return retval;
