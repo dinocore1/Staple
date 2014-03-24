@@ -5,10 +5,10 @@ compileUnit
 	;
 
 classDecl
-	: 'class' ID '{' (memberFunctionDecl | memberVar)* '}'
+	: 'class' CLASSNAME '{' (memberFunctionDecl | memberVarDecl)* '}'
 	;
 
-memberVar
+memberVarDecl
     : type ID ';'
     ;
 
@@ -48,15 +48,21 @@ args
 	;
 
 type
-	: 'void'
+	: classType
+	| 'void'
 	| intType
 	| 'byte'
 	| 'float'
+	| 'string'
 	;
 
 intType
 	: 'int' INT?
 	;
+
+classType
+    : CLASSNAME
+    ;
 
 // T o k e n s
 
@@ -100,3 +106,7 @@ INT
 HEX
 	: [a-zA-Z09]
 	;
+
+CLASSNAME
+    : [A-Z][a-zA-Z09_.]*
+    ;
