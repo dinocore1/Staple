@@ -27,7 +27,7 @@ stmt
     ;
 
 localVarDecl
-    : type ID ';'
+    : t=type id=ID ';'
     ;
 
 // E x p r e s s i o n s
@@ -39,7 +39,7 @@ expr
     | l=expr op=('*'|'/') r=expr # mathOp
     | '(' expr ')' # expr1
     | v=INT # intLiteral
-    | ID # varReference
+    | v=ID # varReference
     ;
 
 
