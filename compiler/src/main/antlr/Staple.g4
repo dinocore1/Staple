@@ -5,7 +5,7 @@ compileUnit
 	;
 
 classDecl
-	: 'class' CLASSNAME '{' (memberFunctionDecl | memberVarDecl)* '}'
+	: 'class' ID '{' (memberFunctionDecl | memberVarDecl)* '}'
 	;
 
 memberVarDecl
@@ -35,11 +35,11 @@ localVarDecl
 expr
     : l=expr '=' r=expr # assign
     | l=expr op=('<'|'>'|'>='|'<='|'=='|'!=') r=expr # relation
-    | l=expr op=('+'|'-') r=expr # mathOp
     | l=expr op=('*'|'/') r=expr # mathOp
+    | l=expr op=('+'|'-') r=expr # mathOp
     | '(' expr ')' # expr1
     | v=INT # intLiteral
-    | v=ID # varReference
+    | v=ID # symbolReference
     ;
 
 
@@ -104,9 +104,9 @@ INT
 	;
 
 HEX
-	: [a-zA-Z09]
+	: [a-zA-Z0-9]
 	;
 
 CLASSNAME
-    : [A-Z][a-zA-Z09_.]*
+    : [A-Z][a-zA-Z0-9]*
     ;

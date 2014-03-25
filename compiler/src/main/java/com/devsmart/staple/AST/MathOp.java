@@ -27,9 +27,9 @@ public class MathOp extends ASTNode {
         }
     }
 
-    private final Operation operation;
-    private final ASTNode left;
-    private final ASTNode right;
+    public final Operation operation;
+    public final ASTNode left;
+    public final ASTNode right;
 
     public MathOp(Operation op, ASTNode left, ASTNode right) {
         this.operation = op;

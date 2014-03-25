@@ -1,9 +1,11 @@
 package com.devsmart.staple.AST;
 
 
+import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 public class ASTNode {
 
-    public ParserRuleContext mParserRuleContext;
+    public Type type;
+
 }

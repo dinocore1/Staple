@@ -1,6 +1,8 @@
 package com.devsmart.staple.AST;
 
 
+import com.devsmart.staple.type.BoolType;
+
 public class Relation extends ASTNode {
 
     public enum Operator {
@@ -34,6 +36,7 @@ public class Relation extends ASTNode {
     private final ASTNode right;
 
     public Relation(Operator op, ASTNode left, ASTNode right) {
+        this.type = BoolType.BOOL;
         this.operator = op;
         this.left = left;
         this.right = right;
