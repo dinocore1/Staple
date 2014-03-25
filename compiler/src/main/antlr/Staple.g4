@@ -24,10 +24,15 @@ stmt
     : expr ';'
     | localVarDecl
     | block
+    | returnStmt
     ;
 
 localVarDecl
     : t=type id=ID ';'
+    ;
+
+returnStmt
+    : 'return' e=expr ';'
     ;
 
 // E x p r e s s i o n s

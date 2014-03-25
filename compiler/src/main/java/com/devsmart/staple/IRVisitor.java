@@ -2,25 +2,29 @@ package com.devsmart.staple;
 
 import com.devsmart.staple.AST.*;
 import com.devsmart.staple.ir.*;
+import com.devsmart.staple.symbol.Symbol;
 import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
+
+import java.util.HashMap;
 
 
 public class IRVisitor extends StapleBaseVisitor<Operand> {
     private final CompilerContext mCompilerContext;
     private int mTempCount;
+    private HashMap<Symbol, Operand> mSymbolMap = new HashMap<Symbol, Operand>();
 
     public IRVisitor(CompilerContext ctx) {
         mCompilerContext = ctx;
     }
 
-    private Operand lvalue(ParserRuleContext ctx) {
-        Operand retval = null;
+    private Symbol lvalue(ParserRuleContext ctx) {
+        Symbol retval = null;
         ASTNode node = mCompilerContext.astTreeProperties.get(ctx);
         if(node instanceof SymbolRef){
             SymbolRef symbolRef = (SymbolRef)node;
-            retval = new Var(symbolRef.type, symbolRef.symbol.name);
+            retval = symbolRef.symbol;
         }
 
         return retval;
@@ -31,14 +35,15 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         ASTNode node = mCompilerContext.astTreeProperties.get(ctx);
         if(node instanceof SymbolRef) {
             SymbolRef symbolRef = (SymbolRef)node;
-            retval = new Var(symbolRef.type, symbolRef.symbol.name);
+            retval = mSymbolMap.get(symbolRef.symbol);
         } else if(node instanceof IntLiteral) {
             IntLiteral intliteral = (IntLiteral)node;
             retval = new IntLiteralOperand(intliteral.value);
         } else if(node instanceof Assignment) {
             StapleParser.AssignContext assignContext = (StapleParser.AssignContext) ctx;
             Operand o1 = rvalue(assignContext.r);
-
+        } else {
+            retval = visit(ctx);
         }
 
 
@@ -61,14 +66,19 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     }
 
     @Override
+    public Operand visitReturnStmt(@NotNull StapleParser.ReturnStmtContext ctx) {
+        Operand retval = visit(ctx.e);
+        ReturnInst returnInst = new ReturnInst(retval);
+        return null;
+    }
+
+    @Override
     public Operand visitAssign(@NotNull StapleParser.AssignContext ctx) {
 
+        Symbol left = lvalue(ctx.l);
         Operand right = rvalue(ctx.r);
-        Operand left = lvalue(ctx.l);
-
-
-        Assignment assignment = (Assignment)mCompilerContext.astTreeProperties.get(ctx);
-        assignment.left
+        mSymbolMap.put(left, right);
+        return null;
     }
 
     @Override
