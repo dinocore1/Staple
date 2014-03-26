@@ -21,7 +21,7 @@ public class Scope {
     public Symbol get(String name) {
         Symbol retval = null;
         for(Scope s = this; s != null; s = s.mParent) {
-            retval = s.get(name);
+            retval = s.mTable.get(name);
             if( retval != null) {
                 break;
             }

@@ -13,7 +13,11 @@ memberVarDecl
     ;
 
 memberFunctionDecl
-	: type ID args block
+	: r=type n=ID '(' args+=arg? (',' args+=arg)* ')' block
+	;
+
+arg
+	: t=type n=ID
 	;
 
 block
@@ -38,27 +42,26 @@ returnStmt
 // E x p r e s s i o n s
 
 expr
-    : l=expr '=' r=expr # assign
-    | l=expr op=('<'|'>'|'>='|'<='|'=='|'!=') r=expr # relation
-    | l=expr op=('*'|'/') r=expr # mathOp
+    : l=expr op=('*'|'/') r=expr # mathOp
     | l=expr op=('+'|'-') r=expr # mathOp
+    | l=expr op=('<'|'>'|'>='|'<='|'=='|'!=') r=expr # relation
     | '(' expr ')' # expr1
     | v=INT # intLiteral
     | v=ID # symbolReference
+    | a=ID ('[' dim+=expr ']')+ # arrayAccess
+    | l=expr '=' r=expr # assign
     ;
 
 
-args
-	: '(' (type ID (',' type ID)* )?  ')'
-	;
+
 
 type
-	: classType
+	: classType '[]'?
 	| 'void'
-	| intType
-	| 'byte'
-	| 'float'
-	| 'string'
+	| intType '[]'?
+	| 'byte' '[]'?
+	| 'float' '[]'?
+	| 'string' '[]'?
 	;
 
 intType

@@ -4,7 +4,10 @@ package com.devsmart.staple;
 import com.devsmart.staple.AST.*;
 import com.devsmart.staple.symbol.Symbol;
 import com.devsmart.staple.type.Type;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
+
+import java.util.ArrayList;
 
 public class ASTVisitor extends StapleBaseVisitor<ASTNode> {
 
@@ -109,5 +112,17 @@ public class ASTVisitor extends StapleBaseVisitor<ASTNode> {
         retval.type = type;
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
+    }
+
+    @Override
+    public ASTNode visitArrayAccess(@NotNull StapleParser.ArrayAccessContext ctx) {
+        Symbol symbol = currentScope.get(ctx.a.getText());
+        ArrayList<ASTNode> dim = new ArrayList<ASTNode>(ctx.dim.size());
+        for(ParserRuleContext d : ctx.dim) {
+            dim.add(visit(d));
+        }
+        ArrayAccess arrayAccess = new ArrayAccess(symbol, dim);
+        mCompilerContext.astTreeProperties.put(ctx, arrayAccess);
+        return arrayAccess;
     }
 }

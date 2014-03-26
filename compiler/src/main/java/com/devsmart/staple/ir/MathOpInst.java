@@ -19,6 +19,6 @@ public class MathOpInst extends SSAInst {
 
     @Override
     public String toString() {
-        return String.format("%s = %s %s %s", result.name, left.toString(), operation.name(), right.toString());
+        return String.format("%s = %s %s %s", result.name, left.toString(), operation.symbol, right.toString());
     }
 }

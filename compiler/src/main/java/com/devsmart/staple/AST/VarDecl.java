@@ -9,5 +9,6 @@ public class VarDecl extends ASTNode {
 
     public VarDecl(Symbol symbol) {
         this.symbol = symbol;
+        this.type = symbol.type;
     }
 }

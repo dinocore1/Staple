@@ -3,6 +3,7 @@ package com.devsmart.staple;
 import com.devsmart.staple.AST.*;
 import com.devsmart.staple.ir.*;
 import com.devsmart.staple.symbol.Symbol;
+import com.devsmart.staple.type.PointerType;
 import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
@@ -17,17 +18,6 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
     public IRVisitor(CompilerContext ctx) {
         mCompilerContext = ctx;
-    }
-
-    private Symbol lvalue(ParserRuleContext ctx) {
-        Symbol retval = null;
-        ASTNode node = mCompilerContext.astTreeProperties.get(ctx);
-        if(node instanceof SymbolRef){
-            SymbolRef symbolRef = (SymbolRef)node;
-            retval = symbolRef.symbol;
-        }
-
-        return retval;
     }
 
     private Operand rvalue(ParserRuleContext ctx) {
@@ -59,6 +49,42 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     }
 
     @Override
+    public Operand visitAssign(@NotNull StapleParser.AssignContext ctx) {
+
+        ASTNode left = mCompilerContext.astTreeProperties.get(ctx.l);
+        Operand right = rvalue(ctx.r);
+
+        if(left instanceof SymbolRef){
+            SymbolRef symbolRef = (SymbolRef)left;
+            mSymbolMap.put(symbolRef.symbol, right);
+        } else if(left instanceof ArrayAccess){
+            ArrayAccess arrayAccessAst = (ArrayAccess)left;
+            StapleParser.ArrayAccessContext arrayAccess = (StapleParser.ArrayAccessContext)ctx.l;
+            Operand[] indexes = new Operand[arrayAccess.dim.size()];
+            for(int i=0;i<indexes.length;i++){
+                indexes[i] = rvalue(arrayAccess.dim.get(i));
+            }
+            Var ptr = createTemporaty(new PointerType(arrayAccessAst.var.type));
+            Operand base = mSymbolMap.get(arrayAccessAst.var);
+            emit(new GetPointerInst(ptr, base, indexes));
+            emit(new StoreInst(ptr, right));
+        }
+
+        return null;
+    }
+
+    @Override
+    public Operand visitLocalVarDecl(@NotNull StapleParser.LocalVarDeclContext ctx) {
+        VarDecl varDecl = (VarDecl) mCompilerContext.astTreeProperties.get(ctx);
+
+        Var var = new Var(new PointerType(varDecl.type), varDecl.symbol.name);
+
+        emit(new StackAllocInst(var, varDecl.type));
+        mSymbolMap.put(varDecl.symbol, var);
+        return null;
+    }
+
+    @Override
     public Operand visitBlock(@NotNull StapleParser.BlockContext ctx) {
         mTempCount = 0;
         visitChildren(ctx);
@@ -69,15 +95,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     public Operand visitReturnStmt(@NotNull StapleParser.ReturnStmtContext ctx) {
         Operand retval = visit(ctx.e);
         ReturnInst returnInst = new ReturnInst(retval);
-        return null;
-    }
-
-    @Override
-    public Operand visitAssign(@NotNull StapleParser.AssignContext ctx) {
-
-        Symbol left = lvalue(ctx.l);
-        Operand right = rvalue(ctx.r);
-        mSymbolMap.put(left, right);
+        emit(returnInst);
         return null;
     }
 
@@ -99,5 +117,12 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     public Operand visitIntLiteral(@NotNull StapleParser.IntLiteralContext ctx) {
         IntLiteral intliteral = (IntLiteral) mCompilerContext.astTreeProperties.get(ctx);
         return new IntLiteralOperand(intliteral.value);
+    }
+
+    @Override
+    public Operand visitSymbolReference(@NotNull StapleParser.SymbolReferenceContext ctx) {
+        SymbolRef symbolRef = (SymbolRef)mCompilerContext.astTreeProperties.get(ctx);
+        Operand retval = mSymbolMap.get(symbolRef.symbol);
+        return retval;
     }
 }
