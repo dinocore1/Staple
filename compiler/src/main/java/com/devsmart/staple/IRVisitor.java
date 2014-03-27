@@ -125,4 +125,21 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         Operand retval = mSymbolMap.get(symbolRef.symbol);
         return retval;
     }
+
+    @Override
+    public Operand visitArrayAccess(@NotNull StapleParser.ArrayAccessContext ctx) {
+        ArrayAccess arrayAccess = (ArrayAccess) mCompilerContext.astTreeProperties.get(ctx);
+
+        Operand[] indexes = new Operand[arrayAccess.indexes.size()];
+        for(int i=0;i<indexes.length;i++){
+            indexes[i] = visit(ctx.dim.get(i));
+        }
+        Var ptr = createTemporaty(new PointerType(arrayAccess.var.type));
+        Operand base = mSymbolMap.get(arrayAccess.var);
+        emit(new GetPointerInst(ptr, base, indexes));
+        Var retval = createTemporaty(arrayAccess.var.type);
+        emit(new LoadInst(retval, ptr));
+
+        return retval;
+    }
 }

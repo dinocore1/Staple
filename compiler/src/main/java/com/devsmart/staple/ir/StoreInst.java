@@ -13,6 +13,6 @@ public class StoreInst extends SSAInst {
 
     @Override
     public String toString() {
-        return String.format("%s <= %s", ptr, value);
+        return String.format("store %s <= %s", ptr, value);
     }
 }
