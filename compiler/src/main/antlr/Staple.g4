@@ -5,11 +5,11 @@ compileUnit
 	;
 
 classDecl
-	: 'class' ID '{' (memberFunctionDecl | memberVarDecl)* '}'
+	: 'class' n=ID '{' (f+=memberFunctionDecl | m+=memberVarDecl)* '}'
 	;
 
 memberVarDecl
-    : type ID ';'
+    : t=type n=ID ';'
     ;
 
 memberFunctionDecl

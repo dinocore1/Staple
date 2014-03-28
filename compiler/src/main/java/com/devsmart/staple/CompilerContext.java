@@ -11,4 +11,5 @@ public class CompilerContext {
 
     public ParseTreeProperty<ASTNode> astTreeProperties = new ParseTreeProperty<ASTNode>();
     public LinkedList<SSAInst> code = new LinkedList<SSAInst>();
+    public Scope rootScope = new Scope(null);
 }
