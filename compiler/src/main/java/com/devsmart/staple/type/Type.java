@@ -1,13 +1,15 @@
 package com.devsmart.staple.type;
 
 
-public class Type {
+public abstract class Type {
 
     public final String name;
 
     public Type(String name) {
         this.name = name;
     }
+
+    public abstract boolean isAssignableTo(Type t);
 
     @Override
     public String toString() {

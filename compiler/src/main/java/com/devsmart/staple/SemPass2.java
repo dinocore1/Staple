@@ -2,18 +2,24 @@ package com.devsmart.staple;
 
 
 import com.devsmart.staple.AST.ASTNode;
+import com.devsmart.staple.AST.Assignment;
+import com.devsmart.staple.AST.Block;
 import com.devsmart.staple.AST.ClassDecl;
 import com.devsmart.staple.AST.ClassFunction;
 import com.devsmart.staple.AST.ClassMember;
+import com.devsmart.staple.AST.VarDecl;
 import com.devsmart.staple.symbol.ClassSymbol;
+import com.devsmart.staple.symbol.MemberFunctionSymbol;
 import com.devsmart.staple.symbol.Symbol;
 import com.devsmart.staple.type.BoolType;
 import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FloatType;
+import com.devsmart.staple.type.FunctionType;
 import com.devsmart.staple.type.IntType;
 import com.devsmart.staple.type.Type;
 import com.devsmart.staple.type.VoidType;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 
 import java.util.regex.Matcher;
@@ -69,6 +75,82 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         Symbol symbol = new Symbol(varName, typeNode.type);
         currentScope.define(symbol);
 
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitMemberFunctionDecl(@NotNull StapleParser.MemberFunctionDeclContext ctx) {
+        ClassFunction retval = new ClassFunction();
+
+        retval.returnType = visit(ctx.r).type;
+        retval.name = ctx.n.toString();
+        for(ParserRuleContext arg : ctx.args){
+            retval.args.add((VarDecl) visit(arg));
+        }
+
+        MemberFunctionSymbol symbol = new MemberFunctionSymbol(retval.name,
+                new FunctionType(retval.returnType, retval.getArgTypes()));
+
+        currentScope.define(symbol);
+
+        retval.block = (Block) visit(ctx.block());
+
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitArg(@NotNull StapleParser.ArgContext ctx) {
+        ASTNode type = visit(ctx.t);
+        Symbol symbol = new Symbol(ctx.n.getText(), type.type);
+        VarDecl retval = new VarDecl(symbol);
+
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitBlock(@NotNull StapleParser.BlockContext ctx) {
+        pushScope();
+        Block block = new Block();
+        block.scope = currentScope;
+        for(ParserRuleContext stmt : ctx.stmt()){
+            block.statements.add(visit(stmt));
+        }
+        popScope();
+
+        mCompilerContext.astTreeProperties.put(ctx, block);
+        return block;
+    }
+
+    @Override
+    public ASTNode visitLocalVarDecl(@NotNull StapleParser.LocalVarDeclContext ctx) {
+        ASTNode type = visitType(ctx.t);
+        String name = ctx.id.getText();
+
+        Symbol var = new Symbol(name, type.type);
+        currentScope.define(var);
+
+        VarDecl retval = new VarDecl(var);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitAssign(@NotNull StapleParser.AssignContext ctx) {
+
+        ASTNode left = visit(ctx.l);
+        ASTNode right = visit(ctx.r);
+
+       if(!right.type.isAssignableTo(left.type)) {
+           String errStr = String.format("'%s' is not assignable to '%s'",
+                   right.type.name, left.type.name);
+           mCompilerContext.errorStream.error(errStr, ctx.l.start);
+       }
+
+        Assignment retval = new Assignment(left, right);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
     }
 
