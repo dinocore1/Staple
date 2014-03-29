@@ -9,6 +9,7 @@ import java.util.LinkedList;
 
 public class CompilerContext {
 
+    public ErrorStream errorStream = new ErrorStream();
     public ParseTreeProperty<ASTNode> astTreeProperties = new ParseTreeProperty<ASTNode>();
     public LinkedList<SSAInst> code = new LinkedList<SSAInst>();
     public Scope rootScope = new Scope(null);

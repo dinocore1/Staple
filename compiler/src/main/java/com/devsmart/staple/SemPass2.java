@@ -5,6 +5,8 @@ import com.devsmart.staple.AST.ASTNode;
 import com.devsmart.staple.AST.ClassDecl;
 import com.devsmart.staple.AST.ClassFunction;
 import com.devsmart.staple.AST.ClassMember;
+import com.devsmart.staple.symbol.Symbol;
+import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.Type;
 
 import org.antlr.v4.runtime.misc.NotNull;
@@ -46,11 +48,25 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
 
     @Override
     public ASTNode visitMemberVarDecl(@NotNull StapleParser.MemberVarDeclContext ctx) {
-        ASTNode type = visit(ctx.t);
-
         ClassMember retval = new ClassMember();
-        retval.type = type.type;
+
         retval.scope = currentScope;
+
+
+        ASTNode type = visit(ctx.t);
+        final String varName = ctx.n.getText();
+
+        if(type.type instanceof ClassType){
+            ClassType classType = (ClassType)type;
+            Symbol classSymbol = currentScope.get(classType.name);
+            if(classSymbol == null){
+                mCompilerContext.errorStream.error(String.format("unknown class: '%s'", classType.name), ctx.t.getStart()));
+            }
+        }
+
+        retval.type = type.type;
+        Symbol symbol = new Symbol(varName, type.type);
+        currentScope.define(symbol);
 
         return retval;
     }
