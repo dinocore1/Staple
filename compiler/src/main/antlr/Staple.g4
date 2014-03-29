@@ -56,21 +56,19 @@ expr
 
 
 type
-	: classType '[]'?
-	| 'void'
+	: 'void'
+	| 'bool'
 	| intType '[]'?
 	| 'byte' '[]'?
 	| 'float' '[]'?
 	| 'string' '[]'?
+	| ID '[]'?
 	;
 
 intType
 	: 'int' INT?
 	;
 
-classType
-    : CLASSNAME
-    ;
 
 // T o k e n s
 

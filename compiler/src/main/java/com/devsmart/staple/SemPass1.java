@@ -45,6 +45,7 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
         currentScope.define(classSymbol);
 
         ClassDecl node = new ClassDecl(classSymbol);
+        node.scope = new Scope(currentScope);
         mCompilerContext.astTreeProperties.put(ctx, node);
 
         return null;

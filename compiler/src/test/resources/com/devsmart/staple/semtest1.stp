@@ -1,0 +1,26 @@
+
+
+class Test1 {
+
+    int mGoodInt;
+    bool mGoodBool;
+    Crazy mBadClass;
+    Test1 mGoodClass;
+
+    int test() {
+        int i;
+        int a;
+        a = 13;
+        i = 3+2*4;
+        a = i +7;
+        i = i * 3*2+4;
+        i = a;
+        return i;
+    }
+
+    int test2() {
+        int[] r;
+        r[3] = 7;
+        return r[0];
+    }
+}

@@ -51,6 +51,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
             classDecl.functions.add((ClassFunction) visit(f));
         }
 
+
         return classDecl;
     }
 
@@ -63,12 +64,6 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
 
         ASTNode typeNode = visit(ctx.t);
         final String varName = ctx.n.getText();
-
-        if(typeNode.type instanceof ClassType){
-            ClassType classType = (ClassType)typeNode.type;
-            Symbol classSymbol = currentScope.get(classType.name);
-
-        }
 
         retval.type = typeNode.type;
         Symbol symbol = new Symbol(varName, typeNode.type);
@@ -105,7 +100,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         } else {
             Symbol classSymbol = currentScope.get(text);
             if(classSymbol == null || !(classSymbol instanceof ClassSymbol)){
-                mCompilerContext.errorStream.error(String.format("unknown class: '%s'", text), ctx.getStart()));
+                mCompilerContext.errorStream.error(String.format("unknown class: '%s'", text), ctx.getStart());
             } else {
                 type = classSymbol.type;
             }

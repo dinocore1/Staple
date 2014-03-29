@@ -2,6 +2,7 @@ package com.devsmart.staple;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -34,6 +35,10 @@ public class ErrorStream {
 		}
 		return hasError;
 	}
+
+    public List<ErrorMessage> getMessages() {
+        return messages;
+    }
 	
 	public static class ErrorMessage {
 		public static enum Level {
@@ -58,7 +63,11 @@ public class ErrorStream {
 			if(token != null){
 				TokenSource source = token.getTokenSource();
 				String sourceFile = source.getSourceName();
-				sourceFile = sourceFile.substring(sourceFile.lastIndexOf(File.separator)+1, sourceFile.length());
+                if(sourceFile != null) {
+                    sourceFile = sourceFile.substring(sourceFile.lastIndexOf(File.separator)+1, sourceFile.length());
+                } else {
+                    sourceFile = "stream";
+                }
 				locationStr = String.format("%s:%d", sourceFile, token.getLine());
 			}
 			return String.format("[%s %s] %s", level.toString(), locationStr, message);
