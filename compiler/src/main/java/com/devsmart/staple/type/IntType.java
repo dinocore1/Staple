@@ -14,4 +14,17 @@ public class IntType extends Type {
         super(String.format("int%d", precision));
         this.precision = precision;
     }
+
+    @Override
+    public boolean isAssignableTo(Type t) {
+        boolean retval = false;
+
+        if(t instanceof IntType){
+            retval = true;
+        } else if(t instanceof FloatType){
+            retval = true;
+        }
+
+        return retval;
+    }
 }

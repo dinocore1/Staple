@@ -8,4 +8,9 @@ public class VoidType extends Type {
     public VoidType() {
         super("void");
     }
+
+    @Override
+    public boolean isAssignableTo(Type t) {
+        return false;
+    }
 }

@@ -10,4 +10,13 @@ public class FloatType extends Type {
         super(String.format("float%d", precision));
         this.precision = precision;
     }
+
+    @Override
+    public boolean isAssignableTo(Type t) {
+        boolean retval = false;
+        if(t instanceof FloatType){
+            retval = true;
+        }
+        return retval;
+    }
 }

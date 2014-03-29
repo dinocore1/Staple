@@ -1,20 +1,19 @@
 package com.devsmart.staple.type;
 
-
-public class PointerType extends Type {
+public class ArrayType extends Type {
 
     public Type baseType;
 
-    public PointerType(Type baseType) {
-        super(String.format("*%s", baseType));
+    public ArrayType(Type baseType) {
+        super(String.format("%s[]", baseType.name));
         this.baseType = baseType;
     }
 
     @Override
     public boolean isAssignableTo(Type t) {
         boolean retval = false;
-        if(t instanceof IntType) {
-            retval = ((IntType) t).precision >= 32;
+        if(t instanceof ArrayType){
+            retval = true;
         }
         return retval;
     }

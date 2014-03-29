@@ -29,8 +29,11 @@ public class IRTest {
         StapleParser.CompileUnitContext tree = parser.compileUnit();
         tree.inspect(parser);
 
-        ASTVisitor astNodeVisitor = new ASTVisitor(mCompilerContext);
-        astNodeVisitor.visit(tree);
+        SemPass1 semPass1 = new SemPass1(mCompilerContext);
+        semPass1.visit(tree);
+
+        SemPass2 semPass2 = new SemPass2(mCompilerContext);
+        semPass2.visit(tree);
 
         IRVisitor irVisitor = new IRVisitor(mCompilerContext);
         irVisitor.visit(tree);

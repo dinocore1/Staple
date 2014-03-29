@@ -2,11 +2,16 @@ package com.devsmart.staple;
 
 
 import com.devsmart.staple.AST.ASTNode;
+import com.devsmart.staple.AST.ArrayAccess;
 import com.devsmart.staple.AST.Assignment;
 import com.devsmart.staple.AST.Block;
 import com.devsmart.staple.AST.ClassDecl;
 import com.devsmart.staple.AST.ClassFunction;
 import com.devsmart.staple.AST.ClassMember;
+import com.devsmart.staple.AST.IntLiteral;
+import com.devsmart.staple.AST.MathOp;
+import com.devsmart.staple.AST.Relation;
+import com.devsmart.staple.AST.SymbolRef;
 import com.devsmart.staple.AST.VarDecl;
 import com.devsmart.staple.symbol.ClassSymbol;
 import com.devsmart.staple.symbol.MemberFunctionSymbol;
@@ -22,6 +27,7 @@ import com.devsmart.staple.type.VoidType;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -152,6 +158,51 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         Assignment retval = new Assignment(left, right);
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
+    }
+
+    @Override
+    public ASTNode visitMathOp(@NotNull StapleParser.MathOpContext ctx) {
+        MathOp.Operation op = MathOp.Operation.getOperation(ctx.op.getText());
+        MathOp retval = new MathOp(op, visit(ctx.l), visit(ctx.r));
+        retval.type = retval.left.type;
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitRelation(@NotNull StapleParser.RelationContext ctx) {
+        Relation.Operator op = Relation.Operator.getOperation(ctx.op.getText());
+        Relation retval = new Relation(op, visit(ctx.l), visit(ctx.r));
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitSymbolReference(@NotNull StapleParser.SymbolReferenceContext ctx) {
+        Symbol symbol = currentScope.get(ctx.v.getText());
+        SymbolRef retval = new SymbolRef(symbol);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitIntLiteral(@NotNull StapleParser.IntLiteralContext ctx) {
+        IntLiteral retval = new IntLiteral(ctx.v.getText());
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitArrayAccess(@NotNull StapleParser.ArrayAccessContext ctx) {
+        Symbol symbol = currentScope.get(ctx.a.getText());
+        ArrayList<ASTNode> dim = new ArrayList<ASTNode>(ctx.dim.size());
+        for(ParserRuleContext d : ctx.dim) {
+            dim.add(visit(d));
+        }
+        ArrayAccess arrayAccess = new ArrayAccess(symbol, dim);
+        mCompilerContext.astTreeProperties.put(ctx, arrayAccess);
+        return arrayAccess;
     }
 
     public static final Pattern INT_REGEX = Pattern.compile("int([0-9]*)");
