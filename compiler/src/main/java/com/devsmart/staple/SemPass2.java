@@ -1,20 +1,10 @@
 package com.devsmart.staple;
 
 
-import com.devsmart.staple.AST.ASTNode;
-import com.devsmart.staple.AST.ArrayAccess;
-import com.devsmart.staple.AST.Assignment;
-import com.devsmart.staple.AST.Block;
-import com.devsmart.staple.AST.ClassDecl;
-import com.devsmart.staple.AST.ClassFunction;
-import com.devsmart.staple.AST.ClassMember;
-import com.devsmart.staple.AST.IntLiteral;
-import com.devsmart.staple.AST.MathOp;
-import com.devsmart.staple.AST.Relation;
-import com.devsmart.staple.AST.SymbolRef;
-import com.devsmart.staple.AST.VarDecl;
+import com.devsmart.staple.AST.*;
 import com.devsmart.staple.symbol.ClassSymbol;
 import com.devsmart.staple.symbol.MemberFunctionSymbol;
+import com.devsmart.staple.symbol.MemberSymbol;
 import com.devsmart.staple.symbol.Symbol;
 import com.devsmart.staple.type.BoolType;
 import com.devsmart.staple.type.ClassType;
@@ -35,6 +25,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
 
     private final CompilerContext mCompilerContext;
     private Scope currentScope;
+    private ClassType currentClass;
 
     public SemPass2(CompilerContext ctx) {
         mCompilerContext = ctx;
@@ -53,6 +44,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
         ClassDecl classDecl = (ClassDecl) mCompilerContext.astTreeProperties.get(ctx);
+        currentClass = (ClassType) classDecl.type;
         currentScope = classDecl.scope;
 
         for(StapleParser.MemberVarDeclContext m : ctx.m){
@@ -70,15 +62,18 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitMemberVarDecl(@NotNull StapleParser.MemberVarDeclContext ctx) {
         ClassMember retval = new ClassMember();
-
         retval.scope = currentScope;
-
 
         ASTNode typeNode = visit(ctx.t);
         final String varName = ctx.n.getText();
 
+        if(currentClass.members.containsKey(varName)){
+            mCompilerContext.errorStream.error(String.format("redefinition of class member '%s'", varName), ctx);
+        }
+        currentClass.members.put(varName, typeNode.type);
+
         retval.type = typeNode.type;
-        Symbol symbol = new Symbol(varName, typeNode.type);
+        Symbol symbol = new MemberSymbol(varName, typeNode.type, currentClass);
         currentScope.define(symbol);
 
         mCompilerContext.astTreeProperties.put(ctx, retval);
@@ -111,6 +106,61 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         ASTNode type = visit(ctx.t);
         Symbol symbol = new Symbol(ctx.n.getText(), type.type);
         VarDecl retval = new VarDecl(symbol);
+
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitObjectAccess(@NotNull StapleParser.ObjectAccessContext ctx) {
+        ASTNode retval = null;
+        ClassType baseType = null;
+        ClassSymbol baseClassSymbol = null;
+
+        ASTNode left = visit(ctx.l);
+
+        if(!(left.type instanceof ClassType)){
+            mCompilerContext.errorStream.error("Not a object type", ctx.l);
+            return null;
+        } else {
+            baseType = (ClassType)left.type;
+            Symbol symbol = currentScope.get(baseType.name);
+            if(!(symbol instanceof ClassSymbol)){
+                mCompilerContext.errorStream.error("wft", ctx);
+            } else {
+                baseClassSymbol = (ClassSymbol)symbol;
+            }
+
+        }
+
+        if(ctx.r instanceof StapleParser.SymbolReferenceContext) {
+            String memberName = ctx.r.getText();
+
+            Type t = baseClassSymbol.getType().members.get(memberName);
+            if(t == null){
+                mCompilerContext.errorStream.error(String.format("Undefined member '%s' in class '%s'", memberName, baseClassSymbol.name), ctx.r);
+            }
+            MemberAccess memberAccess = new MemberAccess(left, baseClassSymbol, memberName);
+            retval = memberAccess;
+        } else if(ctx.r instanceof StapleParser.FunctionCallContext) {
+            StapleParser.FunctionCallContext fncCtx = (StapleParser.FunctionCallContext) ctx.r;
+            String functionName = fncCtx.n.getText();
+
+
+            Type m = baseClassSymbol.getType().getMemberFunction(functionName);
+            if(m == null){
+                mCompilerContext.errorStream.error(String.format("Undefined function '%s' in class '%s'", functionName, baseClassSymbol.name), ctx.r);
+            }
+
+            ArrayList<ASTNode> args = new ArrayList<ASTNode>(fncCtx.args.size());
+            for(ParserRuleContext arg : fncCtx.args){
+                args.add(visit(arg));
+            }
+            MemberFunctionCall memberFunctionCall = new MemberFunctionCall(left, baseClassSymbol, functionName, args);
+            retval = memberFunctionCall;
+        } else {
+            mCompilerContext.errorStream.error("right side of object access is not a member or function call", ctx.r);
+        }
 
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;

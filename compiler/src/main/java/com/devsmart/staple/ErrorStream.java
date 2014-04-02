@@ -2,11 +2,10 @@ package com.devsmart.staple;
 
 import java.io.File;
 import java.io.PrintStream;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.abego.treelayout.internal.util.java.lang.string.StringUtil;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.TokenSource;
 
@@ -16,8 +15,12 @@ public class ErrorStream {
 	private List<ErrorMessage> messages = new LinkedList<ErrorMessage>();
 	
 	public void error(String message, Token token) {
-		messages.add(new ErrorMessage(ErrorMessage.Level.Error, message, token));
+		messages.add(new ErrorMessage(ErrorMessage.Level.Error, message, token, token));
 	}
+
+    public void error(String message, ParserRuleContext ctx) {
+        messages.add(new ErrorMessage(ErrorMessage.Level.Error, message, ctx.start, ctx.stop));
+    }
 	
 	public void print(PrintStream out) {
 		for(ErrorMessage m : messages){
@@ -39,8 +42,8 @@ public class ErrorStream {
     public List<ErrorMessage> getMessages() {
         return messages;
     }
-	
-	public static class ErrorMessage {
+
+    public static class ErrorMessage {
 		public static enum Level {
 			Error,
 			Warn,
@@ -49,26 +52,28 @@ public class ErrorStream {
 		
 		Level level;
 		String message;
-		Token token;
+		Token start;
+        Token stop;
 		
-		public ErrorMessage(Level level, String message, Token location){
+		public ErrorMessage(Level level, String message, Token start, Token stop){
 			this.level = level;
 			this.message = message;
-			this.token = location;
+			this.start = start;
+            this.stop = stop;
 		}
 		
 		@Override
 		public String toString(){
 			String locationStr = "";
-			if(token != null){
-				TokenSource source = token.getTokenSource();
+			if(start != null){
+				TokenSource source = start.getTokenSource();
 				String sourceFile = source.getSourceName();
                 if(sourceFile != null) {
                     sourceFile = sourceFile.substring(sourceFile.lastIndexOf(File.separator)+1, sourceFile.length());
                 } else {
                     sourceFile = "stream";
                 }
-				locationStr = String.format("%s:%d", sourceFile, token.getLine());
+				locationStr = String.format("%s:%d", sourceFile, start.getLine());
 			}
 			return String.format("[%s %s] %s", level.toString(), locationStr, message);
 		}

@@ -15,6 +15,8 @@ class Test1 {
         a = i +7;
         i = i * 3*2+4;
         i = a;
+
+        mGoodClass.rad.cool().awesome().super;
         return i;
     }
 

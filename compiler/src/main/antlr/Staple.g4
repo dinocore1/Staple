@@ -49,6 +49,8 @@ expr
     | v=INT # intLiteral
     | v=ID # symbolReference
     | a=ID ('[' dim+=expr ']')+ # arrayAccess
+    | n=ID '(' args+=expr? (',' args+=expr)* ')' # functionCall
+    | l=expr '.' r=expr # objectAccess
     | l=expr '=' r=expr # assign
     ;
 
