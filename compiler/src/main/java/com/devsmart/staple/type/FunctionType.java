@@ -1,13 +1,15 @@
 package com.devsmart.staple.type;
 
 
+import java.util.Arrays;
+
 public class FunctionType extends Type {
 
     public final Type returnType;
     public final Type[] args;
 
     public FunctionType(Type returnType, Type[] args) {
-        super(String.format("%s (%s)", returnType, args.toString()));
+        super(String.format("%s -> (%s)", returnType, Arrays.toString(args)));
         this.returnType = returnType;
         this.args = args;
     }

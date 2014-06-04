@@ -27,6 +27,11 @@ public class MathOp extends ASTNode {
                     break;
                 }
             }
+            if("||".equals(symbol)){
+                retval = OR;
+            } else if("&&".equals(symbol)){
+                retval = AND;
+            }
             return retval;
         }
     }

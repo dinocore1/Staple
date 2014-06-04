@@ -155,4 +155,9 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         return retval;
     }
+
+    @Override
+    public Operand visitIfStmt(@NotNull StapleParser.IfStmtContext ctx) {
+
+    }
 }

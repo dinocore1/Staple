@@ -2,10 +2,7 @@ package com.devsmart.staple;
 
 
 import com.devsmart.staple.AST.*;
-import com.devsmart.staple.symbol.ClassSymbol;
-import com.devsmart.staple.symbol.MemberFunctionSymbol;
-import com.devsmart.staple.symbol.MemberSymbol;
-import com.devsmart.staple.symbol.Symbol;
+import com.devsmart.staple.symbol.*;
 import com.devsmart.staple.type.BoolType;
 import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FloatType;
@@ -95,7 +92,14 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
 
         currentScope.define(symbol);
 
+        pushScope();
+        //define the args in the new scope
+        for(VarDecl arg : retval.args){
+            currentScope.define(arg.symbol);
+        }
+
         retval.block = (Block) visit(ctx.block());
+        popScope();
 
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
@@ -253,8 +257,53 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
     @Override
     public ASTNode visitSymbolReference(@NotNull StapleParser.SymbolReferenceContext ctx) {
         Symbol symbol = currentScope.get(ctx.v.getText());
+        if(symbol == null){
+            mCompilerContext.errorStream.error(String.format("undefined symbol '%s'", ctx.v.getText()), ctx.v);
+            return null;
+        }
         SymbolRef retval = new SymbolRef(symbol);
         mCompilerContext.astTreeProperties.put(ctx, retval);
+
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitFunctionCall(@NotNull StapleParser.FunctionCallContext ctx) {
+        final String name = ctx.n.getText();
+        FunctionSymbol functionSymbol = null;
+        {
+            Symbol symbol = currentScope.get(name);
+            if (symbol == null) {
+                mCompilerContext.errorStream.error(String.format("undefined function '%s'", name), ctx.n);
+                return null;
+            }
+
+            if (!(symbol instanceof FunctionSymbol)) {
+                mCompilerContext.errorStream.error(String.format("'%s' is not a function type", name), ctx.n);
+                return null;
+            }
+            functionSymbol = (FunctionSymbol) symbol;
+        }
+
+        FunctionCall retval = new FunctionCall(functionSymbol);
+        FunctionType functionType = (FunctionType) functionSymbol.type;
+
+
+        int argCount = 0;
+        for(StapleParser.ExprContext argctx : ctx.args){
+            final Type expectedArg = functionType.args[argCount];
+            final ASTNode argnode = visit(argctx);
+
+            if(argnode != null){
+                if(!argnode.type.equals(expectedArg) || !argnode.type.isAssignableTo(expectedArg)){
+                    mCompilerContext.errorStream.error(String.format("argument num %d is not assignable to type '%s", argCount, expectedArg.name), argctx);
+                } else {
+                    retval.args.add(argnode);
+                }
+            }
+            argCount++;
+        }
+
 
         return retval;
     }
