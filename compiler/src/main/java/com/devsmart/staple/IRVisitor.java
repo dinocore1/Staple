@@ -2,6 +2,7 @@ package com.devsmart.staple;
 
 import com.devsmart.staple.AST.*;
 import com.devsmart.staple.ir.*;
+import com.devsmart.staple.symbol.MemberFunctionSymbol;
 import com.devsmart.staple.symbol.Symbol;
 import com.devsmart.staple.type.PointerType;
 import com.devsmart.staple.type.Type;
@@ -44,8 +45,20 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         return new Var(type, String.format("t%d", ++mTempCount));
     }
 
+
     private void emit(SSAInst inst) {
         mCompilerContext.code.add(inst);
+    }
+
+    @Override
+    public Operand visitMemberFunctionDecl(@NotNull StapleParser.MemberFunctionDeclContext ctx) {
+        ClassFunction memberSymbol = (ClassFunction) mCompilerContext.astTreeProperties.get(ctx);
+
+        emit(new FunctionDeclaration(memberSymbol));
+
+        visitChildren(ctx);
+
+        return null;
     }
 
     @Override

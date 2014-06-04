@@ -29,6 +29,11 @@ stmt
     | localVarDecl
     | block
     | returnStmt
+    | ifStmt
+    ;
+
+ifStmt
+    : 'if' '(' expr ')' stmt ('else' stmt)?
     ;
 
 localVarDecl
@@ -48,6 +53,7 @@ expr
     | '(' expr ')' # expr1
     | v=INT # intLiteral
     | v=ID # symbolReference
+    | l=expr op=('||'|'&&') r=expr # logicOp
     | a=ID ('[' dim+=expr ']')+ # arrayAccess
     | n=ID '(' args+=expr? (',' args+=expr)* ')' # functionCall
     | l=expr '.' r=expr # objectAccess

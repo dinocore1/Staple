@@ -85,7 +85,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         ClassFunction retval = new ClassFunction();
 
         retval.returnType = visit(ctx.r).type;
-        retval.name = ctx.n.toString();
+        retval.name = ctx.n.getText();
         for(ParserRuleContext arg : ctx.args){
             retval.args.add((VarDecl) visit(arg));
         }
@@ -118,6 +118,9 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         ClassSymbol baseClassSymbol = null;
 
         ASTNode left = visit(ctx.l);
+        if(left == null){
+            return null;
+        }
 
         if(!(left.type instanceof ClassType)){
             mCompilerContext.errorStream.error("Not a object type", ctx.l);
@@ -215,6 +218,26 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         MathOp.Operation op = MathOp.Operation.getOperation(ctx.op.getText());
         MathOp retval = new MathOp(op, visit(ctx.l), visit(ctx.r));
         retval.type = retval.left.type;
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitLogicOp(@NotNull StapleParser.LogicOpContext ctx) {
+
+        ASTNode left = visit(ctx.l);
+        if(left.type != BoolType.BOOL){
+            mCompilerContext.errorStream.error(String.format("'%s' must be a boolean operator", ctx.l.getText()), ctx.l);
+        }
+
+        ASTNode right = visit(ctx.r);
+        if(right.type != BoolType.BOOL){
+            mCompilerContext.errorStream.error(String.format("'%s' must be a boolean operator", ctx.r.getText()), ctx.r);
+        }
+
+        MathOp.Operation op = MathOp.Operation.getOperation(ctx.op.getText());
+        MathOp retval = new MathOp(op, visit(ctx.l), visit(ctx.r));
+        retval.type = BoolType.BOOL;
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
     }

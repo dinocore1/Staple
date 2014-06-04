@@ -1,0 +1,11 @@
+
+class Fibonacci {
+
+    int calc(int i) {
+        if(i == 1 || i == 2){
+            return 1;
+        } else {
+            return calc(i-2) + calc(i-1);
+        }
+    }
+}

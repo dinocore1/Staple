@@ -7,7 +7,11 @@ public class MathOp extends ASTNode {
         ADDITION("+"),
         SUBTRACTION("-"),
         MULTIPLICATION("*"),
-        DIVISION("/");
+        DIVISION("/"),
+        OR("|"),
+        AND("&"),
+        XOR("^"),
+        ;
 
         public final String symbol;
 

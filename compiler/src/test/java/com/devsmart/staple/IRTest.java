@@ -7,12 +7,33 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
 
+@RunWith(Parameterized.class)
 public class IRTest {
 
+    @Parameterized.Parameters
+    public static Iterable<Object[]> createTests() {
+        ArrayList<Object[]> retval = new ArrayList<Object[]>();
+
+        retval.add(new Object[]{IRTest.class.getResource("fibonacci.stp")});
+        retval.add(new Object[]{IRTest.class.getResource("test1.stp")});
+
+
+        return retval;
+    }
+
+    private URL mInputFile;
     private CompilerContext mCompilerContext;
+
+    public IRTest(URL file){
+        mInputFile = file;
+    }
 
     @Before
     public void setup() {
@@ -21,7 +42,7 @@ public class IRTest {
 
     @Test
     public void test1() throws Exception {
-        InputStream in = getClass().getResourceAsStream("test1.stp");
+        InputStream in = mInputFile.openStream();
         Assert.assertNotNull(in);
         StapleLexer lexer = new StapleLexer(new ANTLRInputStream(in));
         StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
