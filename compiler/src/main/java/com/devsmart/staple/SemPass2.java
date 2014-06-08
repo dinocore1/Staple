@@ -240,7 +240,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         }
 
         MathOp.Operation op = MathOp.Operation.getOperation(ctx.op.getText());
-        MathOp retval = new MathOp(op, visit(ctx.l), visit(ctx.r));
+        MathOp retval = new MathOp(op, left, right);
         retval.type = BoolType.BOOL;
         mCompilerContext.astTreeProperties.put(ctx, retval);
         return retval;
@@ -286,6 +286,7 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
         }
 
         FunctionCall retval = new FunctionCall(functionSymbol);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
         FunctionType functionType = (FunctionType) functionSymbol.type;
 
 
@@ -306,6 +307,29 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
 
 
         return retval;
+    }
+
+    @Override
+    public ASTNode visitReturnStmt(@NotNull StapleParser.ReturnStmtContext ctx) {
+        ASTNode expr = visit(ctx.e);
+        return new Return(expr);
+    }
+
+    @Override
+    public ASTNode visitIfStmt(@NotNull StapleParser.IfStmtContext ctx) {
+        ASTNode condition = visit(ctx.c);
+
+        if(condition.type != BoolType.BOOL){
+            mCompilerContext.errorStream.error("if condition is not a bool type", ctx.c);
+        }
+
+        ASTNode positiveBlock = visit(ctx.t);
+        ASTNode negitiveBlock = null;
+        if(ctx.e != null){
+            negitiveBlock = visit(ctx.e);
+        }
+
+        return new IfStatement(condition, positiveBlock, negitiveBlock);
     }
 
     @Override

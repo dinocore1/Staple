@@ -21,6 +21,7 @@ configurations {
 dependencies {
 	compile 'org.antlr:antlr4-runtime:4.2'
 	compile 'org.antlr:stringtemplate:4.0.2'
+    compile 'com.google.guava:guava:17.0'
 	antlr4 group: 'org.antlr', name: 'antlr4', version: '4.2'
 	testCompile 'junit:junit:4.11'
 }

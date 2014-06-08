@@ -31,9 +31,9 @@ public class Relation extends ASTNode {
         }
     }
 
-    private final Operator operator;
-    private final ASTNode left;
-    private final ASTNode right;
+    public final Operator operator;
+    public final ASTNode left;
+    public final ASTNode right;
 
     public Relation(Operator op, ASTNode left, ASTNode right) {
         this.type = BoolType.BOOL;

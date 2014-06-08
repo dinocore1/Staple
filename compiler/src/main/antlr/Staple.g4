@@ -33,7 +33,7 @@ stmt
     ;
 
 ifStmt
-    : 'if' '(' expr ')' stmt ('else' stmt)?
+    : 'if' '(' c=expr ')' t=stmt ('else' e=stmt)?
     ;
 
 localVarDecl
