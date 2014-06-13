@@ -15,9 +15,40 @@ import java.util.HashMap;
 
 
 public class IRVisitor extends StapleBaseVisitor<Operand> {
+
+    private static class SymbolScope {
+        private HashMap<Symbol, Operand> mSymbolTable = new HashMap<Symbol, Operand>();
+        public SymbolScope mParent;
+
+        public void put(Symbol symbol, Operand op) {
+            mSymbolTable.put(symbol, op);
+        }
+
+        public Operand get(Symbol symbol) {
+            Operand retval = null;
+            for(SymbolScope s = this; s != null; s = s.mParent) {
+                retval = s.mSymbolTable.get(symbol);
+                if(retval != null){
+                    break;
+                }
+            }
+            return  retval;
+        }
+    }
+
     private final CompilerContext mCompilerContext;
     private int mTempCount;
-    private HashMap<Symbol, Operand> mSymbolMap = new HashMap<Symbol, Operand>();
+    private SymbolScope mCurrentSymbolScope = new SymbolScope();
+
+    public void pushScope() {
+        SymbolScope newScope = new SymbolScope();
+        newScope.mParent = mCurrentSymbolScope;
+        mCurrentSymbolScope = newScope;
+    }
+
+    public void popScope() {
+        mCurrentSymbolScope = mCurrentSymbolScope.mParent;
+    }
 
     public IRVisitor(CompilerContext ctx) {
         mCompilerContext = ctx;
@@ -28,7 +59,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         ASTNode node = mCompilerContext.astTreeProperties.get(ctx);
         if(node instanceof SymbolRef) {
             SymbolRef symbolRef = (SymbolRef)node;
-            retval = mSymbolMap.get(symbolRef.symbol);
+            retval = mCurrentSymbolScope.get(symbolRef.symbol);
         } else if(node instanceof IntLiteral) {
             IntLiteral intliteral = (IntLiteral)node;
             retval = new IntLiteralOperand(intliteral.value);
@@ -58,11 +89,15 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         emit(new FunctionDeclaration(memberSymbol));
 
+        pushScope();
+
         for(VarDecl arg : memberSymbol.args){
-            mSymbolMap.put(arg.symbol, new Var(arg.symbol.type, arg.symbol.name));
+            mCurrentSymbolScope.put(arg.symbol, new Var(arg.symbol.type, arg.symbol.name));
         }
 
         visitChildren(ctx);
+
+        popScope();
 
         return null;
     }
@@ -75,7 +110,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         if(left instanceof SymbolRef){
             SymbolRef symbolRef = (SymbolRef)left;
-            mSymbolMap.put(symbolRef.symbol, right);
+            mCurrentSymbolScope.put(symbolRef.symbol, right);
         } else if(left instanceof ArrayAccess){
             ArrayAccess arrayAccessAst = (ArrayAccess)left;
             StapleParser.ArrayAccessContext arrayAccess = (StapleParser.ArrayAccessContext)ctx.l;
@@ -84,7 +119,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
                 indexes[i] = rvalue(arrayAccess.dim.get(i));
             }
             Var ptr = createTemporaty(new PointerType(arrayAccessAst.var.type));
-            Operand base = mSymbolMap.get(arrayAccessAst.var);
+            Operand base = mCurrentSymbolScope.get(arrayAccessAst.var);
             emit(new GetPointerInst(ptr, base, indexes));
             emit(new StoreInst(ptr, right));
         }
@@ -99,14 +134,15 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         Var var = new Var(new PointerType(varDecl.type), varDecl.symbol.name);
 
         emit(new StackAllocInst(var, varDecl.type));
-        mSymbolMap.put(varDecl.symbol, var);
+        mCurrentSymbolScope.put(varDecl.symbol, var);
         return null;
     }
 
     @Override
     public Operand visitBlock(@NotNull StapleParser.BlockContext ctx) {
-        mTempCount = 0;
+        pushScope();
         visitChildren(ctx);
+        popScope();
         return null;
     }
 
@@ -203,7 +239,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     @Override
     public Operand visitSymbolReference(@NotNull StapleParser.SymbolReferenceContext ctx) {
         SymbolRef symbolRef = (SymbolRef)mCompilerContext.astTreeProperties.get(ctx);
-        Operand retval = mSymbolMap.get(symbolRef.symbol);
+        Operand retval = mCurrentSymbolScope.get(symbolRef.symbol);
         return retval;
     }
 
@@ -216,7 +252,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
             indexes[i] = visit(ctx.dim.get(i));
         }
         Var ptr = createTemporaty(new PointerType(arrayAccess.var.type));
-        Operand base = mSymbolMap.get(arrayAccess.var);
+        Operand base = mCurrentSymbolScope.get(arrayAccess.var);
         emit(new GetPointerInst(ptr, base, indexes));
         Var retval = createTemporaty(arrayAccess.var.type);
         emit(new LoadInst(retval, ptr));
