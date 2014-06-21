@@ -10,13 +10,16 @@ import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Stack;
 
 
 public class IRVisitor extends StapleBaseVisitor<Operand> {
 
     private static class SymbolScope {
+        BasicBlock basicBlock = new BasicBlock();
         private HashMap<Symbol, Operand> mSymbolTable = new HashMap<Symbol, Operand>();
         public SymbolScope mParent;
 
@@ -80,7 +83,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
 
     private void emit(SSAInst inst) {
-        mCompilerContext.code.add(inst);
+        mCurrentSymbolScope.basicBlock.code.add(inst);
     }
 
     @Override
@@ -189,15 +192,26 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
     @Override
     public Operand visitIfStmt(@NotNull StapleParser.IfStmtContext ctx) {
+
         Operand condition = rvalue(ctx.c);
         Label trueLabel = new Label();
         Label falseLabel = new Label();
         Branch branch = new Branch(condition, trueLabel, falseLabel);
         emit(branch);
+
+        BasicBlock thisBB = mCurrentSymbolScope.basicBlock;
+
+        pushScope();
+        thisBB.outEdges.add(mCurrentSymbolScope.basicBlock);
         emit(trueLabel);
         visit(ctx.t);
+        popScope();
+
+        pushScope();
+        thisBB.outEdges.add(mCurrentSymbolScope.basicBlock);
         emit(falseLabel);
         visit(ctx.e);
+        popScope();
 
         return null;
     }

@@ -1,0 +1,18 @@
+
+class DominanceTest {
+
+    int test(int x) {
+        int y;
+        int z;
+        if(x < 3){
+            y = x * 2;
+        } else {
+            y = x - 3;
+        }
+
+        z = y +5;
+
+        return z;
+    }
+
+}
