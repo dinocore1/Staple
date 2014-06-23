@@ -15,11 +15,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
 
+import org.jgrapht.*;
+import org.jgrapht.graph.*;
+
 
 public class IRVisitor extends StapleBaseVisitor<Operand> {
 
+    DirectedGraph<BasicBlock, DefaultEdge> cfg;
+    HashMap<Label, BasicBlock> labelTable = new HashMap<Label, BasicBlock>();
+
     private static class SymbolScope {
-        BasicBlock basicBlock = new BasicBlock();
+        BasicBlock basicBlock;
         private HashMap<Symbol, Operand> mSymbolTable = new HashMap<Symbol, Operand>();
         public SymbolScope mParent;
 
@@ -43,10 +49,13 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     private int mTempCount;
     private SymbolScope mCurrentSymbolScope = new SymbolScope();
 
-    public void pushScope() {
+    public void pushScope(Label label) {
         SymbolScope newScope = new SymbolScope();
+        newScope.basicBlock = new BasicBlock(label);
+        cfg.addVertex(newScope.basicBlock);
         newScope.mParent = mCurrentSymbolScope;
         mCurrentSymbolScope = newScope;
+        labelTable.put(label, newScope.basicBlock);
     }
 
     public void popScope() {
@@ -90,17 +99,27 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     public Operand visitMemberFunctionDecl(@NotNull StapleParser.MemberFunctionDeclContext ctx) {
         ClassFunction memberSymbol = (ClassFunction) mCompilerContext.astTreeProperties.get(ctx);
 
-        emit(new FunctionDeclaration(memberSymbol));
 
-        pushScope();
+        labelTable.clear();
+        cfg = new DefaultDirectedGraph<BasicBlock, DefaultEdge>(DefaultEdge.class);
+        Label label = new Label();
+        pushScope(label);
+        emit(new FunctionDeclaration(memberSymbol));
+        BasicBlock rootBlock = mCurrentSymbolScope.basicBlock;
 
         for(VarDecl arg : memberSymbol.args){
             mCurrentSymbolScope.put(arg.symbol, new Var(arg.symbol.type, arg.symbol.name));
         }
 
         visitChildren(ctx);
-
         popScope();
+
+
+
+
+
+
+
 
         return null;
     }
@@ -143,7 +162,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
     @Override
     public Operand visitBlock(@NotNull StapleParser.BlockContext ctx) {
-        pushScope();
+        pushScope(null);
         visitChildren(ctx);
         popScope();
         return null;
@@ -201,14 +220,14 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         BasicBlock thisBB = mCurrentSymbolScope.basicBlock;
 
-        pushScope();
-        thisBB.outEdges.add(mCurrentSymbolScope.basicBlock);
+        pushScope(trueLabel);
+        cfg.addEdge(thisBB, mCurrentSymbolScope.basicBlock);
         emit(trueLabel);
         visit(ctx.t);
         popScope();
 
-        pushScope();
-        thisBB.outEdges.add(mCurrentSymbolScope.basicBlock);
+        pushScope(falseLabel);
+        cfg.addEdge(thisBB, mCurrentSymbolScope.basicBlock);
         emit(falseLabel);
         visit(ctx.e);
         popScope();
