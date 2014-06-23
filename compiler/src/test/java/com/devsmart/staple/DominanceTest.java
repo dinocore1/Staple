@@ -2,6 +2,7 @@ package com.devsmart.staple;
 
 import com.devsmart.staple.ir.BasicBlock;
 import com.devsmart.staple.ir.Dominators;
+import com.google.common.collect.ImmutableSet;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.DefaultDirectedGraph;
 import org.jgrapht.graph.DefaultEdge;
@@ -37,12 +38,32 @@ public class DominanceTest {
     public void createGraph() {
         graph = new DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge.class);
 
-        for(int i=1;i<14;i++){
+        for(int i=1;i<11;i++){
             Node node = new Node(String.format("%d", i));
             nodes.put(i, node);
             graph.addVertex(node);
         }
 
+        graph.addEdge(nodes.get(1), nodes.get(2));
+        graph.addEdge(nodes.get(1), nodes.get(3));
+        graph.addEdge(nodes.get(2), nodes.get(3));
+        graph.addEdge(nodes.get(3), nodes.get(4));
+        graph.addEdge(nodes.get(4), nodes.get(3));
+        graph.addEdge(nodes.get(4), nodes.get(5));
+        graph.addEdge(nodes.get(4), nodes.get(6));
+        graph.addEdge(nodes.get(5), nodes.get(7));
+        graph.addEdge(nodes.get(6), nodes.get(7));
+        graph.addEdge(nodes.get(7), nodes.get(4));
+        graph.addEdge(nodes.get(7), nodes.get(8));
+        graph.addEdge(nodes.get(8), nodes.get(3));
+        graph.addEdge(nodes.get(8), nodes.get(9));
+        graph.addEdge(nodes.get(8), nodes.get(10));
+        graph.addEdge(nodes.get(9), nodes.get(1));
+        graph.addEdge(nodes.get(10), nodes.get(7));
+
+
+
+        /*
         graph.addEdge(nodes.get(1), nodes.get(2));
         graph.addEdge(nodes.get(1), nodes.get(9));
         graph.addEdge(nodes.get(1), nodes.get(5));
@@ -63,6 +84,7 @@ public class DominanceTest {
         graph.addEdge(nodes.get(10), nodes.get(12));
         graph.addEdge(nodes.get(11), nodes.get(12));
         graph.addEdge(nodes.get(12), nodes.get(13));
+        */
     }
 
 
@@ -71,8 +93,20 @@ public class DominanceTest {
 
         Dominators<Node, DefaultEdge> dom = Dominators.compute(graph, nodes.get(1));
 
-        Set<Node> set = dom.getDominators(nodes.get(5));
-        assertTrue(set.equals(Arrays.asList(new Node[]{nodes.get(5), nodes.get(6), nodes.get(7)})));
+        Set<Node> set = dom.getDominators(nodes.get(1));
+        assertTrue(set.equals(ImmutableSet.of(nodes.get(1))));
+
+        set = dom.getDominators(nodes.get(2));
+        assertTrue(set.equals(ImmutableSet.of(nodes.get(1), nodes.get(2))));
+
+        set = dom.getDominators(nodes.get(3));
+        assertTrue(set.equals(ImmutableSet.of(nodes.get(1), nodes.get(3))));
+
+        set = dom.getDominators(nodes.get(4));
+        assertTrue(set.equals(ImmutableSet.of(nodes.get(1), nodes.get(3), nodes.get(4))));
+
+        set = dom.getDominators(nodes.get(5));
+        assertTrue(set.equals(ImmutableSet.of(nodes.get(1), nodes.get(3), nodes.get(4), nodes.get(5))));
 
 
     }
