@@ -1,10 +1,8 @@
 package com.devsmart.staple.ir;
 
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
-import com.google.common.collect.Sets;
+import com.google.common.base.Predicate;
+import com.google.common.collect.*;
 import org.jgrapht.DirectedGraph;
 
 import java.util.HashSet;
@@ -76,6 +74,34 @@ public class Dominators<V, E> {
 
     public Set<V> getDominators(V node) {
         return out.get(node);
+    }
+
+    public Set<V> getDominanceFrontiers(V node) {
+        Set<V> dominated = new HashSet<V>();
+        for(V n : graph.vertexSet()){
+            Set<V> set = getDominators(n);
+            if(set.contains(node)){
+                dominated.add(n);
+            }
+        }
+
+        Set<V> frontiers = new HashSet<V>();
+        for(V n : graph.vertexSet()){
+            if(!dominated.contains(n) && anyPredesesorsContainsAny(n, dominated)){
+                frontiers.add(n);
+            }
+        }
+
+        return frontiers;
+    }
+
+    private boolean anyPredesesorsContainsAny(V node, final Set<V> collection){
+        return Iterables.any(getPredesesor(node), new Predicate<V>() {
+            @Override
+            public boolean apply(V input) {
+                return collection.contains(input);
+            }
+        });
     }
 
 }

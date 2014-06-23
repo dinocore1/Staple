@@ -25,7 +25,6 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     HashMap<Label, BasicBlock> labelTable = new HashMap<Label, BasicBlock>();
 
     private static class SymbolScope {
-        BasicBlock basicBlock;
         private HashMap<Symbol, Operand> mSymbolTable = new HashMap<Symbol, Operand>();
         public SymbolScope mParent;
 
@@ -48,18 +47,23 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     private final CompilerContext mCompilerContext;
     private int mTempCount;
     private SymbolScope mCurrentSymbolScope = new SymbolScope();
+    private BasicBlock mCurrentBasicBlock;
 
-    public void pushScope(Label label) {
+    public void pushScope() {
         SymbolScope newScope = new SymbolScope();
-        newScope.basicBlock = new BasicBlock(label);
-        cfg.addVertex(newScope.basicBlock);
         newScope.mParent = mCurrentSymbolScope;
         mCurrentSymbolScope = newScope;
-        labelTable.put(label, newScope.basicBlock);
+
     }
 
     public void popScope() {
         mCurrentSymbolScope = mCurrentSymbolScope.mParent;
+    }
+
+    private BasicBlock createBasicBlock(Label label) {
+        BasicBlock retval = new BasicBlock(label);
+        cfg.addVertex(retval);
+        return retval;
     }
 
     public IRVisitor(CompilerContext ctx) {
@@ -92,20 +96,20 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
 
     private void emit(SSAInst inst) {
-        mCurrentSymbolScope.basicBlock.code.add(inst);
+        mCurrentBasicBlock.code.add(inst);
     }
 
     @Override
     public Operand visitMemberFunctionDecl(@NotNull StapleParser.MemberFunctionDeclContext ctx) {
         ClassFunction memberSymbol = (ClassFunction) mCompilerContext.astTreeProperties.get(ctx);
 
-
         labelTable.clear();
         cfg = new DefaultDirectedGraph<BasicBlock, DefaultEdge>(DefaultEdge.class);
         Label label = new Label();
-        pushScope(label);
+        BasicBlock rootBlock = createBasicBlock(label);
+        mCurrentBasicBlock = rootBlock;
+        pushScope();
         emit(new FunctionDeclaration(memberSymbol));
-        BasicBlock rootBlock = mCurrentSymbolScope.basicBlock;
 
         for(VarDecl arg : memberSymbol.args){
             mCurrentSymbolScope.put(arg.symbol, new Var(arg.symbol.type, arg.symbol.name));
@@ -113,12 +117,6 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         visitChildren(ctx);
         popScope();
-
-
-
-
-
-
 
 
         return null;
@@ -162,7 +160,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
     @Override
     public Operand visitBlock(@NotNull StapleParser.BlockContext ctx) {
-        pushScope(null);
+        pushScope();
         visitChildren(ctx);
         popScope();
         return null;
@@ -218,16 +216,18 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         Branch branch = new Branch(condition, trueLabel, falseLabel);
         emit(branch);
 
-        BasicBlock thisBB = mCurrentSymbolScope.basicBlock;
+        BasicBlock thisBB = mCurrentBasicBlock;
 
-        pushScope(trueLabel);
-        cfg.addEdge(thisBB, mCurrentSymbolScope.basicBlock);
+        pushScope();
+        mCurrentBasicBlock = createBasicBlock(trueLabel);
+        cfg.addEdge(thisBB, mCurrentBasicBlock);
         emit(trueLabel);
         visit(ctx.t);
         popScope();
 
-        pushScope(falseLabel);
-        cfg.addEdge(thisBB, mCurrentSymbolScope.basicBlock);
+        pushScope();
+        mCurrentBasicBlock = createBasicBlock(falseLabel);
+        cfg.addEdge(thisBB, mCurrentBasicBlock);
         emit(falseLabel);
         visit(ctx.e);
         popScope();
