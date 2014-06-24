@@ -10,10 +10,7 @@ import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Stack;
+import java.util.*;
 
 import org.jgrapht.*;
 import org.jgrapht.graph.*;
@@ -48,6 +45,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     private int mTempCount;
     private SymbolScope mCurrentSymbolScope = new SymbolScope();
     private BasicBlock mCurrentBasicBlock;
+    private final LinkedList<InsertPhi> mInsertPhi = new LinkedList<InsertPhi>();
 
     public void pushScope() {
         SymbolScope newScope = new SymbolScope();
@@ -104,6 +102,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         ClassFunction memberSymbol = (ClassFunction) mCompilerContext.astTreeProperties.get(ctx);
 
         labelTable.clear();
+        mInsertPhi.clear();
         cfg = new DefaultDirectedGraph<BasicBlock, DefaultEdge>(DefaultEdge.class);
         Label label = new Label();
         BasicBlock rootBlock = createBasicBlock(label);
@@ -112,12 +111,18 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         emit(new FunctionDeclaration(memberSymbol));
 
         for(VarDecl arg : memberSymbol.args){
-            mCurrentSymbolScope.put(arg.symbol, new Var(arg.symbol.type, arg.symbol.name));
+            Var var = new Var(arg.symbol.type, arg.symbol.name);
+            mCurrentSymbolScope.put(arg.symbol, var);
+            mInsertPhi.add(new InsertPhi(cfg, rootBlock, arg.symbol));
         }
 
         visitChildren(ctx);
         popScope();
 
+        for(InsertPhi phi : mInsertPhi){
+            phi.run();
+        }
+        mInsertPhi.clear();
 
         return null;
     }
@@ -130,6 +135,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         if(left instanceof SymbolRef){
             SymbolRef symbolRef = (SymbolRef)left;
+            right.tag = symbolRef.symbol;
             mCurrentSymbolScope.put(symbolRef.symbol, right);
         } else if(left instanceof ArrayAccess){
             ArrayAccess arrayAccessAst = (ArrayAccess)left;
@@ -210,6 +216,8 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     @Override
     public Operand visitIfStmt(@NotNull StapleParser.IfStmtContext ctx) {
 
+        BasicBlock finishBlock = createBasicBlock(new Label());
+
         Operand condition = rvalue(ctx.c);
         Label trueLabel = new Label();
         Label falseLabel = new Label();
@@ -221,6 +229,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         pushScope();
         mCurrentBasicBlock = createBasicBlock(trueLabel);
         cfg.addEdge(thisBB, mCurrentBasicBlock);
+        cfg.addEdge(mCurrentBasicBlock, finishBlock);
         emit(trueLabel);
         visit(ctx.t);
         popScope();
@@ -228,9 +237,13 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         pushScope();
         mCurrentBasicBlock = createBasicBlock(falseLabel);
         cfg.addEdge(thisBB, mCurrentBasicBlock);
+        cfg.addEdge(mCurrentBasicBlock, finishBlock);
         emit(falseLabel);
         visit(ctx.e);
         popScope();
+
+        mCurrentBasicBlock = finishBlock;
+
 
         return null;
     }

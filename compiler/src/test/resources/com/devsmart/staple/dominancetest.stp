@@ -1,10 +1,8 @@
 
-http://www.cs.colostate.edu/~mstrout/CS553Fall06/slides/lecture17-SSA.pdf
 
 class DominanceTest {
 
-    int test(int x) {
-        int y;
+    int test(int x, int y) {
         int z;
         if(x < 3){
             y = x * 2;
@@ -12,7 +10,7 @@ class DominanceTest {
             y = x - 3;
         }
 
-        z = y +5;
+        z = y + 5;
 
         return z;
     }

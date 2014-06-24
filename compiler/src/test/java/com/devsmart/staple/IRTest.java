@@ -21,8 +21,10 @@ public class IRTest {
     public static Iterable<Object[]> createTests() {
         ArrayList<Object[]> retval = new ArrayList<Object[]>();
 
+        retval.add(new Object[]{IRTest.class.getResource("dominancetest.stp")});
         retval.add(new Object[]{IRTest.class.getResource("fibonacci.stp")});
         retval.add(new Object[]{IRTest.class.getResource("test1.stp")});
+
 
 
         return retval;

@@ -6,14 +6,13 @@ import com.google.common.collect.*;
 import org.jgrapht.DirectedGraph;
 
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 public class Dominators<V, E> {
 
     public static <Y, Z> Dominators<Y, Z> compute(DirectedGraph<Y, Z> graph, Y entry) {
         Dominators<Y, Z> dom = new Dominators<Y, Z>(graph, entry);
-
+        dom.compute();
         return dom;
     }
 
@@ -25,7 +24,6 @@ public class Dominators<V, E> {
     private Dominators(DirectedGraph<V, E> graph, V start) {
         this.graph = graph;
         this.start = start;
-        compute();
     }
 
     private Set<V> getPredesesor(V n){

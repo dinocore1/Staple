@@ -135,4 +135,27 @@ public class DominanceTest {
 
 
     }
+
+    @Test
+    public void testSimple() {
+        DirectedGraph<Node, DefaultEdge> graph = new DefaultDirectedGraph<Node, DefaultEdge>(DefaultEdge.class);
+        HashMap<Integer, Node> nodes = new HashMap<Integer, Node>();
+
+        for (int i = 0; i < 4; i++) {
+            Node node = new Node(String.format("%d", i));
+            nodes.put(i, node);
+            graph.addVertex(node);
+        }
+
+        graph.addEdge(nodes.get(0), nodes.get(1));
+        graph.addEdge(nodes.get(0), nodes.get(2));
+        graph.addEdge(nodes.get(1), nodes.get(3));
+        graph.addEdge(nodes.get(2), nodes.get(3));
+
+        Dominators<Node, DefaultEdge> dom = Dominators.compute(graph, nodes.get(0));
+        Set<Node> frontiers = dom.getDominanceFrontiers(nodes.get(1));
+
+        assertTrue(frontiers.equals(ImmutableSet.of(nodes.get(3))));
+
+    }
 }
