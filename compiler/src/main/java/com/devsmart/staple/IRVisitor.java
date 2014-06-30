@@ -107,7 +107,9 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         emit(new FunctionDeclaration(memberSymbol));
 
         for(VarDecl arg : memberSymbol.args){
-            Var var = new Var(arg.symbol.type, arg.symbol.name);
+            Var var = new Var(arg.symbol.type);
+            var.nameFormat = arg.symbol.name+"%s";
+            var.tag = arg.symbol;
             mCurrentSymbolScope.put(arg.symbol, var);
             mInsertPhi.add(new InsertPhi(cfg, rootBlock, arg.symbol));
         }
@@ -156,11 +158,14 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     public Operand visitLocalVarDecl(@NotNull StapleParser.LocalVarDeclContext ctx) {
         VarDecl varDecl = (VarDecl) mCompilerContext.astTreeProperties.get(ctx);
 
-        Var var = new Var(new PointerType(varDecl.type), varDecl.symbol.name);
+        Var var = new Var(new PointerType(varDecl.type));
+        var.nameFormat = varDecl.symbol.name+"%s";
         var.tag = varDecl.symbol;
+        mInsertPhi.add(new InsertPhi(cfg, mCurrentBasicBlock, varDecl.symbol));
 
         emit(new StackAllocInst(var, varDecl.type));
         mCurrentSymbolScope.put(varDecl.symbol, var);
+
         return null;
     }
 
@@ -251,12 +256,17 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     @Override
     public Operand visitForStmt(@NotNull StapleParser.ForStmtContext ctx) {
 
-        Label trueLabel = new Label();
+
         Label loop = new Label();
         BasicBlock loopBlock = createBasicBlock(loop);
         cfg.addVertex(loopBlock);
         cfg.addEdge(mCurrentBasicBlock, loopBlock);
-        cfg.addEdge(loopBlock, loopBlock);
+
+        Label trueLabel = new Label();
+        BasicBlock trueBlock = createBasicBlock(trueLabel);
+        cfg.addVertex(trueBlock);
+        cfg.addEdge(loopBlock, trueBlock);
+        cfg.addEdge(trueBlock, loopBlock);
 
         Label falseLabel = new Label();
         BasicBlock finishBlock = createBasicBlock(falseLabel);
@@ -275,6 +285,10 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         Branch branch = new Branch(rvalue(ctx.c), trueLabel, falseLabel);
         emit(branch);
+        popScope();
+
+        pushScope();
+        mCurrentBasicBlock = trueBlock;
         emit(trueLabel);
         visit(ctx.block());
         if(ctx.n != null){
@@ -283,6 +297,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         }
         emit(new JumpTo(loop));
         popScope();
+
 
         mCurrentBasicBlock = finishBlock;
         emit(falseLabel);

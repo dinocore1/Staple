@@ -13,12 +13,6 @@ public class Var extends Operand {
         super(type);
     }
 
-    //for explicitly named vars
-    public Var(Type type, String name) {
-        super(type);
-        this.name = name;
-    }
-
     @Override
     public String toString() {
         return name;

@@ -36,10 +36,14 @@ public class  InsertPhi implements Runnable {
 
         PhiInst inst = getPhiInst(block);
         if(inst == null){
-            Var result = new Var(var.type, var.name);
+            Var result = new Var(var.type);
             result.tag = var;
             inst = new PhiInst(result);
-            block.code.addFirst(inst);
+            if(block.code.get(0) instanceof Label){
+                block.code.add(1, inst);
+            } else {
+                block.code.addFirst(inst);
+            }
         }
         inst.args.add(new PhiInst.Predecessor(label, value));
     }

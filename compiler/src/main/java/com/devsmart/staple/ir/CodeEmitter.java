@@ -32,6 +32,9 @@ public class CodeEmitter {
                 } else if(inst instanceof AssignmentInst) {
                     AssignmentInst op = (AssignmentInst) inst;
                     giveName(op.result);
+                } else if(inst instanceof FunctionDeclaration){
+                    FunctionDeclaration dec = (FunctionDeclaration)inst;
+                    //for(dec.mFunctionSymbol.)
                 }
                 code.add(inst);
             }
