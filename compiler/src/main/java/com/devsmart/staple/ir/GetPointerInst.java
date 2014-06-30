@@ -1,12 +1,10 @@
 package com.devsmart.staple.ir;
 
 
-import java.util.ArrayList;
 import java.util.Arrays;
 
-public class GetPointerInst extends SSAInst {
+public class GetPointerInst extends AssignmentInst {
 
-    public final Var result;
     public final Operand base;
     public final Operand[] indexes;
 

@@ -1,21 +1,15 @@
 package com.devsmart.staple.ir;
 
 
-import com.devsmart.staple.AST.VarDecl;
 import com.devsmart.staple.symbol.Symbol;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import org.jgrapht.DirectedGraph;
-import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.traverse.BreadthFirstIterator;
 
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Set;
 
-public class InsertPhi implements Runnable {
+public class  InsertPhi implements Runnable {
 
     private final DirectedGraph<BasicBlock, DefaultEdge> cfg;
     private final BasicBlock start;
@@ -38,7 +32,7 @@ public class InsertPhi implements Runnable {
         return null;
     }
 
-    private void addPhi(BasicBlock block, Label label, Operand value){
+    private void addPhi(BasicBlock block, Label label, Var value){
 
         PhiInst inst = getPhiInst(block);
         if(inst == null){
@@ -59,8 +53,8 @@ public class InsertPhi implements Runnable {
         while(it.hasNext()){
             BasicBlock block = it.next();
             for(SSAInst inst : block.code){
-                if(inst instanceof MathOpInst){
-                    MathOpInst dec = (MathOpInst)inst;
+                if(inst instanceof AssignmentInst){
+                    AssignmentInst dec = (AssignmentInst)inst;
                     if(dec.result.tag != null && dec.result.tag.equals(var)){
                         for(BasicBlock frontier : dom.getDominanceFrontiers(block)){
                             addPhi(frontier, block.label, dec.result);
@@ -69,16 +63,7 @@ public class InsertPhi implements Runnable {
 
                 }
             }
-
-            Set<BasicBlock> frontieres = dom.getDominanceFrontiers(block);
-            for(BasicBlock fontier : frontieres){
-
-            }
-
-
         }
-
-
     }
 
 

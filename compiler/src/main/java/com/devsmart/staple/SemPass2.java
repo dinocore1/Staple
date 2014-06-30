@@ -329,7 +329,33 @@ public class SemPass2 extends StapleBaseVisitor<ASTNode> {
             negitiveBlock = visit(ctx.e);
         }
 
-        return new IfStatement(condition, positiveBlock, negitiveBlock);
+        IfStatement retval = new IfStatement(condition, positiveBlock, negitiveBlock);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+        return retval;
+    }
+
+    @Override
+    public ASTNode visitForStmt(@NotNull StapleParser.ForStmtContext ctx) {
+
+        ASTNode init = null;
+        if(ctx.i != null) {
+            init = visit(ctx.i);
+        }
+
+        ASTNode condition = null;
+        condition = visit(ctx.c);
+
+        ASTNode increment = null;
+        if(ctx.n != null){
+            increment = visit(ctx.n);
+        }
+
+        ASTNode loopBlock = visit(ctx.block());
+
+        ForStatement retval = new ForStatement(init, condition, increment, loopBlock);
+        mCompilerContext.astTreeProperties.put(ctx, retval);
+
+        return retval;
     }
 
     @Override

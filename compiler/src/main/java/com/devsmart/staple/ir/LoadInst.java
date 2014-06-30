@@ -1,8 +1,7 @@
 package com.devsmart.staple.ir;
 
 
-public class LoadInst extends SSAInst {
-    private final Var result;
+public class LoadInst extends AssignmentInst {
     private final Var ptr;
 
     public LoadInst(Var retval, Var ptr) {
@@ -12,6 +11,6 @@ public class LoadInst extends SSAInst {
 
     @Override
     public String toString() {
-        return String.format("%s = load %s", result, ptr);
+        return String.format("%s = load %s", result.name, ptr);
     }
 }

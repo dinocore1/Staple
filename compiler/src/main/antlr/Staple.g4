@@ -30,10 +30,15 @@ stmt
     | block
     | returnStmt
     | ifStmt
+    | forStmt
     ;
 
 ifStmt
     : 'if' '(' c=expr ')' t=stmt ('else' e=stmt)?
+    ;
+
+forStmt
+    : 'for' '(' (i=expr)? ';' c=expr ';' (n=expr)? ')' block
     ;
 
 localVarDecl

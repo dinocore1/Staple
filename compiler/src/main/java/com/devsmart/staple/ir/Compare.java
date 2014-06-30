@@ -2,10 +2,9 @@ package com.devsmart.staple.ir;
 
 import com.devsmart.staple.AST.Relation;
 
-public class Compare extends SSAInst {
+public class Compare extends AssignmentInst {
 
     public final Relation.Operator operator;
-    public final Var result;
     public final Operand left;
     public final Operand right;
 

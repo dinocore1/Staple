@@ -3,13 +3,13 @@ package com.devsmart.staple.ir;
 
 import java.util.HashSet;
 
-public class PhiInst extends SSAInst {
+public class PhiInst extends AssignmentInst {
 
     public static class Predecessor {
         public final Label label;
-        public final Operand operand;
+        public final Var operand;
 
-        public Predecessor(Label label, Operand operand) {
+        public Predecessor(Label label, Var operand) {
             this.label = label;
             this.operand = operand;
         }
@@ -27,12 +27,21 @@ public class PhiInst extends SSAInst {
             }
             return retval;
         }
+
+        @Override
+        public String toString() {
+            return String.format("%s %s", label.name, operand.name);
+        }
     }
 
-    public final Operand result;
     public final HashSet<Predecessor> args = new HashSet<Predecessor>();
 
-    public PhiInst(Operand result) {
+    public PhiInst(Var result) {
         this.result = result;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s = phi(%s)", result.name, args);
     }
 }

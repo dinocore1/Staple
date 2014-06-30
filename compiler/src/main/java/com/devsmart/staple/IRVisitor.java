@@ -88,10 +88,6 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         return retval;
     }
 
-    private Var createTemporaty(Type type) {
-        return new Var(type, String.format("t%d", ++mTempCount));
-    }
-
 
     private void emit(SSAInst inst) {
         mCurrentBasicBlock.code.add(inst);
@@ -124,6 +120,9 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         }
         mInsertPhi.clear();
 
+        CodeEmitter emitter = new CodeEmitter(cfg, rootBlock, mCompilerContext.code);
+        emitter.doIt();
+
         return null;
     }
 
@@ -144,7 +143,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
             for(int i=0;i<indexes.length;i++){
                 indexes[i] = rvalue(arrayAccess.dim.get(i));
             }
-            Var ptr = createTemporaty(new PointerType(arrayAccessAst.var.type));
+            Var ptr = new Var(new PointerType(arrayAccessAst.var.type));
             Operand base = mCurrentSymbolScope.get(arrayAccessAst.var);
             emit(new GetPointerInst(ptr, base, indexes));
             emit(new StoreInst(ptr, right));
@@ -158,6 +157,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         VarDecl varDecl = (VarDecl) mCompilerContext.astTreeProperties.get(ctx);
 
         Var var = new Var(new PointerType(varDecl.type), varDecl.symbol.name);
+        var.tag = varDecl.symbol;
 
         emit(new StackAllocInst(var, varDecl.type));
         mCurrentSymbolScope.put(varDecl.symbol, var);
@@ -183,7 +183,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
             argOperands.add(argoperand);
         }
 
-        Var result = createTemporaty(functionType.returnType);
+        Var result = new Var(functionType.returnType);
         FunctionCallInst inst = new FunctionCallInst(functionCall.functionSymbol, result, argOperands);
         emit(inst);
 
@@ -204,7 +204,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         Operand left = rvalue(ctx.l);
         Operand right = rvalue(ctx.r);
-        Var result = createTemporaty(relation.type);
+        Var result = new Var(relation.type);
 
         Compare compare = new Compare(relation.operator, result, left, right);
 
@@ -249,12 +249,54 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
     }
 
     @Override
+    public Operand visitForStmt(@NotNull StapleParser.ForStmtContext ctx) {
+
+        Label trueLabel = new Label();
+        Label loop = new Label();
+        BasicBlock loopBlock = createBasicBlock(loop);
+        cfg.addVertex(loopBlock);
+        cfg.addEdge(mCurrentBasicBlock, loopBlock);
+        cfg.addEdge(loopBlock, loopBlock);
+
+        Label falseLabel = new Label();
+        BasicBlock finishBlock = createBasicBlock(falseLabel);
+        cfg.addVertex(finishBlock);
+        cfg.addEdge(loopBlock, finishBlock);
+
+
+        //initial condition
+        if(ctx.i != null){
+            visit(ctx.i);
+        }
+
+        pushScope();
+        mCurrentBasicBlock = loopBlock;
+        emit(loop);
+
+        Branch branch = new Branch(rvalue(ctx.c), trueLabel, falseLabel);
+        emit(branch);
+        emit(trueLabel);
+        visit(ctx.block());
+        if(ctx.n != null){
+            //increment expression
+            visit(ctx.n);
+        }
+        emit(new JumpTo(loop));
+        popScope();
+
+        mCurrentBasicBlock = finishBlock;
+        emit(falseLabel);
+
+        return null;
+    }
+
+    @Override
     public Operand visitMathOp(@NotNull StapleParser.MathOpContext ctx) {
         MathOp mathOp = (MathOp) mCompilerContext.astTreeProperties.get(ctx);
 
         Operand left = visit(ctx.l);
         Operand right = visit(ctx.r);
-        Var result = createTemporaty(mathOp.type);
+        Var result = new Var(mathOp.type);
 
         MathOpInst inst = new MathOpInst(mathOp.operation, result, left, right);
         emit(inst);
@@ -268,7 +310,7 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
 
         Operand left = visit(ctx.l);
         Operand right = visit(ctx.r);
-        Var result = createTemporaty(mathOp.type);
+        Var result = new Var(mathOp.type);
 
         MathOpInst inst = new MathOpInst(mathOp.operation, result, left, right);
         emit(inst);
@@ -297,10 +339,10 @@ public class IRVisitor extends StapleBaseVisitor<Operand> {
         for(int i=0;i<indexes.length;i++){
             indexes[i] = visit(ctx.dim.get(i));
         }
-        Var ptr = createTemporaty(new PointerType(arrayAccess.var.type));
+        Var ptr = new Var(new PointerType(arrayAccess.var.type));
         Operand base = mCurrentSymbolScope.get(arrayAccess.var);
         emit(new GetPointerInst(ptr, base, indexes));
-        Var retval = createTemporaty(arrayAccess.var.type);
+        Var retval = new Var(arrayAccess.var.type);
         emit(new LoadInst(retval, ptr));
 
         return retval;

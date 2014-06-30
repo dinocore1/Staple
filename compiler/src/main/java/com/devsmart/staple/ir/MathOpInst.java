@@ -3,10 +3,9 @@ package com.devsmart.staple.ir;
 
 import com.devsmart.staple.AST.MathOp;
 
-public class MathOpInst extends SSAInst {
+public class MathOpInst extends AssignmentInst {
 
     MathOp.Operation operation;
-    Var result;
     Operand left;
     Operand right;
 
