@@ -5,14 +5,15 @@ import com.devsmart.staple.Scope;
 import com.devsmart.staple.symbols.Field;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class ClassType implements Type {
 
     public final String name;
     public ClassType parent;
     public Scope scope;
-    public ArrayList<Field> fields = new ArrayList<Field>();
-    public ArrayList<FunctionType> functions = new ArrayList<FunctionType>();
+    public List<Field> fields = new ArrayList<Field>();
+    public List<FunctionType> functions = new ArrayList<FunctionType>();
 
     public ClassType(String name){
         this.name = name;
@@ -26,7 +27,7 @@ public class ClassType implements Type {
 
     @Override
     public String toString() {
-        return String.format("class: %s", name);
+        return name;
     }
 
     public Field getField(String name) {

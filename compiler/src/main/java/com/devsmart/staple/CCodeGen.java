@@ -1,12 +1,11 @@
 package com.devsmart.staple;
 
 
+import com.devsmart.staple.runtime.*;
 import com.devsmart.staple.symbols.Argument;
-import com.devsmart.staple.type.ClassType;
+import com.devsmart.staple.type.*;
 
 import com.devsmart.staple.symbols.Field;
-import com.devsmart.staple.type.FunctionType;
-import com.devsmart.staple.type.MemberFunctionType;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
@@ -66,18 +65,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         String[] retval = new String[functions.size()];
         int i = 0;
         for(FunctionType function : functions){
-            ST functionTmp = codegentemplate.getInstanceOf("functionTypedef");
-            functionTmp.add("return", function.returnType.getTypeName());
-            functionTmp.add("name", function.name);
-            if(function instanceof MemberFunctionType){
-                Argument[] args = new Argument[function.arguments.length+1];
-                args[0] = new Argument(currentClassType, "self");
-                System.arraycopy(function.arguments, 0, args, 1, function.arguments.length);
-                functionTmp.add("args", args);
-            } else {
-                functionTmp.add("args", function.arguments);
-            }
-            retval[i++] = functionTmp.render() + ";";
+            retval[i++] = renderType(function) + ";";
         }
         return retval;
     }
@@ -87,9 +75,46 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         int i = 0;
         for(Field field : fields){
             retval[i++] = String.format("%s %s;",
-                    field.type.getTypeName() + (field.type instanceof ClassType ? "*" : ""),
+                    renderType(field.type),
                     field.name);
         }
+        return retval;
+    }
+
+    private String renderType(Type type) {
+        String retval = null;
+        if(type instanceof PrimitiveType){
+            retval = type.toString();
+        } else if(type instanceof FunctionType){
+            final FunctionType functionType = (FunctionType)type;
+            ST functionTypeTmp = codegentemplate.getInstanceOf("functionType");
+            functionTypeTmp.add("return", renderType(functionType.returnType));
+            if(!functionType.isAnonomus) {
+                functionTypeTmp.add("name", functionType.name);
+            }
+
+            Argument[] args = null;
+            if(functionType.isMember) {
+                args = new Argument[functionType.arguments.length + 1];
+                args[0] = new Argument(new PointerType(com.devsmart.staple.runtime.Runtime.BaseObject), "self");
+                System.arraycopy(functionType.arguments, 0, args, 1, functionType.arguments.length);
+            } else {
+                args = functionType.arguments;
+            }
+
+            String[] argsStr = new String[args.length];
+            for(int i=0;i<argsStr.length;i++){
+                argsStr[i] = renderType(args[i].type) + " " + args[i].name;
+            }
+            functionTypeTmp.add("args", argsStr);
+            retval = functionTypeTmp.render();
+        } else if(type instanceof PointerType){
+            final PointerType pointerType = (PointerType) type;
+            retval = renderType(pointerType.baseType) + "*";
+        } else {
+            retval = type.toString();
+        }
+
         return retval;
     }
 

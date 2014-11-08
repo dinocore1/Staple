@@ -17,6 +17,6 @@ struct <name> {
 
 >>
 
-functionTypedef(return, name, args) ::= <<
+functionType(return, name, args) ::= <<
 <return> (*<name>)(<args; separator=", ">)
 >>

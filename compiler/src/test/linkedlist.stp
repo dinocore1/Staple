@@ -1,15 +1,14 @@
 
 class LinkedList {
   uint size;
-  LinkedListNode head;
-  LinkedListNode tail;
+  LinkedListNode* head;
+  LinkedListNode* tail;
 
-  void add(uint obj) {
-
+  void add(void* obj) {
   }
 }
 
 class LinkedListNode {
-  LinkedListNode next;
-  LinkedListNode previous;
+  LinkedListNode* next;
+  LinkedListNode* previous;
 }

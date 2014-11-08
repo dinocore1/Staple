@@ -51,7 +51,7 @@ ifStmt
     ;
 
 type
-    : baseType '*'?
+    : baseType POINTER?
     ;
 
 baseType
@@ -62,6 +62,9 @@ baseType
     | ID
     ;
 
+POINTER
+    : '*'
+    ;
 
 WS
 	: [ \t\r\n]+ -> skip

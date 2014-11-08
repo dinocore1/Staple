@@ -80,10 +80,11 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitClassMemberDecl(@NotNull StapleParser.ClassMemberDeclContext ctx) {
 
-        final String typeStr = ctx.type().getText();
-        Type type = getType(typeStr);
+        final StapleParser.TypeContext typeCtx = ctx.type();
+        visit(typeCtx);
+        Type type = (Type) compilerContext.symbols.get(typeCtx);
         if(type == null){
-            compilerContext.errorStream.error("Could not determine type of: " + typeStr, ctx.type());
+            compilerContext.errorStream.error("Could not determine type: " + typeCtx.getText(), typeCtx);
         } else {
             final String name = ctx.ID().getText();
             if(currentClass.getField(name) != null){
@@ -112,7 +113,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         ArrayList<Argument> arguments = (ArrayList<Argument>) compilerContext.symbols.get(ctx.argList());
 
         Argument[] argArray = arguments.toArray(new Argument[arguments.size()]);
-        MemberFunctionType functionType = new MemberFunctionType(name, returnType, argArray);
+        FunctionType functionType = FunctionType.memberFunction(name, returnType, argArray);
 
         currentClass.functions.add(functionType);
         compilerContext.symbols.put(ctx, functionType);
@@ -126,14 +127,28 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         List<TerminalNode> names = ctx.ID();
         ArrayList<Argument> args = new ArrayList<Argument>(names.size());
         for(int i=0;i<names.size();i++){
-            final String typeStr = types.get(i).getText();
-            Type type = getType(typeStr);
-
+            StapleParser.TypeContext typeCtx = types.get(i);
+            visit(typeCtx);
+            Type type = (Type) compilerContext.symbols.get(typeCtx);
             Argument arg = new Argument(type, names.get(i).getText());
             args.add(arg);
         }
 
         compilerContext.symbols.put(ctx, args);
+
+        return null;
+    }
+
+    @Override
+    public Void visitType(@NotNull StapleParser.TypeContext ctx) {
+        String basetypeStr = ctx.baseType().getText();
+        Type baseType = getType(basetypeStr);
+
+        Type theType = baseType;
+        if(ctx.POINTER() != null) {
+            theType = new PointerType(baseType);
+        }
+        compilerContext.symbols.put(ctx, theType);
 
         return null;
     }
