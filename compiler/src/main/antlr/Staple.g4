@@ -17,12 +17,12 @@ classMemberDecl
     ;
 
 classFunctionDecl
-    : linkage? type ID '(' argList ')'
+    : linkage? type ID '(' argList ')' block
     ;
 
 argList
-    : type ID
-    | type ID (',' type ID)+
+    : type ID (',' type ID)*
+    |
     ;
 
 linkage
@@ -30,14 +30,37 @@ linkage
     | 'static'
     ;
 
+block
+    : '{' statement* '}'
+    ;
+
+statement
+    : block
+    | rvalue ('*' | '/' | '+' | '-') rvalue
+    | ifStmt
+    | rvalue '=' rvalue
+    | ID
+    ;
+
+rvalue
+    : ID
+    ;
+
+ifStmt
+    : 'if' '(' statement ')' statement ('else' statement)?
+    ;
+
 type
+    : baseType '*'?
+    ;
+
+baseType
     : 'void'
     | INTTYPE
     | 'bool'
     | FLOATTYPE
     | ID
     ;
-
 
 
 WS

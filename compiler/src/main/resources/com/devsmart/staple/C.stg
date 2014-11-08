@@ -3,7 +3,8 @@ classTypeDecl(name, parent, functions) ::= <<
 struct <name>Class {
   <parent>
   <functions; separator=";\n">
-}
+};
+
 
 >>
 
@@ -11,6 +12,11 @@ classObjDecl(name, parent, fields) ::= <<
 struct <name> {
   <parent>
   <fields; separator="\n">
-}
+};
 
+
+>>
+
+functionTypedef(return, name, args) ::= <<
+<return> (*<name>)(<args; separator=", ">)
 >>

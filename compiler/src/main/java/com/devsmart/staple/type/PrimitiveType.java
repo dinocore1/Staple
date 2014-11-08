@@ -3,6 +3,8 @@ package com.devsmart.staple.type;
 
 public interface PrimitiveType extends Type {
 
+    public static final VoidType Void = new VoidType();
+
     public static final IntType Int8 = new IntType(8, false);
     public static final IntType Int16 = new IntType(16, false);
     public static final IntType Int32 = new IntType(32, false);

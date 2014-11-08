@@ -20,7 +20,7 @@ public class ObjOutputTest {
 
 
         ctx = new CompilerContext();
-        ctx.input = new FileInputStream(new File("compiler/src/test/linkedlist.stp"));
+        ctx.input = new FileInputStream(new File("src/test/linkedlist.stp"));
         ctx.output = new OutputStreamWriter(System.out);
     }
 
@@ -31,7 +31,7 @@ public class ObjOutputTest {
         StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
 
         StapleParser.CompileUnitContext tree = parser.compileUnit();
-        tree.inspect(parser);
+        //tree.inspect(parser);
 
         SemPass1 semPass1 = new SemPass1(ctx);
         semPass1.visit(tree);

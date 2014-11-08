@@ -2,6 +2,7 @@ package com.devsmart.staple.type;
 
 
 import com.devsmart.staple.Scope;
+import com.devsmart.staple.symbols.Field;
 
 import java.util.ArrayList;
 
@@ -11,7 +12,7 @@ public class ClassType implements Type {
     public ClassType parent;
     public Scope scope;
     public ArrayList<Field> fields = new ArrayList<Field>();
-    ArrayList<Field> functions = new ArrayList<Field>();
+    public ArrayList<FunctionType> functions = new ArrayList<FunctionType>();
 
     public ClassType(String name){
         this.name = name;

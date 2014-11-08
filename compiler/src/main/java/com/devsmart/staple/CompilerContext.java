@@ -13,6 +13,6 @@ public class CompilerContext {
     ErrorStream errorStream = new ErrorStream();
 
     Scope rootScope = new Scope(null);
-    ParseTreeProperty<Symbol> symbols = new ParseTreeProperty<Symbol>();
+    ParseTreeProperty<Object> symbols = new ParseTreeProperty<Object>();
 
 }

@@ -1,14 +1,16 @@
 package com.devsmart.staple;
 
 
-import com.devsmart.staple.type.ClassType;
-import com.devsmart.staple.type.Field;
-import com.devsmart.staple.type.PrimitiveType;
-import com.devsmart.staple.type.Type;
+import com.devsmart.staple.symbols.Argument;
+import com.devsmart.staple.symbols.Field;
+import com.devsmart.staple.type.*;
 
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class SemPass2 extends StapleBaseVisitor<Void> {
 
@@ -39,6 +41,8 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         StapleParser.ExtendsDeclContext extendDecl = ctx.extendsDecl();
         if(extendDecl != null) {
             visit(ctx.extendsDecl());
+        } else {
+            currentClass.parent = com.devsmart.staple.runtime.Runtime.BaseObject;
         }
 
         Scope parentScope = currentScope;
@@ -95,8 +99,48 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         return null;
     }
 
+    @Override
+    public Void visitClassFunctionDecl(@NotNull StapleParser.ClassFunctionDeclContext ctx) {
+
+        final String name = ctx.ID().getText();
+
+        final String retvalTypeStr = ctx.type().getText();
+        Type returnType = getType(retvalTypeStr);
+
+        visit(ctx.argList());
+
+        ArrayList<Argument> arguments = (ArrayList<Argument>) compilerContext.symbols.get(ctx.argList());
+
+        Argument[] argArray = arguments.toArray(new Argument[arguments.size()]);
+        MemberFunctionType functionType = new MemberFunctionType(name, returnType, argArray);
+
+        currentClass.functions.add(functionType);
+        compilerContext.symbols.put(ctx, functionType);
+
+        return null;
+    }
+
+    @Override
+    public Void visitArgList(@NotNull StapleParser.ArgListContext ctx) {
+        List<StapleParser.TypeContext> types = ctx.type();
+        List<TerminalNode> names = ctx.ID();
+        ArrayList<Argument> args = new ArrayList<Argument>(names.size());
+        for(int i=0;i<names.size();i++){
+            final String typeStr = types.get(i).getText();
+            Type type = getType(typeStr);
+
+            Argument arg = new Argument(type, names.get(i).getText());
+            args.add(arg);
+        }
+
+        compilerContext.symbols.put(ctx, args);
+
+        return null;
+    }
+
     public static HashMap<String, PrimitiveType> PrimitiveTypes = new HashMap<String, PrimitiveType>();
     static {
+        PrimitiveTypes.put("void", PrimitiveType.Void);
         PrimitiveTypes.put("int", PrimitiveType.Int32);
         PrimitiveTypes.put("uint", PrimitiveType.UInt32);
 

@@ -1,14 +1,14 @@
-package com.devsmart.staple.type;
-
+package com.devsmart.staple.symbols;
 
 import com.devsmart.staple.Symbol;
+import com.devsmart.staple.type.Type;
 
-public class Field implements Symbol {
+public class Argument implements Symbol {
 
     public final Type type;
     public final String name;
 
-    public Field(Type type, String name){
+    public Argument(Type type, String name){
         this.type = type;
         this.name = name;
     }

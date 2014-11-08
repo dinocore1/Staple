@@ -26,7 +26,7 @@ dependencies {
     antlr4 group: 'org.antlr', name: 'antlr4', version: antlrVersion
     antlr4 group: 'org.antlr', name: 'antlr4-runtime', version: antlrVersion
     runtime 'org.antlr:stringtemplate:4.0.2'
-    runtime 'com.google.guava:guava:17.0'
+    runtime 'com.google.guava:guava:18.0'
 
 	testCompile 'junit:junit:4.11'
 }

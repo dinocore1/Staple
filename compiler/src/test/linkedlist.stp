@@ -3,6 +3,10 @@ class LinkedList {
   uint size;
   LinkedListNode head;
   LinkedListNode tail;
+
+  void add(uint obj) {
+
+  }
 }
 
 class LinkedListNode {
