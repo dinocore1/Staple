@@ -6,6 +6,17 @@ struct _<name>Class {
   <functions; separator=";\n">
 };
 
+extern <name>Class <name>ClassObj;
+
+
+>>
+
+classTypeInstance(name, parent, functions) ::= <<
+<name>Class <name>ClassObj = {
+  "<name>",
+  <parent>,
+  <functions; separator=",\n">
+};
 
 >>
 

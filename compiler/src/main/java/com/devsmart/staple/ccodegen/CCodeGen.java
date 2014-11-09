@@ -7,10 +7,13 @@ import com.devsmart.staple.StapleParser;
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.type.*;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Collections2;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 
@@ -46,6 +49,30 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         ClassHeaderGen internalClassHeaderGen = new ClassHeaderGen(compilerContext, codeOutput);
         for(StapleParser.ClassDeclContext intClass : mainClass.classDecl()){
             internalClassHeaderGen.visit(intClass);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
+
+        currentClassType = (ClassType)compilerContext.symbols.get(ctx);
+
+        ST instanceTmp = codegentemplate.getInstanceOf("classTypeInstance");
+        instanceTmp.add("name", currentClassType.name);
+        instanceTmp.add("parent", currentClassType.parent != null ? currentClassType.parent.name : "NULL");
+        instanceTmp.add("functions", Collections2.transform(currentClassType.functions, new Function<FunctionType, String>() {
+            @Override
+            public String apply(FunctionType input) {
+                return input.name;
+            }
+        }));
+
+        try {
+            codeOutput.write(instanceTmp.render());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         return null;
