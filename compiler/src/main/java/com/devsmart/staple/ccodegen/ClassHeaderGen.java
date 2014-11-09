@@ -7,6 +7,7 @@ import com.devsmart.staple.StapleParser;
 import com.devsmart.staple.symbols.Field;
 import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FunctionType;
+import com.devsmart.staple.type.PrimitiveType;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
 
@@ -14,12 +15,12 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Collection;
 
-public class ClassCCodeGen extends StapleBaseVisitor<Void> {
+public class ClassHeaderGen extends StapleBaseVisitor<Void> {
 
     private final CompilerContext compilerContext;
     private final OutputStreamWriter output;
 
-    public ClassCCodeGen(CompilerContext ctx, OutputStreamWriter output){
+    public ClassHeaderGen(CompilerContext ctx, OutputStreamWriter output){
         this.compilerContext = ctx;
         this.output = output;
     }
@@ -28,23 +29,27 @@ public class ClassCCodeGen extends StapleBaseVisitor<Void> {
     public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
         ClassType currentClassType = (ClassType) compilerContext.symbols.get(ctx);
 
-        ST classTypeTmp = CCodeGen.codegentemplate.getInstanceOf("classTypeDecl");
-        classTypeTmp.add("name", currentClassType.name);
-        classTypeTmp.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + "Class parent;"  : ""));
-        classTypeTmp.add("functions", functions(currentClassType.functions));
-
-
-        ST classObj = CCodeGen.codegentemplate.getInstanceOf("classObjDecl");
-        classObj.add("name", currentClassType.name);
-        classObj.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + " parent;"  : ""));
-        classObj.add("fields", fields(currentClassType.fields));
-
         try {
+            ST classTypeTmp = CCodeGen.codegentemplate.getInstanceOf("classTypeDecl");
+            classTypeTmp.add("name", currentClassType.name);
+            classTypeTmp.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + "Class parent;"  : ""));
+            classTypeTmp.add("functions", functions(currentClassType.functions));
             String code = classTypeTmp.render();
             output.write(code);
 
+
+            ST classObj = CCodeGen.codegentemplate.getInstanceOf("classObjDecl");
+            classObj.add("name", currentClassType.name);
+            classObj.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + " parent;"  : ""));
+            classObj.add("fields", fields(currentClassType.fields));
             code = classObj.render();
             output.write(code);
+
+            ST initFuncTmp = CCodeGen.codegentemplate.getInstanceOf("functionDec");
+            initFuncTmp.add("name", currentClassType.name + "_init");
+            initFuncTmp.add("return", CCodeGen.renderType(PrimitiveType.Void));
+            initFuncTmp.add("args", new String[] { "void* self" });
+            output.write(initFuncTmp.render());
         } catch (IOException e) {
             e.printStackTrace();
         }

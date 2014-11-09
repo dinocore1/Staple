@@ -19,6 +19,10 @@ struct <name> {
 
 >>
 
+functionDec(return, name, args) ::= <<
+<return> <name>(<args; separator=", ">)
+>>
+
 functionType(return, name, args) ::= <<
 <return> (*<name>)(<args; separator=", ">)
 >>

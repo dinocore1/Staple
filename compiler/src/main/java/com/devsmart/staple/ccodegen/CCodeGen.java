@@ -40,12 +40,12 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     public Void visitCompileUnit(@NotNull StapleParser.CompileUnitContext ctx) {
 
         StapleParser.ClassDeclContext mainClass = ctx.classDecl();
-        ClassCCodeGen mainClassCCodeGen = new ClassCCodeGen(compilerContext, headerOutput);
-        mainClassCCodeGen.visit(mainClass);
+        ClassHeaderGen mainClassHeaderGen = new ClassHeaderGen(compilerContext, headerOutput);
+        mainClassHeaderGen.visit(mainClass);
 
-        ClassCCodeGen internalClassCCodeGen = new ClassCCodeGen(compilerContext, codeOutput);
+        ClassHeaderGen internalClassHeaderGen = new ClassHeaderGen(compilerContext, codeOutput);
         for(StapleParser.ClassDeclContext intClass : mainClass.classDecl()){
-            internalClassCCodeGen.visit(intClass);
+            internalClassHeaderGen.visit(intClass);
         }
 
         return null;
