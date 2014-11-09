@@ -1,6 +1,7 @@
 
 classTypeDecl(name, parent, functions) ::= <<
-struct <name>Class {
+typedef struct _<name>Class <name>Class;
+struct _<name>Class {
   <parent>
   <functions; separator=";\n">
 };
@@ -9,6 +10,7 @@ struct <name>Class {
 >>
 
 classObjDecl(name, parent, fields) ::= <<
+typedef struct _<name> <name>;
 struct <name> {
   <parent>
   <fields; separator="\n">
