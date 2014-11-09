@@ -34,6 +34,10 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         }
     }
 
+    private TypeVisitor createTypeVisitor() {
+        return new TypeVisitor(compilerContext, currentScope);
+    }
+
     @Override
     public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
 
@@ -94,8 +98,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     public Void visitClassMemberDecl(@NotNull StapleParser.ClassMemberDeclContext ctx) {
 
         final StapleParser.TypeContext typeCtx = ctx.type();
-        visit(typeCtx);
-        Type type = (Type) compilerContext.symbols.get(typeCtx);
+        Type type = createTypeVisitor().visit(typeCtx);
         if(type == null){
             compilerContext.errorStream.error("Could not determine type: " + typeCtx.getText(), typeCtx);
         } else {
@@ -120,8 +123,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
 
         final String name = ctx.Identifier().getText();
 
-        final String retvalTypeStr = ctx.type().getText();
-        Type returnType = getType(retvalTypeStr);
+        Type returnType = createTypeVisitor().visit(ctx.type());
 
         visit(ctx.argList());
 
@@ -152,9 +154,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         List<TerminalNode> names = ctx.Identifier();
         ArrayList<Argument> args = new ArrayList<Argument>(names.size());
         for(int i=0;i<names.size();i++){
-            StapleParser.TypeContext typeCtx = types.get(i);
-            visit(typeCtx);
-            Type type = (Type) compilerContext.symbols.get(typeCtx);
+            Type type = createTypeVisitor().visit(types.get(i));
             Argument arg = new Argument(type, names.get(i).getText());
             args.add(arg);
         }
@@ -185,9 +185,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitLocalVariableDeclaration(@NotNull StapleParser.LocalVariableDeclarationContext ctx) {
 
-        final StapleParser.TypeContext typeCtx = ctx.type();
-        visit(typeCtx);
-        Type type = (Type) compilerContext.symbols.get(typeCtx);
+        Type type = createTypeVisitor().visit(ctx.type());
 
         final String name = ctx.Identifier().getText();
         Symbol conflictSymbol = currentScope.get(name);
@@ -204,47 +202,23 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitType(@NotNull StapleParser.TypeContext ctx) {
-        String basetypeStr = ctx.primitiveType() != null ? ctx.primitiveType().getText() : ctx.Identifier().getText();
-        Type baseType = getType(basetypeStr);
+    public Void visitExpression(@NotNull StapleParser.ExpressionContext ctx) {
 
-        if(baseType == null){
-            compilerContext.errorStream.error("unknown type: " + basetypeStr, ctx);
-        }
+        StapleParser.AssignmentOperatorContext assign = ctx.assignmentOperator();
+        if(assign != null){
 
-        Type theType = baseType;
-        if(ctx.POINTER() != null) {
-            theType = new PointerType(baseType);
+            StapleParser.ConditionalExpressionContext lvalue = ctx.conditionalExpression();
+            visit(lvalue);
+
+            StapleParser.ExpressionContext rvalue = ctx.expression();
+            visit(rvalue);
+
+        } else {
+            visitChildren(ctx);
         }
-        compilerContext.symbols.put(ctx, theType);
 
         return null;
     }
 
-    public static HashMap<String, PrimitiveType> PrimitiveTypes = new HashMap<String, PrimitiveType>();
-    static {
-        PrimitiveTypes.put("void", PrimitiveType.Void);
-        PrimitiveTypes.put("int", PrimitiveType.Int32);
-        PrimitiveTypes.put("uint", PrimitiveType.UInt32);
 
-        PrimitiveTypes.put("int8", PrimitiveType.Int8);
-        PrimitiveTypes.put("int16", PrimitiveType.Int16);
-        PrimitiveTypes.put("int32", PrimitiveType.Int32);
-        PrimitiveTypes.put("int64", PrimitiveType.Int64);
-
-        PrimitiveTypes.put("bool", PrimitiveType.Bool);
-    }
-
-    private Type getType(String typeStr) {
-
-        Type retval = PrimitiveTypes.get(typeStr);
-        if(retval == null){
-            Symbol symbol = currentScope.get(typeStr);
-            if(symbol != null && symbol instanceof ClassType){
-                retval = (ClassType)symbol;
-            }
-        }
-
-        return retval;
-    }
 }
