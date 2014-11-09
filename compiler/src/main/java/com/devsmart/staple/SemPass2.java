@@ -64,7 +64,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitExtendsDecl(@NotNull StapleParser.ExtendsDeclContext ctx) {
 
-        final String className = ctx.ID().getText();
+        final String className = ctx.Identifier().getText();
         Symbol symbol = currentScope.get(className);
         if(symbol == null){
             compilerContext.errorStream.error("could not find class: " + className, ctx);
@@ -86,7 +86,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         if(type == null){
             compilerContext.errorStream.error("Could not determine type: " + typeCtx.getText(), typeCtx);
         } else {
-            final String name = ctx.ID().getText();
+            final String name = ctx.Identifier().getText();
             if(currentClass.getField(name) != null){
                 compilerContext.errorStream.error("redefinition of field: " + name, ctx);
             } else {
@@ -103,7 +103,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitClassFunctionDecl(@NotNull StapleParser.ClassFunctionDeclContext ctx) {
 
-        final String name = ctx.ID().getText();
+        final String name = ctx.Identifier().getText();
 
         final String retvalTypeStr = ctx.type().getText();
         Type returnType = getType(retvalTypeStr);
@@ -124,7 +124,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitArgList(@NotNull StapleParser.ArgListContext ctx) {
         List<StapleParser.TypeContext> types = ctx.type();
-        List<TerminalNode> names = ctx.ID();
+        List<TerminalNode> names = ctx.Identifier();
         ArrayList<Argument> args = new ArrayList<Argument>(names.size());
         for(int i=0;i<names.size();i++){
             StapleParser.TypeContext typeCtx = types.get(i);
@@ -141,7 +141,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
 
     @Override
     public Void visitType(@NotNull StapleParser.TypeContext ctx) {
-        String basetypeStr = ctx.baseType().getText();
+        String basetypeStr = ctx.primitiveType() != null ? ctx.primitiveType().getText() : ctx.Identifier().getText();
         Type baseType = getType(basetypeStr);
 
         Type theType = baseType;

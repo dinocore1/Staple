@@ -18,7 +18,7 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
 
-        ClassType classType = new ClassType(ctx.ID().getText());
+        ClassType classType = new ClassType(ctx.Identifier().getText());
         classType.scope = new Scope(currentScope);
 
         currentScope.put(classType.name, classType);

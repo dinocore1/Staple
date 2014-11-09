@@ -5,6 +5,7 @@ class LinkedList {
   LinkedListNode* tail;
 
   void add(void* obj) {
+    this.head = new LinkedListNode();
   }
 }
 
