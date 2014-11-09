@@ -11,6 +11,8 @@ struct _stp_objectClass {
   void (*dest)(void* self);
 };
 
+extern stp_objectClass stp_objectClassObj;
+
 void stp_object_init(void* self);
 void stp_object_dest(void* self);
 

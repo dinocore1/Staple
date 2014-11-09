@@ -4,6 +4,7 @@ class LinkedList {
   class Node {
     Node* next;
     Node* previous;
+    Object* data;
   }
 
   uint size;
@@ -11,7 +12,14 @@ class LinkedList {
   Node* tail;
 
   void add(void* obj) {
-    this.head = new Node();
+    Node newNode;
+    newNode = new Node();
+    newNode.data = obj;
+    newNode.previous = this.head;
+
+    this.head.next = newNode;
+    this.head = newNode;
+    this.size++;
   }
 
   void delete(void* obj){

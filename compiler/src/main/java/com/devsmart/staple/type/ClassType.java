@@ -45,4 +45,20 @@ public class ClassType implements Type {
 
         return retval;
     }
+
+    public FunctionType getFunction(String name) {
+        FunctionType retval = null;
+        for(FunctionType function : functions) {
+            if(function.name.equals(name)){
+                retval = function;
+                break;
+            }
+        }
+
+        if(retval == null && parent != null){
+            retval = parent.getFunction(name);
+        }
+
+        return retval;
+    }
 }

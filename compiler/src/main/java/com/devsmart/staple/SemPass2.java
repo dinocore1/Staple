@@ -3,6 +3,7 @@ package com.devsmart.staple;
 
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.symbols.Field;
+import com.devsmart.staple.symbols.LocalVariable;
 import com.devsmart.staple.type.*;
 
 import org.antlr.v4.runtime.misc.NotNull;
@@ -48,6 +49,12 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
 
         Scope parentScope = currentScope;
         currentScope = currentClass.scope;
+
+        //add init function
+        {
+            FunctionType initFunction = FunctionType.memberFunction("init", PrimitiveType.Void, new Argument[]{new Argument(new PointerType(PrimitiveType.Void), "self")});
+            currentClass.functions.add(initFunction);
+        }
 
         for(StapleParser.ClassDeclContext internalClass : ctx.classDecl()){
             visit(internalClass);
@@ -99,6 +106,8 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
                 Field field = new Field(type, name);
                 currentClass.fields.add(field);
                 compilerContext.symbols.put(ctx, field);
+
+                currentScope.put(name, field);
             }
 
         }
@@ -124,6 +133,16 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         currentClass.functions.add(functionType);
         compilerContext.symbols.put(ctx, functionType);
 
+        Scope blockScope = new Scope(currentScope);
+        StapleParser.BlockContext blockCtx = ctx.block();
+        compilerContext.scope.put(blockCtx, blockScope);
+
+        for(Argument arg : arguments){
+            blockScope.put(arg.name, arg);
+        }
+
+        visit(blockCtx);
+
         return null;
     }
 
@@ -141,6 +160,45 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         }
 
         compilerContext.symbols.put(ctx, args);
+
+        return null;
+    }
+
+    @Override
+    public Void visitBlock(@NotNull StapleParser.BlockContext ctx) {
+
+        //check to see if the scope already exists for this block
+        Scope blockScope = compilerContext.scope.get(ctx);
+        if(blockScope == null){
+            blockScope = new Scope(currentScope);
+            compilerContext.scope.put(ctx, blockScope);
+        } else {
+            currentScope = blockScope;
+        }
+
+        visitChildren(ctx);
+        popScope();
+
+        return null;
+    }
+
+    @Override
+    public Void visitLocalVariableDeclaration(@NotNull StapleParser.LocalVariableDeclarationContext ctx) {
+
+        final StapleParser.TypeContext typeCtx = ctx.type();
+        visit(typeCtx);
+        Type type = (Type) compilerContext.symbols.get(typeCtx);
+
+        final String name = ctx.Identifier().getText();
+        Symbol conflictSymbol = currentScope.get(name);
+        if(conflictSymbol != null){
+            compilerContext.errorStream.error("redefinition of " + name, ctx);
+        } else {
+
+            LocalVariable localVariable = new LocalVariable(type, name);
+            currentScope.put(name, localVariable);
+            compilerContext.symbols.put(ctx, localVariable);
+        }
 
         return null;
     }

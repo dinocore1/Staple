@@ -27,7 +27,7 @@ argList
 
 
 block
-    : '{' statement* '}'
+    : '{' (statement | localVariableDeclarationStatement)* '}'
     ;
 
 blockStatement
@@ -40,7 +40,7 @@ localVariableDeclarationStatement
     ;
 
 localVariableDeclaration
-    : Identifier Identifier
+    : type Identifier
     ;
 
 statement

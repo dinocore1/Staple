@@ -4,18 +4,22 @@ package com.devsmart.staple.ccodegen;
 import com.devsmart.staple.CompilerContext;
 import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
+import com.devsmart.staple.ccodegen.instruction.Instruction;
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.type.*;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.tree.ParseTreeProperty;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.util.LinkedList;
+import java.util.List;
 
 public class CCodeGen extends StapleBaseVisitor<Void> {
 
@@ -29,9 +33,11 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
 
     private final CompilerContext compilerContext;
+    private ParseTreeProperty<List<Instruction>> instructions = new ParseTreeProperty<List<Instruction>>();
     private ClassType currentClassType;
     private OutputStreamWriter headerOutput;
     private OutputStreamWriter codeOutput;
+    private LinkedList<Instruction> code;
 
     public CCodeGen(CompilerContext ctx, OutputStreamWriter headerOutput, OutputStreamWriter codeOutput) {
         compilerContext = ctx;
@@ -83,6 +89,16 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return null;
+    }
+
+    @Override
+    public Void visitClassMemberDecl(@NotNull StapleParser.ClassMemberDeclContext ctx) {
+        code = new LinkedList<Instruction>();
+        instructions.put(ctx, code);
+
+
 
         return null;
     }

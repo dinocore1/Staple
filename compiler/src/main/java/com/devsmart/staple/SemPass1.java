@@ -2,7 +2,6 @@ package com.devsmart.staple;
 
 
 import com.devsmart.staple.type.ClassType;
-
 import org.antlr.v4.runtime.misc.NotNull;
 
 public class SemPass1 extends StapleBaseVisitor<Void> {
@@ -13,6 +12,7 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
     public SemPass1(CompilerContext ctx) {
         compilerContext = ctx;
         currentScope = compilerContext.rootScope;
+        currentScope.put("Object", com.devsmart.staple.runtime.Runtime.BaseObject);
     }
 
     @Override

@@ -26,5 +26,9 @@ public class Runtime {
                 new Field(new PointerType(BaseObjectClass), "classType"),
                 new Field(IntType.UInt32, "refCount")
         });
+
+        BaseObject.functions.add(FunctionType.memberFunction("init", PrimitiveType.Void, new Argument[]{new Argument(new PointerType(PrimitiveType.Void), "self")}));
+        BaseObject.functions.add(FunctionType.memberFunction("dest", PrimitiveType.Void, new Argument[]{new Argument(new PointerType(PrimitiveType.Void), "self")}));
+
     }
 }

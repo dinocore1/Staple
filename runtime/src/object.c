@@ -1,7 +1,7 @@
 
 #include <staple/object.h>
 
-stp_objectClass objectClass = {
+stp_objectClass stp_objectClassObj = {
   "object",
   NULL,
   stp_object_init,

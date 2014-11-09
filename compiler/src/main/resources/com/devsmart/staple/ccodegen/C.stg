@@ -3,7 +3,7 @@ classTypeDecl(name, parent, functions) ::= <<
 typedef struct _<name>Class <name>Class;
 struct _<name>Class {
   <parent>
-  <functions; separator=";\n">
+  <functions; separator="\n">
 };
 
 
@@ -12,7 +12,7 @@ struct _<name>Class {
 classTypeInstance(name, parent, functions) ::= <<
 <name>Class <name>ClassObj = {
   "<name>",
-  <parent>,
+  <parent>ClassObj,
   <functions:{x | <name>_<x>}; separator=",\n">
 };
 
@@ -30,8 +30,7 @@ struct _<name> {
 >>
 
 functionDec(return, name, args) ::= <<
-<return> <name>(<args; separator=", ">);
-
+<return> <name>(<args; separator=", ">)
 >>
 
 functionType(return, name, args) ::= <<
