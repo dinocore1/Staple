@@ -6,8 +6,6 @@ struct _<name>Class {
   <functions; separator=";\n">
 };
 
-extern <name>Class <name>ClassObj;
-
 
 >>
 
@@ -15,25 +13,37 @@ classTypeInstance(name, parent, functions) ::= <<
 <name>Class <name>ClassObj = {
   "<name>",
   <parent>,
-  <functions; separator=",\n">
+  <functions:{x | <name>_<x>}; separator=",\n">
 };
 
 >>
 
 classObjDecl(name, parent, fields) ::= <<
 typedef struct _<name> <name>;
-struct <name> {
+struct _<name> {
   <parent>
   <fields; separator="\n">
 };
 
+#define CAST_<name>(x) ((<name>*)x)
 
 >>
 
 functionDec(return, name, args) ::= <<
-<return> <name>(<args; separator=", ">)
+<return> <name>(<args; separator=", ">);
+
 >>
 
 functionType(return, name, args) ::= <<
 <return> (*<name>)(<args; separator=", ">)
+>>
+
+objInitFunc(name, parent, functions, members) ::= <<
+void <name>_init(void* self)
+{
+  CAST_<parent>(self)->init(self);
+  <name>* thiz = (<name>*)self;
+  thiz->classType = &<name>ClassObj;
+}
+
 >>

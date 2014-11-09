@@ -13,5 +13,9 @@ class LinkedList {
   void add(void* obj) {
     this.head = new Node();
   }
+
+  void delete(void* obj){
+
+  }
 }
 

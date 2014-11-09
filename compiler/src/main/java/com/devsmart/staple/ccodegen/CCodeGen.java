@@ -46,10 +46,19 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         ClassHeaderGen mainClassHeaderGen = new ClassHeaderGen(compilerContext, headerOutput);
         mainClassHeaderGen.visit(mainClass);
 
+        ClassType mainClassType = (ClassType) compilerContext.symbols.get(mainClass);
+        try {
+            headerOutput.write(String.format("extern %1$sClass %1$sClassObj;\n", mainClassType.name));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         ClassHeaderGen internalClassHeaderGen = new ClassHeaderGen(compilerContext, codeOutput);
         for(StapleParser.ClassDeclContext intClass : mainClass.classDecl()){
             internalClassHeaderGen.visit(intClass);
         }
+
+        visitChildren(ctx);
 
         return null;
     }
