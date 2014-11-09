@@ -36,6 +36,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     @Override
     public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
 
+        ClassType lastClass = currentClass;
         currentClass = (ClassType) compilerContext.symbols.get(ctx);
 
         StapleParser.ExtendsDeclContext extendDecl = ctx.extendsDecl();
@@ -48,6 +49,10 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         Scope parentScope = currentScope;
         currentScope = currentClass.scope;
 
+        for(StapleParser.ClassDeclContext internalClass : ctx.classDecl()){
+            visit(internalClass);
+        }
+
         for(StapleParser.ClassMemberDeclContext memberDecl : ctx.classMemberDecl()){
             visit(memberDecl);
         }
@@ -57,6 +62,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         }
 
         currentScope = parentScope;
+        currentClass = lastClass;
 
         return null;
     }
@@ -143,6 +149,10 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     public Void visitType(@NotNull StapleParser.TypeContext ctx) {
         String basetypeStr = ctx.primitiveType() != null ? ctx.primitiveType().getText() : ctx.Identifier().getText();
         Type baseType = getType(basetypeStr);
+
+        if(baseType == null){
+            compilerContext.errorStream.error("unknown type: " + basetypeStr, ctx);
+        }
 
         Type theType = baseType;
         if(ctx.POINTER() != null) {

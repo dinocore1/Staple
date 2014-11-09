@@ -24,6 +24,10 @@ public class SemPass1 extends StapleBaseVisitor<Void> {
         currentScope.put(classType.name, classType);
         compilerContext.symbols.put(ctx, classType);
 
+        currentScope = classType.scope;
+        visitChildren(ctx);
+        currentScope = currentScope.mParent;
+
         return null;
     }
 }

@@ -1,11 +1,11 @@
 grammar Staple;
 
 compileUnit
-    : classDecl+
+    : classDecl
     ;
 
 classDecl
-    : 'class' Identifier extendsDecl? '{' (m+=classMemberDecl | f+=classFunctionDecl)* '}'
+    : 'class' Identifier extendsDecl? '{' (m+=classMemberDecl | f+=classFunctionDecl | c+=classDecl)* '}'
     ;
 
 extendsDecl

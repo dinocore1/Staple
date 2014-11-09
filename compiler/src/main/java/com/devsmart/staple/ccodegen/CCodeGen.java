@@ -1,22 +1,22 @@
-package com.devsmart.staple;
+package com.devsmart.staple.ccodegen;
 
 
-import com.devsmart.staple.runtime.*;
+import com.devsmart.staple.CompilerContext;
+import com.devsmart.staple.StapleBaseVisitor;
+import com.devsmart.staple.StapleParser;
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.type.*;
 
-import com.devsmart.staple.symbols.Field;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
-import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.URL;
-import java.util.Collection;
 
 public class CCodeGen extends StapleBaseVisitor<Void> {
 
-    private static final STGroupFile codegentemplate;
+    static final STGroupFile codegentemplate;
 
     static {
         URL codeOutputStringTemplate = CCodeGen.class.getResource("C.stg");
@@ -27,61 +27,31 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
     private final CompilerContext compilerContext;
     private ClassType currentClassType;
+    private OutputStreamWriter headerOutput;
+    private OutputStreamWriter codeOutput;
 
-    public CCodeGen(CompilerContext ctx) {
+    public CCodeGen(CompilerContext ctx, OutputStreamWriter headerOutput, OutputStreamWriter codeOutput) {
         compilerContext = ctx;
+        this.headerOutput = headerOutput;
+        this.codeOutput = codeOutput;
     }
 
-
     @Override
-    public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
-        currentClassType = (ClassType) compilerContext.symbols.get(ctx);
+    public Void visitCompileUnit(@NotNull StapleParser.CompileUnitContext ctx) {
 
-        ST classTypeTmp = codegentemplate.getInstanceOf("classTypeDecl");
-        classTypeTmp.add("name", currentClassType.name);
-        classTypeTmp.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + "Class parent;"  : ""));
-        classTypeTmp.add("functions", functions(currentClassType.functions));
+        StapleParser.ClassDeclContext mainClass = ctx.classDecl();
+        ClassCCodeGen mainClassCCodeGen = new ClassCCodeGen(compilerContext, headerOutput);
+        mainClassCCodeGen.visit(mainClass);
 
-
-        ST classObj = codegentemplate.getInstanceOf("classObjDecl");
-        classObj.add("name", currentClassType.name);
-        classObj.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + " parent;"  : ""));
-        classObj.add("fields", fields(currentClassType.fields));
-
-        try {
-            String code = classTypeTmp.render();
-            compilerContext.output.write(code);
-
-            code = classObj.render();
-            compilerContext.output.write(code);
-        } catch (IOException e) {
-            e.printStackTrace();
+        ClassCCodeGen internalClassCCodeGen = new ClassCCodeGen(compilerContext, codeOutput);
+        for(StapleParser.ClassDeclContext intClass : mainClass.classDecl()){
+            internalClassCCodeGen.visit(intClass);
         }
 
         return null;
     }
 
-    private String[] functions(Collection<FunctionType> functions) {
-        String[] retval = new String[functions.size()];
-        int i = 0;
-        for(FunctionType function : functions){
-            retval[i++] = renderType(function) + ";";
-        }
-        return retval;
-    }
-
-    private String[] fields(Collection<Field> fields) {
-        String[] retval = new String[fields.size()];
-        int i = 0;
-        for(Field field : fields){
-            retval[i++] = String.format("%s %s;",
-                    renderType(field.type),
-                    field.name);
-        }
-        return retval;
-    }
-
-    private String renderType(Type type) {
+    static String renderType(Type type) {
         String retval = null;
         if(type instanceof PrimitiveType){
             retval = type.toString();

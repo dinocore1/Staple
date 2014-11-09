@@ -9,10 +9,9 @@ import java.io.OutputStreamWriter;
 public class CompilerContext {
 
     InputStream input;
-    OutputStreamWriter output;
     ErrorStream errorStream = new ErrorStream();
 
     Scope rootScope = new Scope(null);
-    ParseTreeProperty<Object> symbols = new ParseTreeProperty<Object>();
+    public ParseTreeProperty<Object> symbols = new ParseTreeProperty<Object>();
 
 }

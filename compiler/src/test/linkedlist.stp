@@ -1,15 +1,17 @@
 
 class LinkedList {
+
+  class Node {
+    Node* next;
+    Node* previous;
+  }
+
   uint size;
-  LinkedListNode* head;
-  LinkedListNode* tail;
+  Node* head;
+  Node* tail;
 
   void add(void* obj) {
-    this.head = new LinkedListNode();
+    this.head = new Node();
   }
 }
 
-class LinkedListNode {
-  LinkedListNode* next;
-  LinkedListNode* previous;
-}

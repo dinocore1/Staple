@@ -1,18 +1,19 @@
 package com.devsmart.staple;
 
 
+import com.devsmart.staple.ccodegen.CCodeGen;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 
 public class ObjOutputTest {
 
     CompilerContext ctx;
+    private ByteArrayOutputStream headerBuffer;
+    private ByteArrayOutputStream codeBuffer;
 
 
     @Before
@@ -21,7 +22,9 @@ public class ObjOutputTest {
 
         ctx = new CompilerContext();
         ctx.input = new FileInputStream(new File("src/test/linkedlist.stp"));
-        ctx.output = new OutputStreamWriter(System.out);
+
+        headerBuffer = new ByteArrayOutputStream();
+        codeBuffer = new ByteArrayOutputStream();
     }
 
     @Test
@@ -39,10 +42,18 @@ public class ObjOutputTest {
         SemPass2 semPass2 = new SemPass2(ctx);
         semPass2.visit(tree);
 
-        CCodeGen codeGen = new CCodeGen(ctx);
+        OutputStreamWriter headerWriter = new OutputStreamWriter(headerBuffer);
+        OutputStreamWriter codeWriter = new OutputStreamWriter(codeBuffer);
+        CCodeGen codeGen = new CCodeGen(ctx, headerWriter, codeWriter);
         codeGen.visit(tree);
 
-        ctx.output.flush();
+        headerWriter.close();
+        System.out.println("********* Header ***********");
+        System.out.println(headerBuffer.toString("UTF-8"));
+
+        codeWriter.close();
+        System.out.println("********* Code *************");
+        System.out.println(codeBuffer.toString("UTF-8"));
 
         System.out.println("done");
     }
