@@ -27,7 +27,7 @@ argList
 
 
 block
-    : '{' (statement | localVariableDeclarationStatement)* '}'
+    : '{' (localVariableDeclarationStatement | statement)* '}'
     ;
 
 blockStatement

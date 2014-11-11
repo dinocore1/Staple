@@ -12,7 +12,7 @@ class LinkedList {
   Node* tail;
 
   void add(Object* obj) {
-    Node newNode;
+    Node* newNode;
     newNode = new Node();
     newNode.data = obj;
     newNode.previous = this.head;

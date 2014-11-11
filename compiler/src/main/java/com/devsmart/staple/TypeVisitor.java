@@ -46,7 +46,9 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             returnType = visit(ctx.primitiveType());
         } else if("this".equals(first)){
             returnType = new PointerType(currentClass);
-            returnType = visit(ctx.arguments());
+            if(ctx.arguments() != null) {
+                returnType = visit(ctx.arguments());
+            }
         } else if("new".equals(first)) {
             Symbol classSymbol = currentScope.get(ctx.c.getText());
             if(classSymbol == null || !(classSymbol instanceof ClassType)){
@@ -72,7 +74,9 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
                         returnType = getMember(returnType, id);
                     }
 
-                    returnType = visit(ctx.identifierSuffix());
+                    if(ctx.identifierSuffix() != null) {
+                        returnType = visit(ctx.identifierSuffix());
+                    }
                 }
             }
         }
@@ -123,7 +127,7 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             }
         } else if(base instanceof PointerType) {
             PointerType ptr = (PointerType)base;
-            retval = getMember(ptr, memberName);
+            retval = getMember(ptr.baseType, memberName);
         } else {
             compilerContext.errorStream.error("not a class or pointer type", memberName.getSymbol());
         }
