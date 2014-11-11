@@ -27,9 +27,6 @@ public class FunctionType implements Type {
         return retval;
     }
 
-
-
-
     private FunctionType(String name, Type returnType, Argument[] arguments){
         this.name = name;
         this.returnType = returnType;
@@ -39,6 +36,18 @@ public class FunctionType implements Type {
     @Override
     public String getTypeName() {
         return name;
+    }
+
+    @Override
+    public boolean isAssignableTo(Type dest) {
+        boolean retval = false;
+        if(dest instanceof FunctionType){
+            //TODO: handle member and static functions properly
+            FunctionType other = (FunctionType)dest;
+            retval = returnType.equals(other.returnType)
+                    && Arrays.equals(arguments, other.arguments);
+        }
+        return retval;
     }
 
     @Override

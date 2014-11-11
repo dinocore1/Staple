@@ -11,7 +11,7 @@ class LinkedList {
   Node* head;
   Node* tail;
 
-  void add(void* obj) {
+  void add(Object* obj) {
     Node newNode;
     newNode = new Node();
     newNode.data = obj;

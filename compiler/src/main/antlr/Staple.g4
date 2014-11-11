@@ -206,14 +206,11 @@ primary
     |   'this' arguments?
     |   'super' superSuffix
     |   literal
-    |   'new' creator
+    |   'new' c=Identifier arguments
 	|   Identifier ('.' Identifier)* identifierSuffix?
     |   primitiveType ('[' ']')* '.' 'class'
     ;
 
-creator
-    : Identifier arguments
-    ;
 
 identifierSuffix
     :   ('[' ']')+ '.' 'class'

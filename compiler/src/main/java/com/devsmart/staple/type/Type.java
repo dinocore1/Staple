@@ -6,4 +6,5 @@ import com.devsmart.staple.Symbol;
 public interface Type extends Symbol {
 
     String getTypeName();
+    boolean isAssignableTo(Type dest);
 }

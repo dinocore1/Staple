@@ -26,6 +26,17 @@ public class ClassType implements Type {
     }
 
     @Override
+    public boolean isAssignableTo(Type dest) {
+        boolean retval = false;
+        if(dest instanceof ClassType){
+            //TODO: implement subclass checking
+            retval = name.equals(((ClassType) dest).name);
+        }
+
+        return retval;
+    }
+
+    @Override
     public String toString() {
         return name;
     }

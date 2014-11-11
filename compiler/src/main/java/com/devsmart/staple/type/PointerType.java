@@ -15,6 +15,15 @@ public class PointerType implements Type {
     }
 
     @Override
+    public boolean isAssignableTo(Type dest) {
+        boolean retval = false;
+        if(dest instanceof PointerType){
+            retval = baseType.isAssignableTo(((PointerType) dest).baseType);
+        }
+        return retval;
+    }
+
+    @Override
     public String toString() {
         return getTypeName();
     }

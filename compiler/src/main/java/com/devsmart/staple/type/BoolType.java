@@ -6,4 +6,9 @@ public class BoolType implements PrimitiveType {
     public String getTypeName() {
         return "bool";
     }
+
+    @Override
+    public boolean isAssignableTo(Type dest) {
+        return dest instanceof BoolType;
+    }
 }

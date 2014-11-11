@@ -1,22 +1,26 @@
 package com.devsmart.staple;
 
 
-import com.devsmart.staple.type.ClassType;
-import com.devsmart.staple.type.PointerType;
-import com.devsmart.staple.type.PrimitiveType;
-import com.devsmart.staple.type.Type;
+import com.devsmart.staple.symbols.Field;
+import com.devsmart.staple.symbols.Variable;
+import com.devsmart.staple.type.*;
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.HashMap;
+import java.util.Iterator;
 
 public class TypeVisitor extends StapleBaseVisitor<Type> {
 
     private final CompilerContext compilerContext;
     private Scope currentScope;
+    private ClassType currentClass;
+    private Type returnType = null;
 
-    public TypeVisitor(CompilerContext ctx, Scope scope) {
+    public TypeVisitor(CompilerContext ctx, Scope scope, ClassType classType) {
         this.compilerContext = ctx;
         this.currentScope = scope;
+        this.currentClass = classType;
     }
 
     private void pushScope() {
@@ -30,21 +34,118 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
     }
 
     @Override
+    public Type visitPrimary(@NotNull StapleParser.PrimaryContext ctx) {
+
+        final String first = ctx.getChild(0).getText();
+
+        if(ctx.parExpression() != null){
+            returnType = visit(ctx.parExpression());
+        } else if(ctx.literal() != null){
+            returnType = visit(ctx.literal());
+        } else if(ctx.primitiveType() != null) {
+            returnType = visit(ctx.primitiveType());
+        } else if("this".equals(first)){
+            returnType = new PointerType(currentClass);
+            returnType = visit(ctx.arguments());
+        } else if("new".equals(first)) {
+            Symbol classSymbol = currentScope.get(ctx.c.getText());
+            if(classSymbol == null || !(classSymbol instanceof ClassType)){
+                compilerContext.errorStream.error("undefined class: " + ctx.c.getText(), ctx.c);
+            } else {
+                returnType = new PointerType((ClassType) classSymbol);
+            }
+        } else if("super".equals(first)){
+            returnType = new PointerType(currentClass.parent);
+        } else {
+            Iterator<TerminalNode> it = ctx.Identifier().iterator();
+            TerminalNode id = it.next();
+            Symbol localVar = currentScope.get(id.getText());
+            if(localVar == null){
+                compilerContext.errorStream.error("undefined symbol: " + id.getText(), id.getSymbol());
+            } else {
+                if(localVar instanceof Variable) {
+                    Variable variable = (Variable) localVar;
+                    returnType = variable.type;
+
+                    while(it.hasNext()){
+                        id = it.next();
+                        returnType = getMember(returnType, id);
+                    }
+
+                    returnType = visit(ctx.identifierSuffix());
+                }
+            }
+        }
+
+        return returnType;
+
+    }
+
+    @Override
+    public Type visitSelector(@NotNull StapleParser.SelectorContext ctx) {
+
+        ClassType classType = null;
+
+        if(returnType != null){
+            if(returnType instanceof ClassType){
+                classType = (ClassType)returnType;
+            } else if(returnType instanceof PointerType) {
+                if(!(((PointerType) returnType).baseType instanceof ClassType)){
+                    compilerContext.errorStream.error("not a class pointer", ctx);
+                    return null;
+                } else {
+                    classType = (ClassType) ((PointerType) returnType).baseType;
+                }
+            }
+
+            if(ctx.Identifier() != null) {
+                if(ctx.arguments()!= null) {
+                    FunctionType function = classType.getFunction(ctx.Identifier().getText());
+                    returnType = function.returnType;
+                } else {
+                    Field field = classType.getField(ctx.Identifier().getText());
+                    returnType = field.type;
+                }
+            }
+        }
+
+        return returnType;
+    }
+
+    private Type getMember(Type base, TerminalNode memberName) {
+        Type retval = null;
+        if(base instanceof ClassType){
+            Field field = ((ClassType)base).getField(memberName.getText());
+            if(field == null){
+                compilerContext.errorStream.error(String.format("class type: '%s' does not have member: '%s'", ((ClassType) base).name, memberName.getText()), memberName.getSymbol());
+            } else {
+                retval = field.type;
+            }
+        } else if(base instanceof PointerType) {
+            PointerType ptr = (PointerType)base;
+            retval = getMember(ptr, memberName);
+        } else {
+            compilerContext.errorStream.error("not a class or pointer type", memberName.getSymbol());
+        }
+
+        return retval;
+    }
+
+    @Override
     public Type visitType(@NotNull StapleParser.TypeContext ctx) {
         String basetypeStr = ctx.primitiveType() != null ? ctx.primitiveType().getText() : ctx.Identifier().getText();
-        Type baseType = getType(basetypeStr);
+        returnType = getType(basetypeStr);
 
-        if(baseType == null){
+        if(returnType == null){
             compilerContext.errorStream.error("unknown type: " + basetypeStr, ctx);
         }
 
-        Type theType = baseType;
         if(ctx.POINTER() != null) {
-            theType = new PointerType(baseType);
+            returnType = new PointerType(returnType);
         }
-        compilerContext.symbols.put(ctx, theType);
+        compilerContext.symbols.put(ctx, returnType);
 
-        return theType;
+        return returnType;
     }
 
     public static HashMap<String, PrimitiveType> PrimitiveTypes = new HashMap<String, PrimitiveType>();

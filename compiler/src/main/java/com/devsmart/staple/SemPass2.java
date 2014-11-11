@@ -35,7 +35,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     }
 
     private TypeVisitor createTypeVisitor() {
-        return new TypeVisitor(compilerContext, currentScope);
+        return new TypeVisitor(compilerContext, currentScope, currentClass);
     }
 
     @Override
@@ -139,6 +139,8 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         StapleParser.BlockContext blockCtx = ctx.block();
         compilerContext.scope.put(blockCtx, blockScope);
 
+        blockScope.put("thiz", new Argument(currentClass, "thiz"));
+
         for(Argument arg : arguments){
             blockScope.put(arg.name, arg);
         }
@@ -208,10 +210,17 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         if(assign != null){
 
             StapleParser.ConditionalExpressionContext lvalue = ctx.conditionalExpression();
-            visit(lvalue);
+            Type lvalueType = createTypeVisitor().visit(lvalue);
 
             StapleParser.ExpressionContext rvalue = ctx.expression();
-            visit(rvalue);
+            Type rvalueType = createTypeVisitor().visit(rvalue);
+
+            if(!rvalueType.isAssignableTo(lvalueType)) {
+                compilerContext.errorStream.error(String.format("'%s' cannot be assigned to '%s'", rvalueType, lvalueType), ctx);
+            } else {
+                visit(lvalue);
+                visit(rvalue);
+            }
 
         } else {
             visitChildren(ctx);

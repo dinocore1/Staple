@@ -17,6 +17,13 @@ public class IntType implements PrimitiveType {
     }
 
     @Override
+    public boolean isAssignableTo(Type dest) {
+        boolean retval = (dest instanceof IntType)
+                || (dest instanceof FunctionType);
+        return retval;
+    }
+
+    @Override
     public String toString() {
         return getTypeName();
     }
