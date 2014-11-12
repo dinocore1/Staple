@@ -5,7 +5,10 @@ import com.devsmart.staple.CompilerContext;
 import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
 import com.devsmart.staple.ccodegen.instruction.Instruction;
+import com.devsmart.staple.ccodegen.instruction.LocalVarableInst;
+import com.devsmart.staple.ccodegen.instruction.ObjectAssignInst;
 import com.devsmart.staple.symbols.Argument;
+import com.devsmart.staple.symbols.LocalVariable;
 import com.devsmart.staple.type.*;
 
 import com.google.common.base.Function;
@@ -72,6 +75,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     @Override
     public Void visitClassDecl(@NotNull StapleParser.ClassDeclContext ctx) {
 
+        ClassType lastClass = currentClassType;
         currentClassType = (ClassType)compilerContext.symbols.get(ctx);
 
         ST instanceTmp = codegentemplate.getInstanceOf("classTypeInstance");
@@ -90,20 +94,85 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
             e.printStackTrace();
         }
 
+        visitChildren(ctx);
+        currentClassType = lastClass;
+
         return null;
     }
 
     @Override
-    public Void visitClassMemberDecl(@NotNull StapleParser.ClassMemberDeclContext ctx) {
+    public Void visitClassFunctionDecl(@NotNull StapleParser.ClassFunctionDeclContext ctx) {
+        FunctionType functionSymbol = (FunctionType) compilerContext.symbols.get(ctx);
+
         code = new LinkedList<Instruction>();
         instructions.put(ctx, code);
 
+        visitChildren(ctx);
 
+        ST functionBodyTmp = codegentemplate.getInstanceOf("functionBody");
+        functionBodyTmp.add("return", renderType(functionSymbol.returnType));
+        functionBodyTmp.add("name", currentClassType.name + "_" + functionSymbol.name);
+        functionBodyTmp.add("args", renderFunctionArgs(functionSymbol));
+        functionBodyTmp.add("inst", Collections2.transform(code, new Function<Instruction, String>() {
+            @Override
+            public String apply(Instruction input) {
+                return input.render();
+            }
+        }));
+
+        try {
+            codeOutput.write(functionBodyTmp.render());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         return null;
     }
 
-    static String renderType(Type type) {
+    @Override
+    public Void visitBlock(@NotNull StapleParser.BlockContext ctx) {
+
+        for(StapleParser.LocalVariableDeclarationStatementContext localVar : ctx.localVariableDeclarationStatement()){
+            visit(localVar);
+        }
+
+        for(StapleParser.StatementContext statement : ctx.statement()){
+            visit(statement);
+        }
+
+        return null;
+    }
+
+    @Override
+    public Void visitLocalVariableDeclaration(@NotNull StapleParser.LocalVariableDeclarationContext ctx) {
+
+        LocalVariable localVariableSymbol = (LocalVariable) compilerContext.symbols.get(ctx);
+
+        code.add(new LocalVarableInst(localVariableSymbol));
+
+        return null;
+    }
+
+    @Override
+    public Void visitExpression(@NotNull StapleParser.ExpressionContext ctx) {
+
+        if(ctx.assignmentOperator() != null){
+
+            StapleParser.ConditionalExpressionContext lvalueCtx = ctx.conditionalExpression();
+            Type lvalueType = (Type) compilerContext.symbols.get(lvalueCtx);
+
+            StapleParser.ExpressionContext rvalueCtx = ctx.expression();
+
+            if(lvalueType instanceof PointerType && ((PointerType) lvalueType).baseType instanceof ClassType){
+
+                code.add(new ObjectAssignInst(lvalueCtx.getText(), rvalueCtx.getText()));
+            }
+        }
+
+        return null;
+    }
+
+    public static String renderType(Type type) {
         String retval = null;
         if(type instanceof PrimitiveType){
             retval = type.toString();
@@ -115,19 +184,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
                 functionTypeTmp.add("name", functionType.name);
             }
 
-            Argument[] args = null;
-            if(functionType.isMember) {
-                args = new Argument[functionType.arguments.length + 1];
-                args[0] = new Argument(new PointerType(com.devsmart.staple.runtime.Runtime.BaseObject), "self");
-                System.arraycopy(functionType.arguments, 0, args, 1, functionType.arguments.length);
-            } else {
-                args = functionType.arguments;
-            }
-
-            String[] argsStr = new String[args.length];
-            for(int i=0;i<argsStr.length;i++){
-                argsStr[i] = renderType(args[i].type) + " " + args[i].name;
-            }
+            String[] argsStr = renderFunctionArgs(functionType);
             functionTypeTmp.add("args", argsStr);
             retval = functionTypeTmp.render();
         } else if(type instanceof PointerType){
@@ -138,6 +195,23 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         }
 
         return retval;
+    }
+
+    public static String[] renderFunctionArgs(final FunctionType functionType) {
+        Argument[] args = null;
+        if(functionType.isMember) {
+            args = new Argument[functionType.arguments.length + 1];
+            args[0] = new Argument(new PointerType(com.devsmart.staple.runtime.Runtime.BaseObject), "self");
+            System.arraycopy(functionType.arguments, 0, args, 1, functionType.arguments.length);
+        } else {
+            args = functionType.arguments;
+        }
+
+        String[] argsStr = new String[args.length];
+        for(int i=0;i<argsStr.length;i++){
+            argsStr[i] = renderType(args[i].type) + " " + args[i].name;
+        }
+        return argsStr;
     }
 
 

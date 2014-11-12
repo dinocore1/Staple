@@ -211,9 +211,11 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
 
             StapleParser.ConditionalExpressionContext lvalue = ctx.conditionalExpression();
             Type lvalueType = createTypeVisitor().visit(lvalue);
+            compilerContext.symbols.put(lvalue, lvalueType);
 
             StapleParser.ExpressionContext rvalue = ctx.expression();
             Type rvalueType = createTypeVisitor().visit(rvalue);
+            compilerContext.symbols.put(rvalue, rvalueType);
 
             if(!rvalueType.isAssignableTo(lvalueType)) {
                 compilerContext.errorStream.error(String.format("'%s' cannot be assigned to '%s'", rvalueType, lvalueType), ctx);

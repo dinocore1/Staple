@@ -37,12 +37,11 @@ functionType(return, name, args) ::= <<
 <return> (*<name>)(<args; separator=", ">)
 >>
 
-objInitFunc(name, parent, functions, members) ::= <<
-void <name>_init(void* self)
+functionBody(return, name, args, inst) ::= <<
+<functionDec(return, name, args)>
 {
-  CAST_<parent>(self)->init(self);
-  <name>* thiz = (<name>*)self;
-  thiz->classType = &<name>ClassObj;
+  <inst; separator="\n">
 }
+
 
 >>
