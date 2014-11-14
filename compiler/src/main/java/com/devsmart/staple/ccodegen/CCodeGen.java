@@ -48,6 +48,10 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         this.codeOutput = codeOutput;
     }
 
+    private ExpressionTransform createTransform() {
+        return new ExpressionTransform(compilerContext);
+    }
+
     @Override
     public Void visitCompileUnit(@NotNull StapleParser.CompileUnitContext ctx) {
 
@@ -159,13 +163,15 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         if(ctx.assignmentOperator() != null){
 
             StapleParser.ConditionalExpressionContext lvalueCtx = ctx.conditionalExpression();
+            String lvalueTransfor = createTransform().visit(lvalueCtx);
             Type lvalueType = (Type) compilerContext.symbols.get(lvalueCtx);
 
             StapleParser.ExpressionContext rvalueCtx = ctx.expression();
+            String rvalueTransform = createTransform().visit(rvalueCtx);
 
             if(lvalueType instanceof PointerType && ((PointerType) lvalueType).baseType instanceof ClassType){
 
-                code.add(new ObjectAssignInst(lvalueCtx.getText(), rvalueCtx.getText()));
+                code.add(new ObjectAssignInst(lvalueTransfor, rvalueTransform));
             }
         }
 

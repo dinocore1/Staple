@@ -68,18 +68,33 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
                 if(localVar instanceof Variable) {
                     Variable variable = (Variable) localVar;
                     returnType = variable.type;
+                    compilerContext.symbols.put(id, variable);
+
+                    ClassType baseType = null;
+                    if(returnType instanceof ClassType){
+                        baseType = (ClassType) returnType;
+                    } else if(returnType instanceof PointerType && ((PointerType) returnType).baseType instanceof ClassType){
+                        baseType = (ClassType) ((PointerType) returnType).baseType;
+                    }
 
                     while(it.hasNext()){
                         id = it.next();
-                        returnType = getMember(returnType, id);
-                    }
 
-                    if(ctx.identifierSuffix() != null) {
-                        returnType = visit(ctx.identifierSuffix());
+                        if(!it.hasNext() && ctx.identifierSuffix() != null){
+                            FunctionType function = baseType.getFunction(id.getText());
+                            compilerContext.symbols.put(id, function);
+                            returnType = function.returnType;
+                        } else {
+                            Field field = baseType.getField(id.getText());
+                            compilerContext.symbols.put(id, field);
+                            returnType = field.type;
+                        }
                     }
                 }
             }
         }
+
+        compilerContext.symbols.put(ctx, returnType);
 
         return returnType;
 
@@ -103,7 +118,7 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             }
 
             if(ctx.Identifier() != null) {
-                if(ctx.arguments()!= null) {
+                if(ctx.arguments() != null) {
                     FunctionType function = classType.getFunction(ctx.Identifier().getText());
                     returnType = function.returnType;
                 } else {
@@ -112,6 +127,8 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
                 }
             }
         }
+
+        compilerContext.symbols.put(ctx, returnType);
 
         return returnType;
     }
