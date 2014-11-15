@@ -46,6 +46,7 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             returnType = visit(ctx.primitiveType());
         } else if("this".equals(first)){
             returnType = new PointerType(currentClass);
+            compilerContext.symbols.put(ctx.getChild(0), returnType);
             if(ctx.arguments() != null) {
                 returnType = visit(ctx.arguments());
             }
@@ -120,15 +121,15 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             if(ctx.Identifier() != null) {
                 if(ctx.arguments() != null) {
                     FunctionType function = classType.getFunction(ctx.Identifier().getText());
+                    compilerContext.symbols.put(ctx, function);
                     returnType = function.returnType;
                 } else {
                     Field field = classType.getField(ctx.Identifier().getText());
+                    compilerContext.symbols.put(ctx, field);
                     returnType = field.type;
                 }
             }
         }
-
-        compilerContext.symbols.put(ctx, returnType);
 
         return returnType;
     }

@@ -18,6 +18,7 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
 
     private final CompilerContext compilerContext;
     private Type baseType;
+    StringBuilder builder = new StringBuilder();
 
     public ExpressionTransform(CompilerContext compilerContext){
         this.compilerContext = compilerContext;
@@ -35,6 +36,8 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
             baseType = ptr;
 
         } else if("this".equals(first)){
+            builder = new StringBuilder();
+            baseType = (PointerType)compilerContext.symbols.get(ctx);
             retval = "self";
         } else {
             StringBuilder buf = new StringBuilder();
@@ -68,11 +71,31 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
             retval = buf.toString();
         }
 
+        builder.append(retval);
+
         return retval;
     }
 
     @Override
     public String visitSelector(@NotNull StapleParser.SelectorContext ctx) {
-        return super.visitSelector(ctx);
+
+        if(baseType instanceof PointerType){
+            builder.append("->");
+        } else {
+            builder.append(".");
+        }
+
+        Object symbol = compilerContext.symbols.get(ctx);
+
+        if(symbol instanceof Field){
+            builder.append(((Field) symbol).name);
+        } else if(symbol instanceof FunctionType) {
+            builder.append(((FunctionType) symbol).name);
+            builder.append("()");
+
+        }
+
+        return builder.toString();
+
     }
 }
