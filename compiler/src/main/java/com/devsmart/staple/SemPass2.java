@@ -207,7 +207,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
     public Void visitExpression(@NotNull StapleParser.ExpressionContext ctx) {
 
         StapleParser.AssignmentOperatorContext assign = ctx.assignmentOperator();
-        if(assign != null){
+        if(assign != null && "=".equals(assign.getText())){
 
             StapleParser.ConditionalExpressionContext lvalue = ctx.conditionalExpression();
             Type lvalueType = createTypeVisitor().visit(lvalue);
@@ -225,11 +225,9 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
             }
 
         } else {
-            visitChildren(ctx);
+            createTypeVisitor().visit(ctx);
         }
 
         return null;
     }
-
-
 }

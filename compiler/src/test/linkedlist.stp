@@ -22,8 +22,12 @@ class LinkedList {
     this.size++;
   }
 
-  void delete(void* obj){
-
+  void deleteFirst(){
+    if(this.head != null) {
+      this.head.previous = null;
+      this.head = null;
+      this.size--;
+    }
   }
 }
 

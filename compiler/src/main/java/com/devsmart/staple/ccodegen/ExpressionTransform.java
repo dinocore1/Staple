@@ -10,6 +10,7 @@ import com.devsmart.staple.type.FunctionType;
 import com.devsmart.staple.type.PointerType;
 import com.devsmart.staple.type.Type;
 import org.antlr.v4.runtime.misc.NotNull;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.Iterator;
@@ -18,7 +19,7 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
 
     private final CompilerContext compilerContext;
     private Type baseType;
-    StringBuilder builder = new StringBuilder();
+    //StringBuilder builder = new StringBuilder();
 
     public ExpressionTransform(CompilerContext compilerContext){
         this.compilerContext = compilerContext;
@@ -36,9 +37,11 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
             baseType = ptr;
 
         } else if("this".equals(first)){
-            builder = new StringBuilder();
+            //builder = new StringBuilder();
             baseType = (PointerType)compilerContext.symbols.get(ctx);
             retval = "self";
+        } else if(ctx.literal() != null){
+            retval = visit(ctx.literal());
         } else {
             StringBuilder buf = new StringBuilder();
             Iterator<TerminalNode> it = ctx.Identifier().iterator();
@@ -71,13 +74,15 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
             retval = buf.toString();
         }
 
-        builder.append(retval);
+        //builder.append(retval);
 
         return retval;
     }
 
     @Override
     public String visitSelector(@NotNull StapleParser.SelectorContext ctx) {
+
+        StringBuilder builder = new StringBuilder();
 
         if(baseType instanceof PointerType){
             builder.append("->");
@@ -89,13 +94,30 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
 
         if(symbol instanceof Field){
             builder.append(((Field) symbol).name);
+            baseType = ((Field) symbol).type;
         } else if(symbol instanceof FunctionType) {
             builder.append(((FunctionType) symbol).name);
             builder.append("()");
-
+            baseType = ((FunctionType) symbol).returnType;
         }
 
         return builder.toString();
 
+    }
+
+
+    @Override
+    public String visitTerminal(@NotNull TerminalNode node) {
+        return node.getText();
+    }
+
+    @Override
+    protected String defaultResult() {
+        return "";
+    }
+
+    @Override
+    protected String aggregateResult(String aggregate, String nextResult) {
+        return aggregate + nextResult;
     }
 }

@@ -18,7 +18,11 @@ public class PointerType implements Type {
     public boolean isAssignableTo(Type dest) {
         boolean retval = false;
         if(dest instanceof PointerType){
-            retval = baseType.isAssignableTo(((PointerType) dest).baseType);
+            if(baseType.equals(PrimitiveType.Void)) {
+                retval = true;
+            } else {
+                retval = baseType.isAssignableTo(((PointerType) dest).baseType);
+            }
         }
         return retval;
     }

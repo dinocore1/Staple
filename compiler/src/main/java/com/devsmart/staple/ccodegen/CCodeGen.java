@@ -4,6 +4,7 @@ package com.devsmart.staple.ccodegen;
 import com.devsmart.staple.CompilerContext;
 import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
+import com.devsmart.staple.ccodegen.instruction.CTextInst;
 import com.devsmart.staple.ccodegen.instruction.Instruction;
 import com.devsmart.staple.ccodegen.instruction.LocalVarableInst;
 import com.devsmart.staple.ccodegen.instruction.ObjectAssignInst;
@@ -173,6 +174,10 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
                 code.add(new ObjectAssignInst(lvalueTransfor, rvalueTransform));
             }
+        } else {
+
+            String ouput = createTransform().visit(ctx);
+            code.add(new CTextInst(ouput));
         }
 
         return null;

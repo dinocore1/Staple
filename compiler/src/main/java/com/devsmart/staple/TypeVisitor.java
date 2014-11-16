@@ -134,24 +134,16 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
         return returnType;
     }
 
-    private Type getMember(Type base, TerminalNode memberName) {
-        Type retval = null;
-        if(base instanceof ClassType){
-            Field field = ((ClassType)base).getField(memberName.getText());
-            if(field == null){
-                compilerContext.errorStream.error(String.format("class type: '%s' does not have member: '%s'", ((ClassType) base).name, memberName.getText()), memberName.getSymbol());
-            } else {
-                retval = field.type;
-            }
-        } else if(base instanceof PointerType) {
-            PointerType ptr = (PointerType)base;
-            retval = getMember(ptr.baseType, memberName);
+    @Override
+    public Type visitLiteral(@NotNull StapleParser.LiteralContext ctx) {
+        if("null".equals(ctx.getText())){
+            return new PointerType(PrimitiveType.Void);
         } else {
-            compilerContext.errorStream.error("not a class or pointer type", memberName.getSymbol());
+            return visitChildren(ctx);
         }
-
-        return retval;
     }
+
+
 
     @Override
     public Type visitType(@NotNull StapleParser.TypeContext ctx) {
