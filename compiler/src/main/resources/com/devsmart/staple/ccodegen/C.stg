@@ -37,11 +37,19 @@ functionType(return, name, args) ::= <<
 <return> (*<name>)(<args; separator=", ">)
 >>
 
-functionBody(return, name, args, inst) ::= <<
+functionBody(return, name, args, code) ::= <<
 <functionDec(return, name, args)>
+<code>
+
+
+>>
+
+ifInst(condition, thenstmp, elsestmt) ::= <<
+if(<condition>)<thenstmp><if(elsestmt)>else <elsestmt><endif>
+>>
+
+block(inst) ::= <<
 {
   <inst; separator="\n">
 }
-
-
 >>

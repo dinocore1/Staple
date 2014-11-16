@@ -4,30 +4,23 @@ package com.devsmart.staple.ccodegen;
 import com.devsmart.staple.CompilerContext;
 import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
-import com.devsmart.staple.ccodegen.instruction.CTextInst;
-import com.devsmart.staple.ccodegen.instruction.Instruction;
-import com.devsmart.staple.ccodegen.instruction.LocalVarableInst;
-import com.devsmart.staple.ccodegen.instruction.ObjectAssignInst;
+import com.devsmart.staple.ccodegen.instruction.*;
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.symbols.LocalVariable;
 import com.devsmart.staple.type.*;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import org.antlr.v4.runtime.misc.NotNull;
-import org.antlr.v4.runtime.tree.ParseTreeProperty;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
-import java.util.LinkedList;
-import java.util.List;
 
 public class CCodeGen extends StapleBaseVisitor<Void> {
 
-    static final STGroupFile codegentemplate;
+    public static final STGroupFile codegentemplate;
 
     static {
         URL codeOutputStringTemplate = CCodeGen.class.getResource("C.stg");
@@ -37,16 +30,25 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
 
     private final CompilerContext compilerContext;
-    private ParseTreeProperty<List<Instruction>> instructions = new ParseTreeProperty<List<Instruction>>();
     private ClassType currentClassType;
     private OutputStreamWriter headerOutput;
     private OutputStreamWriter codeOutput;
-    private LinkedList<Instruction> code;
+    private CodeBlock code;
 
     public CCodeGen(CompilerContext ctx, OutputStreamWriter headerOutput, OutputStreamWriter codeOutput) {
         compilerContext = ctx;
         this.headerOutput = headerOutput;
         this.codeOutput = codeOutput;
+    }
+
+    private void pushCodeBlock() {
+        CodeBlock newBlock = new CodeBlock();
+        newBlock.parent = code;
+        code = newBlock;
+    }
+
+    private void popCodeBlock() {
+        code = code.parent;
     }
 
     private ExpressionTransform createTransform() {
@@ -109,8 +111,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     public Void visitClassFunctionDecl(@NotNull StapleParser.ClassFunctionDeclContext ctx) {
         FunctionType functionSymbol = (FunctionType) compilerContext.symbols.get(ctx);
 
-        code = new LinkedList<Instruction>();
-        instructions.put(ctx, code);
+        pushCodeBlock();
 
         visitChildren(ctx);
 
@@ -118,12 +119,9 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         functionBodyTmp.add("return", renderType(functionSymbol.returnType));
         functionBodyTmp.add("name", currentClassType.name + "_" + functionSymbol.name);
         functionBodyTmp.add("args", renderFunctionArgs(functionSymbol));
-        functionBodyTmp.add("inst", Collections2.transform(code, new Function<Instruction, String>() {
-            @Override
-            public String apply(Instruction input) {
-                return input.render();
-            }
-        }));
+        functionBodyTmp.add("code", code.render());
+
+        popCodeBlock();
 
         try {
             codeOutput.write(functionBodyTmp.render());
@@ -137,6 +135,8 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     @Override
     public Void visitBlock(@NotNull StapleParser.BlockContext ctx) {
 
+        pushCodeBlock();
+
         for(StapleParser.LocalVariableDeclarationStatementContext localVar : ctx.localVariableDeclarationStatement()){
             visit(localVar);
         }
@@ -144,6 +144,11 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         for(StapleParser.StatementContext statement : ctx.statement()){
             visit(statement);
         }
+
+        CodeBlock block = code;
+        popCodeBlock();
+
+        code.code.add(block);
 
         return null;
     }
@@ -153,7 +158,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
         LocalVariable localVariableSymbol = (LocalVariable) compilerContext.symbols.get(ctx);
 
-        code.add(new LocalVarableInst(localVariableSymbol));
+        code.code.add(new LocalVarableInst(localVariableSymbol));
 
         return null;
     }
@@ -172,12 +177,34 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
             if(lvalueType instanceof PointerType && ((PointerType) lvalueType).baseType instanceof ClassType){
 
-                code.add(new ObjectAssignInst(lvalueTransfor, rvalueTransform));
+                code.code.add(new ObjectAssignInst(lvalueTransfor, rvalueTransform));
             }
         } else {
+            visitChildren(ctx);
+        }
 
-            String ouput = createTransform().visit(ctx);
-            code.add(new CTextInst(ouput));
+        return null;
+    }
+
+    @Override
+    public Void visitStatement(@NotNull StapleParser.StatementContext ctx) {
+
+        final String first = ctx.getChild(0).getText();
+        if("if".equals(first)){
+            IfInst ifinst = new IfInst();
+            ifinst.condition = createTransform().visit(ctx.parExpression());
+
+            visit(ctx.statement(0));
+            ifinst.thenInst = code.code.remove();
+
+            if(ctx.statement(1) != null){
+                visit(ctx.statement(1));
+                ifinst.elseInst = code.code.remove();
+            }
+            code.code.add(ifinst);
+
+        } else {
+            visitChildren(ctx);
         }
 
         return null;

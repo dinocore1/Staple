@@ -12,6 +12,6 @@ public class ObjectAssignInst implements Instruction {
 
     @Override
     public String render() {
-        return String.format("OBJ_ASSIGN_S(%s, %s);", lvalueText, rvalueText);
+        return String.format("OBJ_ASSIGN_S(%s, %s)", lvalueText, rvalueText);
     }
 }
