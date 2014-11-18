@@ -11,7 +11,7 @@ stp_objectClass stp_objectClassObj = {
 void stp_object_init(void* self)
 {
   stp_object* thiz = (stp_object*)self;
-  thiz->classType = &objectClass;
+  thiz->classType = &stp_objectClassObj;
   thiz->refCount = 1;
 }
 

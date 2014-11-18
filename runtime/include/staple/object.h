@@ -22,4 +22,8 @@ struct _stp_object {
   uint32 refCount;
 };
 
+
+void stp_assign_strong(void* l, void* r);
+#define OBJ_ASSIGN_S(l, r)  stp_assign_strong(l, r)
+
 #endif /* STP_OBJECT_H_ */

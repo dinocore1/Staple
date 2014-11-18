@@ -187,6 +187,15 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     }
 
     @Override
+    public Void visitUnaryExpression(@NotNull StapleParser.UnaryExpressionContext ctx) {
+
+        String retval = createTransform().visit(ctx);
+        code.code.add(new CTextInst(retval));
+
+        return null;
+    }
+
+    @Override
     public Void visitStatement(@NotNull StapleParser.StatementContext ctx) {
 
         final String first = ctx.getChild(0).getText();

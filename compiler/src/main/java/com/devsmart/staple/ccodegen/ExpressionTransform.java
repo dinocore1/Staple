@@ -105,6 +105,15 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
 
     }
 
+    @Override
+    public String visitLiteral(@NotNull StapleParser.LiteralContext ctx) {
+        final String value = ctx.getText();
+        if("null".equals(value)){
+            return "NULL";
+        } else {
+            return value;
+        }
+    }
 
     @Override
     public String visitTerminal(@NotNull TerminalNode node) {

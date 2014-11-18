@@ -10,6 +10,6 @@ public class CTextInst implements Instruction {
 
     @Override
     public String render() {
-        return text;
+        return text + ";";
     }
 }
