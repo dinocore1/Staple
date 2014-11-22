@@ -1,7 +1,11 @@
 grammar Staple;
 
 compileUnit
-    : classDecl
+    : namespaceDecl? classDecl
+    ;
+
+namespaceDecl
+    : 'namespace' Identifier ('.' Identifier)*
     ;
 
 classDecl

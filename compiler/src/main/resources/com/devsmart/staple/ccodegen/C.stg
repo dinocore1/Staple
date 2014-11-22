@@ -12,7 +12,7 @@ struct _<name>Class {
 classTypeInstance(name, parent, functions) ::= <<
 <name>Class <name>ClassObj = {
   "<name>",
-  <parent>ClassObj,
+  &<parent>ClassObj,
   <functions:{x | <name>_<x>}; separator=",\n">
 };
 

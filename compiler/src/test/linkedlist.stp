@@ -1,4 +1,6 @@
 
+namespace org.staple
+
 class LinkedList {
 
   class Node {

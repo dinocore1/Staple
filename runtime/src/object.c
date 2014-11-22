@@ -18,3 +18,8 @@ void stp_object_init(void* self)
 void stp_object_dest(void* self)
 {
 }
+
+void stp_object_addref(void* obj)
+{
+  __sync_add_and_fetch(&((stp_object*) obj)->refCount, 1);
+}

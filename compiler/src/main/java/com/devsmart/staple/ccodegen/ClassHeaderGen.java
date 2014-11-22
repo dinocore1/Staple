@@ -17,9 +17,7 @@ import org.stringtemplate.v4.ST;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
 
 public class ClassHeaderGen extends StapleBaseVisitor<Void> {
 
@@ -37,15 +35,15 @@ public class ClassHeaderGen extends StapleBaseVisitor<Void> {
 
         try {
             ST classTypeTmp = CCodeGen.codegentemplate.getInstanceOf("classTypeDecl");
-            classTypeTmp.add("name", currentClassType.name);
+            classTypeTmp.add("name", CCodeGen.fullClassName(currentClassType));
             classTypeTmp.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + "Class parent;"  : ""));
-            classTypeTmp.add("functions", functions(currentClassType, currentClassType.functions));
+            classTypeTmp.add("functions", functions(currentClassType));
             String code = classTypeTmp.render();
             output.write(code);
 
 
             ST classObj = CCodeGen.codegentemplate.getInstanceOf("classObjDecl");
-            classObj.add("name", currentClassType.name);
+            classObj.add("name", CCodeGen.fullClassName(currentClassType));
             classObj.add("parent", (currentClassType.parent != null ? currentClassType.parent.name + " parent;"  : ""));
             classObj.add("fields", fields(currentClassType.fields));
             code = classObj.render();
@@ -54,7 +52,7 @@ public class ClassHeaderGen extends StapleBaseVisitor<Void> {
             for(FunctionType function : currentClassType.functions){
                 ST initFuncTmp = CCodeGen.codegentemplate.getInstanceOf("functionDec");
 
-                initFuncTmp.add("name", Joiner.on("_").join(currentClassType.name, function.name));
+                initFuncTmp.add("name", Joiner.on("_").join(CCodeGen.fullClassName(currentClassType), function.name));
                 initFuncTmp.add("return", CCodeGen.renderType(function.returnType));
                 initFuncTmp.add("args", Collections2.transform(Arrays.asList(function.arguments), new Function<Argument, String>() {
                     @Override
@@ -84,9 +82,9 @@ public class ClassHeaderGen extends StapleBaseVisitor<Void> {
         return retval;
     }
 
-    static Collection<String> functions(final ClassType currentClassType, Collection<FunctionType> functions) {
+    static Collection<String> functions(final ClassType currentClassType) {
         ArrayList<String> renderList = new ArrayList<String>();
-        for(FunctionType function : functions){
+        for(FunctionType function : currentClassType.functions){
             if(currentClassType.parent.getFunction(function.name) == null){
                 renderList.add(CCodeGen.renderType(function));
             }

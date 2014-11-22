@@ -9,6 +9,7 @@ import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.symbols.LocalVariable;
 import com.devsmart.staple.type.*;
 import com.google.common.base.Function;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
@@ -86,8 +87,8 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         currentClassType = (ClassType)compilerContext.symbols.get(ctx);
 
         ST instanceTmp = codegentemplate.getInstanceOf("classTypeInstance");
-        instanceTmp.add("name", currentClassType.name);
-        instanceTmp.add("parent", currentClassType.parent != null ? currentClassType.parent.name : "NULL");
+        instanceTmp.add("name", fullClassName(currentClassType));
+        instanceTmp.add("parent", currentClassType.parent != null ? fullClassName(currentClassType.parent) : "NULL");
         instanceTmp.add("functions", Collections2.transform(currentClassType.functions, new Function<FunctionType, String>() {
             @Override
             public String apply(FunctionType input) {
@@ -117,7 +118,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
         ST functionBodyTmp = codegentemplate.getInstanceOf("functionBody");
         functionBodyTmp.add("return", renderType(functionSymbol.returnType));
-        functionBodyTmp.add("name", currentClassType.name + "_" + functionSymbol.name);
+        functionBodyTmp.add("name", fullClassName(currentClassType) + "_" + functionSymbol.name);
         functionBodyTmp.add("args", renderFunctionArgs(functionSymbol));
         functionBodyTmp.add("code", code.render());
 
@@ -259,6 +260,18 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
             argsStr[i] = renderType(args[i].type) + " " + args[i].name;
         }
         return argsStr;
+    }
+
+    public static String fullClassName(ClassType classType) {
+        String retval = "";
+        String[] paths = classType.namespace.getPaths();
+        if(paths.length > 0) {
+            retval = Joiner.on("_").join(classType.namespace.getPaths());
+            retval += "_" + classType.name;
+        } else {
+            retval = classType.name;
+        }
+        return retval;
     }
 
 

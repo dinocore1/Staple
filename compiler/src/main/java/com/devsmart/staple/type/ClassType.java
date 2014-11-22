@@ -1,6 +1,7 @@
 package com.devsmart.staple.type;
 
 
+import com.devsmart.staple.Namespace;
 import com.devsmart.staple.Scope;
 import com.devsmart.staple.symbols.Field;
 
@@ -14,6 +15,7 @@ public class ClassType implements Type {
     public Scope scope;
     public List<Field> fields = new ArrayList<Field>();
     public List<FunctionType> functions = new ArrayList<FunctionType>();
+    public Namespace namespace = Namespace.defaultNameSpace;
 
     public ClassType(String name){
         this.name = name;
@@ -70,6 +72,16 @@ public class ClassType implements Type {
             retval = parent.getFunction(name);
         }
 
+        return retval;
+    }
+
+    public boolean hasFunction(String name) {
+        boolean retval = false;
+        for(FunctionType function : functions) {
+            if (function.name.equals(name)) {
+                retval = true;
+            }
+        }
         return retval;
     }
 }

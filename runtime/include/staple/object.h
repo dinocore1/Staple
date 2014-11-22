@@ -16,6 +16,9 @@ extern stp_objectClass stp_objectClassObj;
 void stp_object_init(void* self);
 void stp_object_dest(void* self);
 
+void stp_object_addref(void* obj);
+void stp_object_decref(void* obj);
+
 typedef struct _stp_object stp_object;
 struct _stp_object {
   stp_objectClass* classType;
@@ -25,5 +28,8 @@ struct _stp_object {
 
 void stp_assign_strong(void* l, void* r);
 #define OBJ_ASSIGN_S(l, r)  stp_assign_strong(l, r)
+
+void* stp_create_obj(uint32 size, void* classObj);
+#define CREATE_OBJ(x) stp_create_obj(sizeof(x), &x##ClassObj)
 
 #endif /* STP_OBJECT_H_ */
