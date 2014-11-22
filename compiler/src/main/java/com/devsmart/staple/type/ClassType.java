@@ -80,6 +80,7 @@ public class ClassType implements Type {
         for(FunctionType function : functions) {
             if (function.name.equals(name)) {
                 retval = true;
+                break;
             }
         }
         return retval;

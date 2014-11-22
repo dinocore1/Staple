@@ -18,6 +18,10 @@ import org.stringtemplate.v4.STGroupFile;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URL;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Set;
 
 public class CCodeGen extends StapleBaseVisitor<Void> {
 
@@ -89,12 +93,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         ST instanceTmp = codegentemplate.getInstanceOf("classTypeInstance");
         instanceTmp.add("name", fullClassName(currentClassType));
         instanceTmp.add("parent", currentClassType.parent != null ? fullClassName(currentClassType.parent) : "NULL");
-        instanceTmp.add("functions", Collections2.transform(currentClassType.functions, new Function<FunctionType, String>() {
-            @Override
-            public String apply(FunctionType input) {
-                return input.name;
-            }
-        }));
+        instanceTmp.add("functions", functionOverrides(currentClassType));
 
         try {
             codeOutput.write(instanceTmp.render());
@@ -106,6 +105,39 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         currentClassType = lastClass;
 
         return null;
+    }
+
+    private Collection<String> functionOverrides(ClassType classType) {
+        LinkedList<String> renderFunctions = new LinkedList<String>();
+        LinkedList<ClassType> superClasses = new LinkedList<ClassType>();
+        superClasses.add(classType);
+        functionOverride(renderFunctions, superClasses, new HashSet<String>());
+        return renderFunctions;
+    }
+
+    private void functionOverride(Collection<String> renderFunctions, LinkedList<ClassType> superClasses,
+                                  Set<String> doneSet) {
+
+        final ClassType firstClass = superClasses.peek();
+        if(firstClass.parent != null){
+            superClasses.push(firstClass.parent);
+            functionOverride(renderFunctions, superClasses, doneSet);
+        }
+
+        for(FunctionType function : firstClass.functions) {
+            ClassType implementingClass = null;
+            for(ClassType superClass : superClasses) {
+                if(!doneSet.contains(function.name) && superClass.hasFunction(function.name)){
+                    implementingClass = superClass;
+                }
+            }
+            if(implementingClass != null) {
+                renderFunctions.add(fullClassName(implementingClass) + "_" + function.name);
+                doneSet.add(function.name);
+            }
+        }
+
+        superClasses.pop();
     }
 
     @Override

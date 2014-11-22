@@ -17,7 +17,12 @@ extendsDecl
     ;
 
 classMemberDecl
-    : type Identifier ';'
+    : memberModifiers* type Identifier ';'
+    ;
+
+memberModifiers
+    : 'strong'
+    | 'weak'
     ;
 
 classFunctionDecl

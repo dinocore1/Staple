@@ -13,7 +13,7 @@ classTypeInstance(name, parent, functions) ::= <<
 <name>Class <name>ClassObj = {
   "<name>",
   &<parent>ClassObj,
-  <functions:{x | <name>_<x>}; separator=",\n">
+  <functions; separator=",\n">
 };
 
 >>

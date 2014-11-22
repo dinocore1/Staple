@@ -1,16 +1,23 @@
 package com.devsmart.staple;
 
 
+import com.devsmart.staple.ccodegen.CCodeGen;
 import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.symbols.Field;
 import com.devsmart.staple.symbols.LocalVariable;
 import com.devsmart.staple.type.*;
+import com.google.common.base.Throwables;
 
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 public class SemPass2 extends StapleBaseVisitor<Void> {
@@ -54,12 +61,6 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         Scope parentScope = currentScope;
         currentScope = currentClass.scope;
 
-        //add init function
-        {
-            FunctionType initFunction = FunctionType.memberFunction("init", PrimitiveType.Void, new Argument[]{new Argument(new PointerType(PrimitiveType.Void), "self")});
-            currentClass.functions.add(initFunction);
-        }
-
         for(StapleParser.ClassDeclContext internalClass : ctx.classDecl()){
             visit(internalClass);
         }
@@ -71,6 +72,31 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         for(StapleParser.ClassFunctionDeclContext functionDecl : ctx.classFunctionDecl()){
             visit(functionDecl);
         }
+
+        //add init function
+        if(!currentClass.hasFunction("init")){
+            StringBuilder initCode = new StringBuilder();
+            initCode.append("void init(void* self) {\n");
+            initCode.append("super(self);\n");
+            for(Field field : currentClass.fields){
+                if(field.type instanceof PointerType
+                        && ((PointerType)field.type).baseType instanceof ClassType) {
+                    initCode.append(String.format("this.%s = null;\n", field.name));
+                }
+            }
+            initCode.append("}");
+
+            try {
+                StapleLexer lexer = new StapleLexer(new ANTLRInputStream(new StringReader(initCode.toString())));
+                StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
+                StapleParser.ClassFunctionDeclContext functionDecl = parser.classFunctionDecl();
+                visit(functionDecl);
+            } catch (IOException e) {
+                Throwables.propagate(e);
+            }
+        }
+
+
 
         currentScope = parentScope;
         currentClass = lastClass;
@@ -106,7 +132,13 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
             if(currentClass.getField(name) != null){
                 compilerContext.errorStream.error("redefinition of field: " + name, ctx);
             } else {
-                Field field = new Field(type, name);
+
+                HashSet<Field.Modifier> modifiers = new HashSet<Field.Modifier>();
+                for(StapleParser.MemberModifiersContext modifier : ctx.memberModifiers()){
+                    modifiers.add(Field.Modifier.valueOf(modifier.getText()));
+                }
+
+                Field field = new Field(type, name, modifiers);
                 currentClass.fields.add(field);
                 compilerContext.symbols.put(ctx, field);
 

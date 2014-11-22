@@ -1,6 +1,7 @@
 package com.devsmart.staple.type;
 
 import com.devsmart.staple.symbols.Argument;
+import com.google.common.base.Joiner;
 
 import java.util.Arrays;
 
@@ -52,7 +53,10 @@ public class FunctionType implements Type {
 
     @Override
     public String toString() {
-
-        return String.format("%s %s", returnType, Arrays.toString(arguments));
+        if(isAnonomus) {
+            return String.format("%s -->(%s)", returnType, Joiner.on(",").join(arguments));
+        } else {
+            return String.format("%s %s(%s)", returnType, name, Joiner.on(",").join(arguments));
+        }
     }
 }
