@@ -59,6 +59,10 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             }
         } else if("super".equals(first)){
             returnType = new PointerType(currentClass.parent);
+            compilerContext.symbols.put(ctx.getChild(0), returnType);
+            if(ctx.superSuffix() != null){
+                visit(ctx.superSuffix());
+            }
         } else {
             Iterator<TerminalNode> it = ctx.Identifier().iterator();
             TerminalNode id = it.next();
@@ -155,6 +159,10 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
                     FunctionType function = classType.getFunction(ctx.Identifier().getText());
                     compilerContext.symbols.put(ctx, function);
                     returnType = function.returnType;
+
+                    TypeVisitor argVisitor = new TypeVisitor(compilerContext, currentScope, currentClass);
+                    argVisitor.visit(ctx.arguments());
+
                 } else {
                     Field field = classType.getField(ctx.Identifier().getText());
                     compilerContext.symbols.put(ctx, field);
@@ -174,8 +182,6 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
             return visitChildren(ctx);
         }
     }
-
-
 
     @Override
     public Type visitType(@NotNull StapleParser.TypeContext ctx) {

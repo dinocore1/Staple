@@ -11,6 +11,7 @@ import com.devsmart.staple.type.*;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
@@ -58,6 +59,12 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
     private ExpressionTransform createTransform() {
         return new ExpressionTransform(compilerContext);
+    }
+
+    private String transform(ParserRuleContext ctx) {
+        ExpressionTransform tx = createTransform();
+        tx.visit(ctx);
+        return tx.render();
     }
 
     @Override
@@ -202,11 +209,12 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         if(ctx.assignmentOperator() != null){
 
             StapleParser.ConditionalExpressionContext lvalueCtx = ctx.conditionalExpression();
-            String lvalueTransfor = createTransform().visit(lvalueCtx);
+
+            String lvalueTransfor = transform(lvalueCtx);;
             Type lvalueType = (Type) compilerContext.symbols.get(lvalueCtx);
 
             StapleParser.ExpressionContext rvalueCtx = ctx.expression();
-            String rvalueTransform = createTransform().visit(rvalueCtx);
+            String rvalueTransform = transform(rvalueCtx);;
 
             if(lvalueType instanceof PointerType && ((PointerType) lvalueType).baseType instanceof ClassType){
 
@@ -222,7 +230,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
     @Override
     public Void visitUnaryExpression(@NotNull StapleParser.UnaryExpressionContext ctx) {
 
-        String retval = createTransform().visit(ctx);
+        String retval = transform(ctx);
         code.code.add(new CTextInst(retval));
 
         return null;
@@ -234,7 +242,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         final String first = ctx.getChild(0).getText();
         if("if".equals(first)){
             IfInst ifinst = new IfInst();
-            ifinst.condition = createTransform().visit(ctx.parExpression());
+            ifinst.condition = transform(ctx.parExpression());
 
             visit(ctx.statement(0));
             ifinst.thenInst = code.code.remove();

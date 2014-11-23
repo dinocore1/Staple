@@ -76,8 +76,8 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         //add init function
         if(!currentClass.hasFunction("init")){
             StringBuilder initCode = new StringBuilder();
-            initCode.append("void init(void* self) {\n");
-            initCode.append("super.init(self);\n");
+            initCode.append("void init() {\n");
+            initCode.append("super.init(this);\n");
             for(Field field : currentClass.fields){
                 if(field.type instanceof PointerType
                         && ((PointerType)field.type).baseType instanceof ClassType) {
