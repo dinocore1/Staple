@@ -242,8 +242,7 @@ selector
     ;
 
 superSuffix
-    :   arguments
-    |   '.' Identifier arguments?
+    :   '.' Identifier arguments?
     ;
 
 literal

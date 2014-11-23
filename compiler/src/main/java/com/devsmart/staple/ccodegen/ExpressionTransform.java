@@ -6,6 +6,7 @@ import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
 import com.devsmart.staple.symbols.Field;
 import com.devsmart.staple.symbols.Variable;
+import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FunctionType;
 import com.devsmart.staple.type.PointerType;
 import com.devsmart.staple.type.Type;
@@ -30,16 +31,21 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
         String retval = "";
 
         final String first = ctx.getChild(0).getText();
-        if("new".equals(first)){
+
+        if(ctx.parExpression() != null){
+            retval = String.format("(%s)", visit(ctx.parExpression()));
+        } else if("new".equals(first)){
             PointerType ptr = (PointerType) compilerContext.symbols.get(ctx);
             retval = String.format("CREATE_OBJ(%s)", ptr.baseType);
 
             baseType = ptr;
 
         } else if("this".equals(first)){
-            //builder = new StringBuilder();
             baseType = (PointerType)compilerContext.symbols.get(ctx);
-            retval = "self";
+            retval = String.format("CAST_%s(self)", CCodeGen.fullClassName((ClassType)((PointerType)baseType).baseType));
+        } else if("super".equals(first)){
+            baseType = (PointerType)compilerContext.symbols.get(ctx);
+            retval = String.format("CAST_%s(self)", CCodeGen.fullClassName((ClassType)((PointerType)baseType).baseType));
         } else if(ctx.literal() != null){
             retval = visit(ctx.literal());
         } else {
@@ -73,8 +79,6 @@ public class ExpressionTransform extends StapleBaseVisitor<String> {
 
             retval = buf.toString();
         }
-
-        //builder.append(retval);
 
         return retval;
     }

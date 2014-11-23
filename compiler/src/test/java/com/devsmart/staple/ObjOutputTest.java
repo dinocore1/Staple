@@ -34,7 +34,7 @@ public class ObjOutputTest {
         StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
 
         StapleParser.CompileUnitContext tree = parser.compileUnit();
-        tree.inspect(parser);
+        //tree.inspect(parser);
 
         SemPass1 semPass1 = new SemPass1(ctx);
         semPass1.visit(tree);

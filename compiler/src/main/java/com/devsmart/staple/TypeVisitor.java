@@ -135,6 +135,38 @@ public class TypeVisitor extends StapleBaseVisitor<Type> {
     }
 
     @Override
+    public Type visitSuperSuffix(@NotNull StapleParser.SuperSuffixContext ctx) {
+        ClassType classType = null;
+
+        if(returnType != null){
+            if(returnType instanceof ClassType){
+                classType = (ClassType)returnType;
+            } else if(returnType instanceof PointerType) {
+                if(!(((PointerType) returnType).baseType instanceof ClassType)){
+                    compilerContext.errorStream.error("not a class pointer", ctx);
+                    return null;
+                } else {
+                    classType = (ClassType) ((PointerType) returnType).baseType;
+                }
+            }
+
+            if(ctx.Identifier() != null) {
+                if(ctx.arguments() != null) {
+                    FunctionType function = classType.getFunction(ctx.Identifier().getText());
+                    compilerContext.symbols.put(ctx, function);
+                    returnType = function.returnType;
+                } else {
+                    Field field = classType.getField(ctx.Identifier().getText());
+                    compilerContext.symbols.put(ctx, field);
+                    returnType = field.type;
+                }
+            }
+        }
+
+        return returnType;
+    }
+
+    @Override
     public Type visitLiteral(@NotNull StapleParser.LiteralContext ctx) {
         if("null".equals(ctx.getText())){
             return new PointerType(PrimitiveType.Void);

@@ -77,7 +77,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         if(!currentClass.hasFunction("init")){
             StringBuilder initCode = new StringBuilder();
             initCode.append("void init(void* self) {\n");
-            initCode.append("super(self);\n");
+            initCode.append("super.init(self);\n");
             for(Field field : currentClass.fields){
                 if(field.type instanceof PointerType
                         && ((PointerType)field.type).baseType instanceof ClassType) {
@@ -90,6 +90,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
                 StapleLexer lexer = new StapleLexer(new ANTLRInputStream(new StringReader(initCode.toString())));
                 StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
                 StapleParser.ClassFunctionDeclContext functionDecl = parser.classFunctionDecl();
+                ctx.addChild(functionDecl);
                 visit(functionDecl);
             } catch (IOException e) {
                 Throwables.propagate(e);
@@ -171,7 +172,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         StapleParser.BlockContext blockCtx = ctx.block();
         compilerContext.scope.put(blockCtx, blockScope);
 
-        blockScope.put("thiz", new Argument(currentClass, "thiz"));
+        blockScope.put("self", new Argument(currentClass, "self"));
 
         for(Argument arg : arguments){
             blockScope.put(arg.name, arg);
