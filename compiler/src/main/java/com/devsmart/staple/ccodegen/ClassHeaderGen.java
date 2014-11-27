@@ -8,7 +8,6 @@ import com.devsmart.staple.symbols.Argument;
 import com.devsmart.staple.symbols.Field;
 import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FunctionType;
-import com.devsmart.staple.type.PrimitiveType;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Collections2;
@@ -17,7 +16,9 @@ import org.stringtemplate.v4.ST;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 
 public class ClassHeaderGen extends StapleBaseVisitor<Void> {
 
@@ -54,12 +55,7 @@ public class ClassHeaderGen extends StapleBaseVisitor<Void> {
 
                 initFuncTmp.add("name", Joiner.on("_").join(CCodeGen.fullClassName(currentClassType), function.name));
                 initFuncTmp.add("return", CCodeGen.renderType(function.returnType));
-                initFuncTmp.add("args", Collections2.transform(Arrays.asList(function.arguments), new Function<Argument, String>() {
-                    @Override
-                    public String apply(Argument input) {
-                        return CCodeGen.renderType(input.type) + " " + input.name;
-                    }
-                }));
+                initFuncTmp.add("args", CCodeGen.renderFunctionArgs(function));
                 output.write(initFuncTmp.render() + ";\n");
             }
 
@@ -86,7 +82,7 @@ public class ClassHeaderGen extends StapleBaseVisitor<Void> {
         ArrayList<String> renderList = new ArrayList<String>();
         for(FunctionType function : currentClassType.functions){
             if(currentClassType.parent.getFunction(function.name) == null){
-                renderList.add(CCodeGen.renderType(function));
+                renderList.add(CCodeGen.renderType(function) + ";");
             }
         }
 

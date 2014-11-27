@@ -97,6 +97,31 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
             }
         }
 
+        //add dest function
+        if(!currentClass.hasFunction("dest")) {
+            StringBuilder destCode = new StringBuilder();
+            destCode.append("void dest() {\n");
+            destCode.append("super.dest(this);\n");
+            for(Field field : currentClass.fields){
+                if(field.type instanceof PointerType
+                        && ((PointerType)field.type).baseType instanceof ClassType
+                        && field.hasModifier(Field.Modifier.Strong)) {
+                    destCode.append(String.format("this.%s = null;\n", field.name));
+                }
+            }
+            destCode.append("}");
+
+            try {
+                StapleLexer lexer = new StapleLexer(new ANTLRInputStream(new StringReader(destCode.toString())));
+                StapleParser parser = new StapleParser(new CommonTokenStream(lexer));
+                StapleParser.ClassFunctionDeclContext functionDecl = parser.classFunctionDecl();
+                ctx.addChild(functionDecl);
+                visit(functionDecl);
+            } catch (IOException e) {
+                Throwables.propagate(e);
+            }
+        }
+
 
 
         currentScope = parentScope;

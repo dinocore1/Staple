@@ -76,7 +76,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
 
         ClassType mainClassType = (ClassType) compilerContext.symbols.get(mainClass);
         try {
-            headerOutput.write(String.format("extern %1$sClass %1$sClassObj;\n", mainClassType.name));
+            headerOutput.write(String.format("extern %sClass %sClassObj;\n", CCodeGen.fullClassName(mainClassType), mainClassType.name));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -278,6 +278,8 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         } else if(type instanceof PointerType){
             final PointerType pointerType = (PointerType) type;
             retval = renderType(pointerType.baseType) + "*";
+        } else if(type instanceof ClassType){
+            retval = CCodeGen.fullClassName((ClassType) type);
         } else {
             retval = type.toString();
         }

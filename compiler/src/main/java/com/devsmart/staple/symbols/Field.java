@@ -26,4 +26,8 @@ public class Field extends Variable {
         this.modifiers = modifiers;
     }
 
+    public boolean hasModifier(Modifier modifier) {
+        return modifiers.contains(modifier);
+    }
+
 }

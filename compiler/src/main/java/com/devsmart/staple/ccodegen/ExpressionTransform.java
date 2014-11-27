@@ -46,8 +46,14 @@ public class ExpressionTransform extends StapleBaseVisitor<Void> {
             PointerType ptr = (PointerType) compilerContext.symbols.get(ctx);
             baseType = ptr;
 
-            visit(ctx.arguments());
-            String stmt = String.format("CREATE_OBJ(%s, %s)", ptr.baseType, stack.pop());
+            final String fullClassName = CCodeGen.fullClassName((ClassType) ptr.baseType);
+
+
+            //visit(ctx.arguments());
+            //stack.pop();
+            //stack.pop();
+
+            String stmt = String.format("%1$s_init(CREATE_OBJ(%1$s))", fullClassName);
             stack.push(stmt);
 
         } else if("this".equals(first)){
