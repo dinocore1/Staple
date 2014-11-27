@@ -291,7 +291,7 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
         Argument[] args = null;
         if(functionType.isMember) {
             args = new Argument[functionType.arguments.length + 1];
-            args[0] = new Argument(new PointerType(com.devsmart.staple.runtime.Runtime.BaseObject), "self");
+            args[0] = new Argument(PointerType.VoidPtr, "self");
             System.arraycopy(functionType.arguments, 0, args, 1, functionType.arguments.length);
         } else {
             args = functionType.arguments;

@@ -3,6 +3,8 @@ package com.devsmart.staple.type;
 
 public class PointerType implements Type {
 
+    public static final PointerType VoidPtr = new PointerType(PrimitiveType.Void);
+
     public final Type baseType;
 
     public PointerType(Type baseType){
