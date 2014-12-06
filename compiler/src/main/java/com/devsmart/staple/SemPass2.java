@@ -101,7 +101,6 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
         if(!currentClass.hasFunction("dest")) {
             StringBuilder destCode = new StringBuilder();
             destCode.append("void dest() {\n");
-            destCode.append("super.dest(this);\n");
             for(Field field : currentClass.fields){
                 if(field.type instanceof PointerType
                         && ((PointerType)field.type).baseType instanceof ClassType
@@ -109,6 +108,7 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
                     destCode.append(String.format("this.%s = null;\n", field.name));
                 }
             }
+            destCode.append("super.dest(this);\n");
             destCode.append("}");
 
             try {
@@ -160,8 +160,13 @@ public class SemPass2 extends StapleBaseVisitor<Void> {
             } else {
 
                 HashSet<Field.Modifier> modifiers = new HashSet<Field.Modifier>();
+                modifiers.add(Field.Modifier.Strong);
                 for(StapleParser.MemberModifiersContext modifier : ctx.memberModifiers()){
                     modifiers.add(Field.Modifier.valueOf(modifier.getText()));
+                }
+
+                if(modifiers.contains(Field.Modifier.Weak)) {
+                    modifiers.remove(Field.Modifier.Strong);
                 }
 
                 Field field = new Field(type, name, modifiers);

@@ -30,3 +30,25 @@ void stp_object_decref(void* obj)
     free(obj);
   }
 }
+
+void stp_assign_strong(void** l, void* r)
+{
+  if(*l != NULL) {
+    stp_object_decref(*l);
+  }
+  *l = r;
+  if(r != NULL) {
+    stp_object_addref(r);
+  }
+
+}
+
+void* stp_create_obj(uint32 size, void* classObj, void (*initfun)(void* self) )
+{
+  void* newobj = malloc(size);
+  ((stp_object*)newobj)->classType = classObj;
+  if(initfun != NULL) {
+    initfun(newobj);
+  }
+  return newobj;
+}

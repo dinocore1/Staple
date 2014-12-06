@@ -4,12 +4,14 @@ package com.devsmart.staple.ccodegen;
 import com.devsmart.staple.CompilerContext;
 import com.devsmart.staple.StapleBaseVisitor;
 import com.devsmart.staple.StapleParser;
+import com.devsmart.staple.ccodegen.instruction.ObjectAssignInst;
 import com.devsmart.staple.symbols.Field;
 import com.devsmart.staple.symbols.Variable;
 import com.devsmart.staple.type.ClassType;
 import com.devsmart.staple.type.FunctionType;
 import com.devsmart.staple.type.PointerType;
 import com.devsmart.staple.type.Type;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.misc.NotNull;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
@@ -35,6 +37,36 @@ public class ExpressionTransform extends StapleBaseVisitor<Void> {
         return builder.toString();
     }
 
+    private String transform(ParserRuleContext ctx) {
+        ExpressionTransform tx = new ExpressionTransform(compilerContext);
+        tx.visit(ctx);
+        return tx.render();
+    }
+
+    @Override
+    public Void visitExpression(@NotNull StapleParser.ExpressionContext ctx) {
+
+        if(ctx.assignmentOperator() != null){
+
+            StapleParser.ConditionalExpressionContext lvalueCtx = ctx.conditionalExpression();
+
+            String lvalueTransfor = transform(lvalueCtx);;
+            Type lvalueType = (Type) compilerContext.symbols.get(lvalueCtx);
+
+            StapleParser.ExpressionContext rvalueCtx = ctx.expression();
+            String rvalueTransform = transform(rvalueCtx);;
+
+            if(lvalueType instanceof PointerType && ((PointerType) lvalueType).baseType instanceof ClassType){
+
+                stack.push(String.format("OBJ_ASSIGN_S(%s, %s)", lvalueTransfor, rvalueTransform));
+            }
+        } else {
+            visitChildren(ctx);
+        }
+
+        return null;
+    }
+
     @Override
     public Void visitPrimary(@NotNull StapleParser.PrimaryContext ctx) {
 
@@ -53,7 +85,7 @@ public class ExpressionTransform extends StapleBaseVisitor<Void> {
             //stack.pop();
             //stack.pop();
 
-            String stmt = String.format("%1$s_init(CREATE_OBJ(%1$s))", fullClassName);
+            String stmt = String.format("CREATE_OBJ(%s)", fullClassName);
             stack.push(stmt);
 
         } else if("this".equals(first)){

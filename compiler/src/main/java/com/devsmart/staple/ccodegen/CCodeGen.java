@@ -253,6 +253,9 @@ public class CCodeGen extends StapleBaseVisitor<Void> {
             }
             code.code.add(ifinst);
 
+        } else if(ctx.statementExpression() != null){
+            String str = transform(ctx.statementExpression());
+            code.code.add(new CTextInst(str));
         } else {
             visitChildren(ctx);
         }

@@ -48,11 +48,11 @@ public class ObjOutputTest {
         codeGen.visit(tree);
 
         headerWriter.close();
-        System.out.println("********* Header ***********");
+        System.out.println("//********* Header ***********");
         System.out.println(headerBuffer.toString("UTF-8"));
 
         codeWriter.close();
-        System.out.println("********* Code *************");
+        System.out.println("//********* Code *************");
         System.out.println(codeBuffer.toString("UTF-8"));
 
         System.out.println("done");

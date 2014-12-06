@@ -26,10 +26,10 @@ struct _stp_object {
 };
 
 
-void stp_assign_strong(void* l, void* r);
-#define OBJ_ASSIGN_S(l, r)  stp_assign_strong(l, r)
+void stp_assign_strong(void** l, void* r);
+#define OBJ_ASSIGN_S(l, r)  stp_assign_strong((void**)&l, r)
 
-void* stp_create_obj(uint32 size, void* classObj);
-#define CREATE_OBJ(x) stp_create_obj(sizeof(x), &x##ClassObj)
+void* stp_create_obj(uint32 size, void* classObj, void (*initfun)(void* self) );
+#define CREATE_OBJ(x) stp_create_obj(sizeof(x), &x##ClassObj, x##_init)
 
 #endif /* STP_OBJECT_H_ */
