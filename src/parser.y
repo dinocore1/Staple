@@ -1,15 +1,15 @@
 %{
-	#include <cstdio>
-    #include "node.h"
-    NBlock *programBlock; /* the top level root node of our final AST */
+#include <cstdio>
+#include "node.h"
+NBlock *programBlock; /* the top level root node of our final AST */
 
-    extern int yylex();
-    void yyerror(const char *s) { printf("ERROR: %s\n", s); }
+extern int yylex();
+void yyerror(const char *s) { printf("ERROR: %s\n", s); }
 %}
 
 /* Represents the many different ways we can access our data */
 %union {
-    Node *node;
+    ASTNode *node;
     NBlock *block;
     NExpression *expr;
     NStatement *stmt;
@@ -22,7 +22,7 @@
 }
 
 /* Define our terminal symbols (tokens). This should
-   match our tokens.l lex file. We also define the node type
+   match our tokens.l lex file. We also define the ASTNode type
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE
@@ -58,7 +58,8 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
       | stmts stmt { $1->statements.push_back($<stmt>2); }
       ;
 
-stmt : var_decl | func_decl
+stmt : var_decl
+     | func_decl
      | expr { $$ = new NExpressionStatement(*$1); }
      ;
 

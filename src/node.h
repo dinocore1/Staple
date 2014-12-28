@@ -1,6 +1,10 @@
+#include "llvm/IR/Verifier.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include <iostream>
 #include <vector>
-#include <llvm/Value.h>
 
 class CodeGenContext;
 class NStatement;
@@ -11,16 +15,18 @@ typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
 typedef std::vector<NVariableDeclaration*> VariableList;
 
-class Node {
+using namespace llvm;
+
+class ASTNode {
 public:
-    virtual ~Node() {}
+    virtual ~ASTNode() {}
     virtual llvm::Value* codeGen(CodeGenContext& context) { }
 };
 
-class NExpression : public Node {
+class NExpression : public ASTNode {
 };
 
-class NStatement : public Node {
+class NStatement : public ASTNode {
 };
 
 class NInteger : public NExpression {
@@ -41,6 +47,19 @@ class NIdentifier : public NExpression {
 public:
     std::string name;
     NIdentifier(const std::string& name) : name(name) { }
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class PrototypeNode : public ASTNode {
+public:
+    const NIdentifier& type;
+    const NIdentifier& id;
+    VariableList arguments;
+
+    PrototypeNode(const NIdentifier& type, const NIdentifier& id,
+            const VariableList& arguments) :
+            type(type), id(id), arguments(arguments){}
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 

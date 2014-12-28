@@ -17,7 +17,7 @@ LOCAL_EXE := $(MODULE)
 
 define exec_template
 $(LOCAL_EXE): $(LOCAL_OBJS) $(LOCAL_SHARED_LIBS)
-	g++ -o $(LOCAL_EXE) $(LOCAL_OBJS)
+	g++ -o $(LOCAL_EXE) $(LOCAL_OBJS) $(LOCAL_LIBS)
 endef
 
 

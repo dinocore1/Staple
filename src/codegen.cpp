@@ -4,13 +4,18 @@
 
 using namespace std;
 
+void Error(const char* str)
+{
+	fprintf(stderr, "Error: %s\n", str);
+}
+
 /* Compile the AST into a module */
 void CodeGenContext::generateCode(NBlock& root)
 {
 	std::cout << "Generating code...\n";
 	
 	/* Create the top level interpreter function to call as entry */
-	vector<const Type*> argTypes;
+	ArrayRef<Type*> argTypes;
 	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
 	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mainFunction, 0);
@@ -25,24 +30,11 @@ void CodeGenContext::generateCode(NBlock& root)
 	   to see if our program compiled properly
 	 */
 	std::cout << "Code is generated.\n";
-	PassManager pm;
-	pm.add(createPrintModulePass(&outs()));
-	pm.run(*module);
-}
-
-/* Executes the AST by running the main function */
-GenericValue CodeGenContext::runCode() {
-	std::cout << "Running code...\n";
-	ExistingModuleProvider *mp = new ExistingModuleProvider(module);
-	ExecutionEngine *ee = ExecutionEngine::create(mp, false);
-	vector<GenericValue> noargs;
-	GenericValue v = ee->runFunction(mainFunction, noargs);
-	std::cout << "Code was run.\n";
-	return v;
+	module->dump();
 }
 
 /* Returns an LLVM type based on the identifier */
-static const Type *typeOf(const NIdentifier& type) 
+static Type *typeOf(const NIdentifier& type)
 {
 	if (type.name.compare("int") == 0) {
 		return Type::getInt64Ty(getGlobalContext());
@@ -88,28 +80,31 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	for (it = arguments.begin(); it != arguments.end(); it++) {
 		args.push_back((**it).codeGen(context));
 	}
-	CallInst *call = CallInst::Create(function, args.begin(), args.end(), "", context.currentBlock());
-	std::cout << "Creating method call: " << id.name << std::endl;
-	return call;
+
+	return context.Builder.CreateCall(function, args, "calltmp");
+	//CallInst *call = CallInst::Create(function, args.begin(), args.end(), "", context.currentBlock());
+	//std::cout << "Creating method call: " << id.name << std::endl;
+	//return call;
 }
 
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating binary operation " << op << std::endl;
-	Instruction::BinaryOps instr;
+	Value *l = lhs.codeGen(context);
+	Value *r = rhs.codeGen(context);
+
+
 	switch (op) {
-		case TPLUS: 	instr = Instruction::Add; goto math;
-		case TMINUS: 	instr = Instruction::Sub; goto math;
-		case TMUL: 		instr = Instruction::Mul; goto math;
-		case TDIV: 		instr = Instruction::SDiv; goto math;
+		case TPLUS: 	return context.Builder.CreateAdd(l, r, "addtmp");
+		case TMINUS: 	return context.Builder.CreateSub(l, r, "subtmp");
+		case TMUL: 		return context.Builder.CreateMul(l, r, "multmp");
+		case TDIV: 		return context.Builder.CreateSDiv(l, r, "divtmp");
 				
-		/* TODO comparison */
+		default:
+			Error("invalid binary operator");
+			return 0;
 	}
 
-	return NULL;
-math:
-	return BinaryOperator::Create(instr, lhs.codeGen(context), 
-		rhs.codeGen(context), "", context.currentBlock());
+
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)
@@ -154,7 +149,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
 Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 {
-	vector<const Type*> argTypes;
+	vector<Type*> argTypes;
 	VariableList::const_iterator it;
 	for (it = arguments.begin(); it != arguments.end(); it++) {
 		argTypes.push_back(typeOf((**it).type));
