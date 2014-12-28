@@ -12,9 +12,6 @@ void Error(const char* str)
 /* Compile the AST into a module */
 void CodeGenContext::generateCode(NBlock& root)
 {
-	std::cout << "Generating code...\n";
-
-
 	/* Create the top level interpreter function to call as entry */
 	ArrayRef<Type*> argTypes;
 	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
@@ -128,7 +125,6 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	std::cout << "Creating variable declaration " << type.name << " " << id.name << std::endl;
 	AllocaInst *alloc = context.Builder.CreateAlloca(typeOf(type), 0, id.name.c_str());
 	context.locals()[id.name] = alloc;
 	if (assignmentExpr != NULL) {
@@ -172,6 +168,8 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	}
 	
 	block.codeGen(context);
+
+	context.fpm->run(*function);
 
 	context.popBlock();
 	return function;

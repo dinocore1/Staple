@@ -3,6 +3,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/PassManager.h"
+#include "llvm/Transforms/Scalar.h"
 #include <stack>
 
 using namespace llvm;
@@ -21,11 +23,16 @@ class CodeGenContext {
 
 public:
     Module *module;
+    FunctionPassManager *fpm;
     IRBuilder<> Builder;
-    CodeGenContext()
+    CodeGenContext(const char* moduleName)
     : Builder(getGlobalContext())
     {
-        module = new Module("main", getGlobalContext());
+        module = new Module(moduleName, getGlobalContext());
+        fpm = new FunctionPassManager(module);
+        fpm->add(createPromoteMemoryToRegisterPass());
+
+        fpm->doInitialization();
     }
     
     void generateCode(NBlock& root);
