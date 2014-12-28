@@ -1,5 +1,8 @@
 int do_math(int a) {
-  int x = a * 5 + 3
+  int x = a * 3 + 20;
+  return x;
 }
 
-do_math(10)
+do_math(10);
+
+

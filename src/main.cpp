@@ -7,11 +7,15 @@ extern NBlock* programBlock;
 extern "C" int yylex();
 int yyparse();
 extern "C" FILE *yyin;
+extern "C" int yydebug;
 
 using namespace std;
 
 int main(int argc, char **argv)
 {
+
+
+    yydebug = 1;
 
     // open a file handle to a particular file:
     FILE *myfile = fopen("test.stp", "r");

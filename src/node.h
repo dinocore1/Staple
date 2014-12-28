@@ -83,6 +83,14 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
+class NReturn : public NExpression {
+public:
+    NExpression& ret;
+    NReturn(NExpression& ret)
+    : ret(ret) {}
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
 class NAssignment : public NExpression {
 public:
     NIdentifier& lhs;

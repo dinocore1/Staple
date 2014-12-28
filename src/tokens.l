@@ -7,9 +7,12 @@
 extern "C" int yywrap() { }
 %}
 
+%option yylineno
+
 %%
 
 [ \t\n]                 ;
+"return"                return TOKEN(TRETURN);
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
 [0-9]+\.[0-9]*          SAVE_TOKEN; return TDOUBLE;
 [0-9]+                  SAVE_TOKEN; return TINTEGER;
@@ -30,6 +33,7 @@ extern "C" int yywrap() { }
 "-"                     return TOKEN(TMINUS);
 "*"                     return TOKEN(TMUL);
 "/"                     return TOKEN(TDIV);
+";"                     return TOKEN(TSEMI);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

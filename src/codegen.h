@@ -31,6 +31,19 @@ public:
     void generateCode(NBlock& root);
     std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
-    void pushBlock(BasicBlock *block) { blocks.push(new CodeGenBlock()); blocks.top()->block = block; }
-    void popBlock() { CodeGenBlock *top = blocks.top(); blocks.pop(); delete top; }
+    void pushBlock(BasicBlock *block)
+    {
+        blocks.push(new CodeGenBlock());
+        blocks.top()->block = block;
+        Builder.SetInsertPoint(block);
+    }
+    void popBlock()
+    {
+        CodeGenBlock *top = blocks.top();
+        blocks.pop();
+        delete top;
+        if(!blocks.empty()) {
+            Builder.SetInsertPoint(blocks.top()->block);
+        }
+    }
 };
