@@ -10,6 +10,8 @@ class CodeGenContext;
 class NStatement;
 class NExpression;
 class NVariableDeclaration;
+class NFunctionDeclaration;
+class NType;
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
@@ -23,7 +25,10 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context) { }
 };
 
-class NExpression : public ASTNode {
+template<class T>
+class ASTNodeList : public ASTNode {
+public:
+    std::vector<T> list;
 };
 
 class NType : public ASTNode {
@@ -32,9 +37,38 @@ public:
     bool isPointer;
     NType(const std::string& text, bool isPointer)
             : text(text), isPointer(isPointer) { }
-    virtual ~NType() {}
+
     llvm::Type* getLLVMType() const;
 };
+
+class NField : public ASTNode {
+public:
+    const std::string name;
+    const NType type;
+
+    NField(const NType& type, const std::string& name)
+    : type(type), name(name)
+    {}
+
+};
+
+
+class NClassDeclaration : public ASTNode {
+public:
+    const std::string name;
+    std::vector<NField*> fields;
+
+    NClassDeclaration(const std::string& name,
+            const std::vector<NField*>& fields)
+    : name(name), fields(fields)
+    {}
+};
+
+
+
+class NExpression : public ASTNode {
+};
+
 
 class NStatement : public ASTNode {
 };
@@ -62,8 +96,8 @@ public:
 
 class PrototypeNode : public ASTNode {
 public:
-    const NIdentifier& type;
-    const NIdentifier& id;
+    const NIdentifier type;
+    const NIdentifier id;
     VariableList arguments;
 
     PrototypeNode(const NIdentifier& type, const NIdentifier& id,
@@ -127,24 +161,33 @@ public:
 
 class NVariableDeclaration : public NStatement {
 public:
-    const NType& type;
-    NIdentifier& id;
+    const NType type;
+    NIdentifier id;
     NExpression *assignmentExpr;
-    NVariableDeclaration(const NType& type, NIdentifier& id) :
+    NVariableDeclaration(const NType& type, const NIdentifier& id) :
         type(type), id(id) { }
-    NVariableDeclaration(const NType& type, NIdentifier& id, NExpression *assignmentExpr) :
+    NVariableDeclaration(const NType& type, const NIdentifier& id, NExpression *assignmentExpr) :
         type(type), id(id), assignmentExpr(assignmentExpr) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NFunctionDeclaration : public NStatement {
 public:
-    const NType& type;
-    const NIdentifier& id;
+    const NType type;
+    const std::string name;
     VariableList arguments;
     NBlock& block;
-    NFunctionDeclaration(const NType& type, const NIdentifier& id,
+    NFunctionDeclaration(const NType& type, const std::string& name,
             const VariableList& arguments, NBlock& block) :
-        type(type), id(id), arguments(arguments), block(block) { }
+        type(type), name(name), arguments(arguments), block(block) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NCompileUnit : public ASTNode {
+public:
+    std::vector<NClassDeclaration*> classes;
+    std::vector<NFunctionDeclaration*> functions;
+
+    NCompileUnit() {}
+
 };

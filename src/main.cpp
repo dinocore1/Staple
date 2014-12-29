@@ -4,7 +4,7 @@
 #include "node.h"
 
 #include "optionparser.h"
-extern NBlock* programBlock;
+extern NCompileUnit* compileUnit;
 
 extern "C" int yylex();
 int yyparse();
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
         outputfile = "output.ll";
     }
 
-    //yydebug = 1;
+    yydebug = 1;
 
     FILE *myfile = fopen(inputfile, "r");
     if (!myfile) {
@@ -76,6 +76,6 @@ int main(int argc, char **argv)
     } while (!feof(yyin));
 
     CodeGenContext context(inputfile);
-    context.generateCode(*programBlock);
+    context.generateCode(*compileUnit);
     return 0;
 }

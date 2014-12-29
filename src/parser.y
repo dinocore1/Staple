@@ -1,7 +1,7 @@
 %{
 #include <cstdio>
 #include "node.h"
-NBlock *programBlock; /* the top level root node of our final AST */
+NCompileUnit *compileUnit; /* the top level root node of our final AST */
 
 extern int yylex();
 
@@ -34,6 +34,10 @@ void yyerror(const char *s)
     std::vector<NExpression*> *exprvec;
     std::string *string;
     int token;
+    ASTNodeList<ASTNode*> *nodelist;
+    NFunctionDeclaration *func_decl;
+    NClassDeclaration *class_decl;
+    NField *field;
 }
 
 /* Define our terminal symbols (tokens). This should
@@ -41,7 +45,7 @@ void yyerror(const char *s)
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE
-%token <token> TRETURN TSEMI
+%token <token> TCLASS TRETURN TSEMI
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -57,16 +61,38 @@ void yyerror(const char *s)
 %type <varvec> func_decl_args
 %type <exprvec> call_args
 %type <block> program stmts block
-%type <stmt> stmt var_decl func_decl
+%type <stmt> stmt var_decl
 %type <token> comparison
+%type <nodelist> class_members
+%type <class_decl> class_decl
+%type <field> field
+%type <func_decl> func_decl
 
 %start program
 
 %%
 
-program : stmts { programBlock = $1; }
+program
+        : program class_decl { compileUnit->classes.push_back($2); }
+        | program func_decl { compileUnit->functions.push_back($2); }
+        | { compileUnit = new NCompileUnit(); }
         ;
-        
+
+class_decl
+        : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
+        ;
+
+class_members
+        : class_members field { $1->list.push_back($2); }
+        | class_members func_decl { $1->list.push_back($2); }
+        | { $$ = new ASTNodeList<ASTNode*>(); }
+
+field
+        : type TIDENTIFIER TSEMI { $$ = new NField(*$1, *$2); delete $1; delete $2; }
+        ;
+
+
+
 stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
       | stmts stmt { $1->statements.push_back($<stmt>2); }
       ;
@@ -88,7 +114,7 @@ type : TIDENTIFIER {  $$ = new NType(*$1, false); }
      | TIDENTIFIER TMUL { $$ = new NType(*$1, true); }
      ;
         
-func_decl : type ident TLPAREN func_decl_args TRPAREN block
+func_decl : type TIDENTIFIER TLPAREN func_decl_args TRPAREN block
             { $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
           ;
     

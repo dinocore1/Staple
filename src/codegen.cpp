@@ -10,20 +10,13 @@ void Error(const char* str)
 }
 
 /* Compile the AST into a module */
-void CodeGenContext::generateCode(NBlock& root)
+void CodeGenContext::generateCode(NCompileUnit& root)
 {
-	/* Create the top level interpreter function to call as entry */
-	ArrayRef<Type*> argTypes;
-	FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
-	mainFunction = Function::Create(ftype, GlobalValue::InternalLinkage, "main", module);
-	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mainFunction);
 
-	
-	/* Push a new variable/block context */
-	pushBlock(bblock);
-	root.codeGen(*this); /* emit bytecode for the toplevel block */
-	Builder.CreateRetVoid();
-	popBlock();
+	for (std::vector<NFunctionDeclaration*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
+		(*it)->codeGen(*this);
+	}
+
 	
 	/* Print the bytecode in a human-readable format 
 	   to see if our program compiled properly
@@ -176,7 +169,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 		argTypes.push_back((**it).type.getLLVMType());
 	}
 	FunctionType *ftype = FunctionType::get(type.getLLVMType(), argTypes, false);
-	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id.name.c_str(), context.module);
+	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
 	context.pushBlock(bblock);

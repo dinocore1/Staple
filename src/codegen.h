@@ -9,7 +9,7 @@
 
 using namespace llvm;
 
-class NBlock;
+class NCompileUnit;
 
 class CodeGenBlock {
 public:
@@ -35,7 +35,7 @@ public:
         fpm->doInitialization();
     }
     
-    void generateCode(NBlock& root);
+    void generateCode(NCompileUnit& root);
     std::map<std::string, Value*>& locals() { return blocks.top()->locals; }
     BasicBlock *currentBlock() { return blocks.top()->block; }
     void pushBlock(BasicBlock *block)
