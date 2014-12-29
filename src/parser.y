@@ -24,6 +24,7 @@ void yyerror(const char *s)
 /* Represents the many different ways we can access our data */
 %union {
     ASTNode *node;
+    NType *type;
     NBlock *block;
     NExpression *expr;
     NStatement *stmt;
@@ -50,6 +51,7 @@ void yyerror(const char *s)
    we call an ident (defined by union type ident) we are really
    calling an (NIdentifier*). It makes the compiler happy.
  */
+%type <type> type
 %type <ident> ident
 %type <expr> numeric expr multexpr addexpr unaryexpr
 %type <varvec> func_decl_args
@@ -69,8 +71,8 @@ stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
       | stmts stmt { $1->statements.push_back($<stmt>2); }
       ;
 
-stmt : var_decl TSEMI
-     | func_decl
+stmt : func_decl
+     | var_decl TSEMI
      | expr TSEMI { $$ = new NExpressionStatement(*$1); }
      ;
 
@@ -78,11 +80,15 @@ block : TLBRACE stmts TRBRACE { $$ = $2; }
       | TLBRACE TRBRACE { $$ = new NBlock(); }
       ;
 
-var_decl : ident ident { $$ = new NVariableDeclaration(*$1, *$2); }
-         | ident ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
+         | type ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
          ;
+
+type : TIDENTIFIER {  $$ = new NType(*$1, false); }
+     | TIDENTIFIER TMUL { $$ = new NType(*$1, true); }
+     ;
         
-func_decl : ident ident TLPAREN func_decl_args TRPAREN block 
+func_decl : type ident TLPAREN func_decl_args TRPAREN block
             { $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
           ;
     

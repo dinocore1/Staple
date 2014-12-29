@@ -31,6 +31,28 @@ void CodeGenContext::generateCode(NBlock& root)
 	module->dump();
 }
 
+Type* NType::getLLVMType() const
+{
+	Type* retval = 0;
+	if(text.compare("int") == 0){
+		retval = Type::getInt32Ty(getGlobalContext());
+	} else if(text.compare(0, 3, "int") == 0) {
+		int width = atoi(text.substr(3).c_str());
+		retval = Type::getIntNTy(getGlobalContext(), width);
+	} else if(text.compare(0, 4, "uint") == 0) {
+		int width = atoi(text.substr(4).c_str());
+		retval = Type::getIntNTy(getGlobalContext(), width);
+	} else if(text.compare("float") == 0) {
+		retval = Type::getFloatTy(getGlobalContext());
+	}
+
+	if(isPointer) {
+		retval = PointerType::getUnqual(retval);
+	}
+
+	return retval;
+}
+
 /* Returns an LLVM type based on the identifier */
 static Type *typeOf(const NIdentifier& type)
 {
@@ -47,7 +69,7 @@ static Type *typeOf(const NIdentifier& type)
 
 Value* NInteger::codeGen(CodeGenContext& context)
 {
-	return ConstantInt::get(getGlobalContext(), APInt(32, value, true));
+	return ConstantInt::get(getGlobalContext(), APInt(64, value, true));
 }
 
 Value* NDouble::codeGen(CodeGenContext& context)
@@ -125,7 +147,7 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	AllocaInst *alloc = context.Builder.CreateAlloca(typeOf(type), 0, id.name.c_str());
+	AllocaInst *alloc = context.Builder.CreateAlloca(type.getLLVMType(), 0, id.name.c_str());
 	context.locals()[id.name] = alloc;
 	if (assignmentExpr != NULL) {
 		NAssignment assn(id, *assignmentExpr);
@@ -151,9 +173,9 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	vector<Type*> argTypes;
 	VariableList::const_iterator it;
 	for (it = arguments.begin(); it != arguments.end(); it++) {
-		argTypes.push_back(typeOf((**it).type));
+		argTypes.push_back((**it).type.getLLVMType());
 	}
-	FunctionType *ftype = FunctionType::get(typeOf(type), argTypes, false);
+	FunctionType *ftype = FunctionType::get(type.getLLVMType(), argTypes, false);
 	Function *function = Function::Create(ftype, GlobalValue::InternalLinkage, id.name.c_str(), context.module);
 	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
 
@@ -162,7 +184,7 @@ Value* NFunctionDeclaration::codeGen(CodeGenContext& context)
 	Function::arg_iterator AI = function->arg_begin();
 	for(unsigned i=0,e=function->arg_size();i!=e;++i,++AI){
 		NVariableDeclaration* arg = arguments[i];
-		AllocaInst* alloc = CreateEntryBlockAlloca(function, typeOf(arg->type), arg->id.name);
+		AllocaInst* alloc = CreateEntryBlockAlloca(function, arg->type.getLLVMType(), arg->id.name);
 		context.locals()[arg->id.name] = alloc;
 		context.Builder.CreateStore(AI, alloc);
 	}
