@@ -12,8 +12,10 @@ extern "C" int yywrap() { }
 %%
 
 [ \t\n]                 ;
+"extern"                return TOKEN(TEXTERN);
 "return"                return TOKEN(TRETURN);
 "class"                 return TOKEN(TCLASS);
+\"([^\\\"]|\\.)*\"      SAVE_TOKEN; return TSTRINGLIT;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
 [0-9]+\.[0-9]*          SAVE_TOKEN; return TDOUBLE;
 [0-9]+                  SAVE_TOKEN; return TINTEGER;
@@ -35,6 +37,7 @@ extern "C" int yywrap() { }
 "*"                     return TOKEN(TMUL);
 "/"                     return TOKEN(TDIV);
 ";"                     return TOKEN(TSEMI);
+"..."                   return TOKEN(TELLIPSIS);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

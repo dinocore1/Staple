@@ -35,17 +35,20 @@ void yyerror(const char *s)
     std::string *string;
     int token;
     ASTNodeList<ASTNode*> *nodelist;
-    NFunctionDeclaration *func_decl;
     NClassDeclaration *class_decl;
     NField *field;
+    NFunctionPrototype *prototype;
+    std::vector<NArgument*> *func_args;
+    bool boolean;
+    NFunction *function;
 }
 
 /* Define our terminal symbols (tokens). This should
    match our tokens.l lex file. We also define the ASTNode type
    they represent.
  */
-%token <string> TIDENTIFIER TINTEGER TDOUBLE
-%token <token> TCLASS TRETURN TSEMI
+%token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
+%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -57,8 +60,7 @@ void yyerror(const char *s)
  */
 %type <type> type
 %type <ident> ident
-%type <expr> numeric expr multexpr addexpr unaryexpr
-%type <varvec> func_decl_args
+%type <expr> literal expr multexpr addexpr unaryexpr
 %type <exprvec> call_args
 %type <block> program stmts block
 %type <stmt> stmt var_decl
@@ -66,17 +68,52 @@ void yyerror(const char *s)
 %type <nodelist> class_members
 %type <class_decl> class_decl
 %type <field> field
-%type <func_decl> func_decl
+%type <prototype> proto_func
+%type <func_args> proto_args
+%type <boolean> ellipse_arg
+%type <function> global_func method
 
 %start program
 
 %%
 
 program
-        : program class_decl { compileUnit->classes.push_back($2); }
-        | program func_decl { compileUnit->functions.push_back($2); }
-        | { compileUnit = new NCompileUnit(); }
+        : { compileUnit = new NCompileUnit(); }
+        | program class_decl { compileUnit->classes.push_back($2); }
+        | program global_func { compileUnit->functions.push_back($2); }
+        | program proto_func { compileUnit->externFunctions.push_back($2); }
         ;
+
+////// Extern Function Prototype //////
+
+proto_func
+        : TEXTERN type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN
+         { $$ = new NFunctionPrototype(*$2, *$3, *$5, $6); delete $3; delete $5; }
+        ;
+
+////// Global Functions /////
+
+global_func
+        : type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN block
+         { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
+        ;
+
+
+ellipse_arg
+        : { $$ = false; }
+        | TELLIPSIS { $$ = true; }
+
+proto_args
+        : type { $$ = new std::vector<NArgument*>(); $$->push_back(new NArgument(*$1)); delete $1; }
+        | type TIDENTIFIER { $$ = new std::vector<NArgument*>(); $$->push_back(new NArgument(*$1, *$2)); delete $1; delete $2; }
+        | { $$ = new std::vector<NArgument*>(); }
+        | proto_args TCOMMA type { $1->push_back(new NArgument(*$3)); delete $3; }
+        | proto_args TCOMMA type TIDENTIFIER { $1->push_back(new NArgument(*$3, *$4)); delete $3; delete $4; }
+        | proto_args TCOMMA { /*for the ellipse*/ }
+        ;
+
+
+////// Class Declaration /////
 
 class_decl
         : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
@@ -84,23 +121,26 @@ class_decl
 
 class_members
         : class_members field { $1->list.push_back($2); }
-        | class_members func_decl { $1->list.push_back($2); }
+        | class_members method { $1->list.push_back($2); }
         | { $$ = new ASTNodeList<ASTNode*>(); }
 
 field
         : type TIDENTIFIER TSEMI { $$ = new NField(*$1, *$2); delete $1; delete $2; }
         ;
 
+method
+        : type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN block
+         { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
+        ;
 
 
 stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
       | stmts stmt { $1->statements.push_back($<stmt>2); }
       ;
 
-stmt : func_decl
-     | var_decl TSEMI
-     | expr TSEMI { $$ = new NExpressionStatement(*$1); }
-     ;
+stmt    : var_decl TSEMI
+        | expr TSEMI { $$ = new NExpressionStatement(*$1); }
+        ;
 
 block : TLBRACE stmts TRBRACE { $$ = $2; }
       | TLBRACE TRBRACE { $$ = new NBlock(); }
@@ -113,21 +153,13 @@ var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
 type : TIDENTIFIER {  $$ = new NType(*$1, false); }
      | TIDENTIFIER TMUL { $$ = new NType(*$1, true); }
      ;
-        
-func_decl : type TIDENTIFIER TLPAREN func_decl_args TRPAREN block
-            { $$ = new NFunctionDeclaration(*$1, *$2, *$4, *$6); delete $4; }
-          ;
-    
-func_decl_args : /*blank*/  { $$ = new VariableList(); }
-          | var_decl { $$ = new VariableList(); $$->push_back($<var_decl>1); }
-          | func_decl_args TCOMMA var_decl { $1->push_back($<var_decl>3); }
-          ;
 
 ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
       ;
 
-numeric : TINTEGER { $$ = new NInteger(atol($1->c_str())); delete $1; }
-        | TDOUBLE { $$ = new NDouble(atof($1->c_str())); delete $1; }
+literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
+        | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; }
+        | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; }
         ;
     
 expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
@@ -148,7 +180,7 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
          ;
 
 unaryexpr : ident { $<ident>$ = $1; }
-          | numeric { $$ = $1; }
+          | literal { $$ = $1; }
           ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }

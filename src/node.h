@@ -3,8 +3,10 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
 #include <iostream>
 #include <vector>
+#include <c++/4.6/bits/stringfwd.h>
 
 class CodeGenContext;
 class NStatement;
@@ -12,6 +14,7 @@ class NExpression;
 class NVariableDeclaration;
 class NFunctionDeclaration;
 class NType;
+class NFunction;
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
@@ -57,6 +60,7 @@ class NClassDeclaration : public ASTNode {
 public:
     const std::string name;
     std::vector<NField*> fields;
+    std::vector<NFunction*> functions;
 
     NClassDeclaration(const std::string& name,
             const std::vector<NField*>& fields)
@@ -73,17 +77,37 @@ class NExpression : public ASTNode {
 class NStatement : public ASTNode {
 };
 
-class NInteger : public NExpression {
+class NLiteral : public NExpression {
 public:
-    long long value;
-    NInteger(long long value) : value(value) { }
+    const std::string str;
+
+    NLiteral(const std::string& str)
+    : str(str) {}
+};
+
+class NIntLiteral : public NLiteral {
+public:
+    unsigned width;
+    NIntLiteral(std::string const &str, unsigned width = 32)
+    : NLiteral(str), width(width) {
+    }
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NDouble : public NExpression {
+class NFloatLiteral : public NLiteral {
 public:
-    double value;
-    NDouble(double value) : value(value) { }
+    NFloatLiteral(std::string const &str) : NLiteral(str) {
+    }
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NStringLiteral : public NLiteral {
+public:
+    NStringLiteral(std::string const &str) : NLiteral(str) {
+    }
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -94,15 +118,28 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class PrototypeNode : public ASTNode {
+class NArgument : public ASTNode {
 public:
-    const NIdentifier type;
-    const NIdentifier id;
-    VariableList arguments;
+    const NType type;
+    std::string name;
 
-    PrototypeNode(const NIdentifier& type, const NIdentifier& id,
-            const VariableList& arguments) :
-            type(type), id(id), arguments(arguments){}
+    NArgument(const NType& type)
+     : type(type) {}
+
+    NArgument(const NType& type, const std::string& name)
+    : type(type), name(name) {}
+};
+
+class NFunctionPrototype : public ASTNode {
+public:
+    const NType returnType;
+    const std::string name;
+    std::vector<NArgument*> arguments;
+    const bool isVarg;
+
+    NFunctionPrototype(const NType& type, const std::string& name,
+            const std::vector<NArgument*>& arguments, bool isVarg) :
+            returnType(type), name(name), arguments(arguments), isVarg(isVarg) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -171,22 +208,31 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NFunctionDeclaration : public NStatement {
+class NFunction : public ASTNode {
 public:
-    const NType type;
+    const NType returnType;
     const std::string name;
-    VariableList arguments;
-    NBlock& block;
-    NFunctionDeclaration(const NType& type, const std::string& name,
-            const VariableList& arguments, NBlock& block) :
-        type(type), name(name), arguments(arguments), block(block) { }
+    std::vector<NArgument*> arguments;
+    const bool isVarg;
+    NBlock block;
+    llvm::Function::LinkageTypes linkage;
+
+    NFunction(const NType& type, const std::string& name,
+            const std::vector<NArgument*>& arguments, bool isVarg,
+            const NBlock& block)
+            : returnType(type), name(name), arguments(arguments),
+              isVarg(isVarg), block(block) {
+        linkage = GlobalValue::ExternalLinkage;
+    }
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NCompileUnit : public ASTNode {
 public:
     std::vector<NClassDeclaration*> classes;
-    std::vector<NFunctionDeclaration*> functions;
+    std::vector<NFunction*> functions;
+    std::vector<NFunctionPrototype*> externFunctions;
 
     NCompileUnit() {}
 

@@ -1,8 +1,10 @@
 
+extern int printf(uint8*, ...)
 
 int main(int a) {
   int x = a * 3 + 20;
-  return x;
+  printf("x=%d", x);
+  return 0;
 }
 
 

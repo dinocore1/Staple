@@ -19,7 +19,6 @@ public:
 
 class CodeGenContext {
     std::stack<CodeGenBlock *> blocks;
-    Function *mainFunction;
 
 public:
     Module *module;
