@@ -2,6 +2,8 @@
 #include <iostream>
 #include "codegen.h"
 #include "node.h"
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include "optionparser.h"
 extern NCompileUnit* compileUnit;
@@ -75,7 +77,19 @@ int main(int argc, char **argv)
         yyparse();
     } while (!feof(yyin));
 
-    CodeGenContext context(inputfile);
-    context.generateCode(*compileUnit);
+    CodeGenContext codeGen(inputfile);
+    codeGen.generateCode(*compileUnit);
+
+    std::error_code errorCode;
+    raw_fd_ostream output(outputfile, errorCode, sys::fs::OpenFlags::F_None);
+
+    codeGen.module->print(output, NULL);
+
+    /**
+    * could also output to llvm bitcode using:
+    * #include <llvm/Bitcode/ReaderWriter.h>
+    *   WriteBitcodeToFile
+    */
+
     return 0;
 }

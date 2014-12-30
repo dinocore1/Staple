@@ -9,12 +9,35 @@ void Error(const char* str)
 	fprintf(stderr, "Error: %s\n", str);
 }
 
+class ForwardDeclareFunctionVisitor : public ASTVisitor {
+public:
+	const CodeGenContext* context;
+	ForwardDeclareFunctionVisitor(const CodeGenContext* context)
+	: context(context) {}
+
+	virtual void visit(NFunction* fun) {
+
+		vector<Type*> argTypes;
+		for (std::vector<NArgument*>::const_iterator it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
+			argTypes.push_back((**it).type.getLLVMType());
+		}
+		FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(), argTypes, fun->isVarg);
+		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context->module);
+
+	}
+};
+
 /* Compile the AST into a module */
 void CodeGenContext::generateCode(NCompileUnit& root)
 {
 
 	for(std::vector<NFunctionPrototype*>::iterator it = root.externFunctions.begin(); it != root.externFunctions.end(); it++) {
 		(*it)->codeGen(*this);
+	}
+
+	ForwardDeclareFunctionVisitor globalfuncdec(this);
+	for (std::vector<NFunction*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
+		globalfuncdec.visit(*it);
 	}
 
 	for (std::vector<NFunction*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
@@ -181,29 +204,22 @@ static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, Type* type, con
 
 Value* NFunction::codeGen(CodeGenContext& context)
 {
-	vector<Type*> argTypes;
-	std::vector<NArgument*>::const_iterator it;
-	for (it = arguments.begin(); it != arguments.end(); it++) {
-		argTypes.push_back((**it).type.getLLVMType());
-	}
-	FunctionType *ftype = FunctionType::get(returnType.getLLVMType(), argTypes, isVarg);
-	Function *function = Function::Create(ftype, linkage, name.c_str(), context.module);
-	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", function, 0);
+	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction, 0);
 
 	context.pushBlock(bblock);
 
-	Function::arg_iterator AI = function->arg_begin();
-	for(size_t i=0,e=function->arg_size();i!=e;++i,++AI){
+	Function::arg_iterator AI = llvmFunction->arg_begin();
+	for(size_t i=0,e=llvmFunction->arg_size();i!=e;++i,++AI){
 		NArgument* arg = arguments[i];
-		AllocaInst* alloc = CreateEntryBlockAlloca(function, arg->type.getLLVMType(), arg->name);
+		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(), arg->name);
 		context.locals()[arg->name] = alloc;
 		context.Builder.CreateStore(AI, alloc);
 	}
 	
 	block.codeGen(context);
 
-	context.fpm->run(*function);
+	context.fpm->run(*llvmFunction);
 
 	context.popBlock();
-	return function;
+	return llvmFunction;
 }

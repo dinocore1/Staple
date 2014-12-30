@@ -6,7 +6,8 @@
 #include "llvm/IR/Function.h"
 #include <iostream>
 #include <vector>
-#include <c++/4.6/bits/stringfwd.h>
+
+class ASTVisitor;
 
 class CodeGenContext;
 class NStatement;
@@ -27,6 +28,13 @@ public:
     virtual ~ASTNode() {}
     virtual llvm::Value* codeGen(CodeGenContext& context) { }
 };
+
+class ASTVisitor {
+public:
+    virtual void visit(NType* type) {}
+    virtual void visit(NFunction* func) {}
+};
+
 
 template<class T>
 class ASTNodeList : public ASTNode {
@@ -216,6 +224,7 @@ public:
     const bool isVarg;
     NBlock block;
     llvm::Function::LinkageTypes linkage;
+    llvm::Function* llvmFunction;
 
     NFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
