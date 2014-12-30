@@ -147,6 +147,7 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TMINUS: 	return context.Builder.CreateSub(l, r);
 		case TMUL: 		return context.Builder.CreateMul(l, r);
 		case TDIV: 		return context.Builder.CreateSDiv(l, r);
+		case TCEQ:		return context.Builder.CreateICmpEQ(l, r);
 				
 		default:
 			Error("invalid binary operator");

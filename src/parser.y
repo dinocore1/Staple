@@ -34,7 +34,7 @@ void yyerror(const char *s)
     std::vector<NExpression*> *exprvec;
     std::string *string;
     int token;
-    ASTNodeList<ASTNode*> *nodelist;
+    ASTNode *nodelist;
     NClassDeclaration *class_decl;
     NField *field;
     NFunctionPrototype *prototype;
@@ -49,6 +49,7 @@ void yyerror(const char *s)
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
 %token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
+%token <token> TIF TELSE
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -60,7 +61,7 @@ void yyerror(const char *s)
  */
 %type <type> type
 %type <ident> ident
-%type <expr> literal expr multexpr addexpr unaryexpr
+%type <expr> literal expr compexpr multexpr addexpr unaryexpr
 %type <exprvec> call_args
 %type <block> program stmts block
 %type <stmt> stmt var_decl
@@ -117,12 +118,13 @@ proto_args
 
 class_decl
         : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
+         { $$ = new NClassDeclaration(*$2, $4); delete $2; delete $4; }
         ;
 
 class_members
-        : class_members field { $1->list.push_back($2); }
-        | class_members method { $1->list.push_back($2); }
-        | { $$ = new ASTNodeList<ASTNode*>(); }
+        : class_members field { $1->children.push_back($2); }
+        | class_members method { $1->children.push_back($2); }
+        | { $$ = new ASTNode(); }
 
 field
         : type TIDENTIFIER TSEMI { $$ = new NField(*$1, *$2); delete $1; delete $2; }
@@ -133,18 +135,26 @@ method
          { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
         ;
 
+///// Statements //////
 
-stmts : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
-      | stmts stmt { $1->statements.push_back($<stmt>2); }
-      ;
+block
+        : TLBRACE stmts TRBRACE { $$ = $2; }
+        | TLBRACE TRBRACE { $$ = new NBlock(); }
+        ;
+
+stmts
+        : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
+        | stmts stmt { $1->statements.push_back($<stmt>2); }
+        ;
 
 stmt    : var_decl TSEMI
         | expr TSEMI { $$ = new NExpressionStatement(*$1); }
+        | TRETURN expr TSEMI { $$ = new NReturn(*$2); }
+        | TIF TLPAREN expr TRPAREN stmt
+        | TIF TLPAREN expr TRPAREN stmt TELSE stmt
+        | block
         ;
 
-block : TLBRACE stmts TRBRACE { $$ = $2; }
-      | TLBRACE TRBRACE { $$ = new NBlock(); }
-      ;
 
 var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
          | type ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
@@ -163,11 +173,18 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         ;
     
 expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
-     | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
-     | addexpr { $$ = $1; }
+     | compexpr { $$ = $1; }
      | TLPAREN expr TRPAREN { $$ = $2; }
-     | TRETURN expr { $$ = new NReturn(*$2); }
      ;
+
+compexpr
+        : addexpr comparison addexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+        | addexpr { $$ = $1; }
+        ;
+
+comparison
+        : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE
+        ;
 
 addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
         | multexpr TMINUS multexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
@@ -181,6 +198,7 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
 
 unaryexpr : ident { $<ident>$ = $1; }
           | literal { $$ = $1; }
+          | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
           ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }
@@ -188,9 +206,7 @@ call_args : /*blank*/  { $$ = new ExpressionList(); }
           | call_args TCOMMA expr  { $1->push_back($3); }
           ;
 
-comparison : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE 
-           | TPLUS | TMINUS | TMUL | TDIV
-           ;
+
 
 %%
 

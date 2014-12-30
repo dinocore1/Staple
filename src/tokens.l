@@ -13,8 +13,10 @@ extern "C" int yywrap() { }
 
 [ \t\n]                 ;
 "extern"                return TOKEN(TEXTERN);
-"return"                return TOKEN(TRETURN);
 "class"                 return TOKEN(TCLASS);
+"if"                    return TOKEN(TIF);
+"else"                  return TOKEN(TELSE);
+"return"                return TOKEN(TRETURN);
 \"([^\\\"]|\\.)*\"      SAVE_TOKEN; return TSTRINGLIT;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
 [0-9]+\.[0-9]*          SAVE_TOKEN; return TDOUBLE;

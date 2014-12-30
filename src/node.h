@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+class ASTNode;
 class ASTVisitor;
 
 class CodeGenContext;
@@ -15,6 +16,7 @@ class NExpression;
 class NVariableDeclaration;
 class NFunctionDeclaration;
 class NType;
+class NField;
 class NFunction;
 
 typedef std::vector<NStatement*> StatementList;
@@ -25,22 +27,26 @@ using namespace llvm;
 
 class ASTNode {
 public:
+    std::vector<ASTNode*> children;
     virtual ~ASTNode() {}
+    virtual void accept(ASTVisitor* visitor) {};
     virtual llvm::Value* codeGen(CodeGenContext& context) { }
 };
 
 class ASTVisitor {
 public:
+    virtual ~ASTVisitor() {}
+    virtual void visit(ASTNode* node) {}
+    void visitChildren(ASTNode* node) {
+        for(std::vector<ASTNode*>::iterator it = node->children.begin(); it != node->children.end(); it++) {
+            (*it)->accept(this);
+        }
+    }
+    virtual void visit(NField* field) {}
     virtual void visit(NType* type) {}
     virtual void visit(NFunction* func) {}
 };
 
-
-template<class T>
-class ASTNodeList : public ASTNode {
-public:
-    std::vector<T> list;
-};
 
 class NType : public ASTNode {
 public:
@@ -61,8 +67,24 @@ public:
     : type(type), name(name)
     {}
 
+    virtual void accept(ASTVisitor* visitor) { visitor->visit(this); };
+
 };
 
+class ClassMemberVisitor : public ASTVisitor {
+public:
+    std::vector<NField*>* fields;
+    std::vector<NFunction*>* functions;
+
+    virtual void visit(NField* field) {
+        fields->push_back(field);
+    }
+
+    virtual void visit(NFunction* function) {
+        functions->push_back(function);
+    }
+
+};
 
 class NClassDeclaration : public ASTNode {
 public:
@@ -71,9 +93,20 @@ public:
     std::vector<NFunction*> functions;
 
     NClassDeclaration(const std::string& name,
-            const std::vector<NField*>& fields)
-    : name(name), fields(fields)
+            const std::vector<NField*>& fields,
+            const std::vector<NFunction*>& functions)
+    : name(name), fields(fields), functions(functions)
     {}
+
+    NClassDeclaration(const std::string& name, ASTNode* members)
+    : name(name)
+    {
+        ClassMemberVisitor collector;
+        collector.fields = &fields;
+        collector.functions = &functions;
+
+        collector.visitChildren(members);
+    }
 };
 
 
@@ -172,7 +205,7 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NReturn : public NExpression {
+class NReturn : public NStatement {
 public:
     NExpression& ret;
     NReturn(NExpression& ret)
@@ -233,6 +266,8 @@ public:
               isVarg(isVarg), block(block) {
         linkage = GlobalValue::ExternalLinkage;
     }
+
+    virtual void accept(ASTVisitor* visitor) { visitor->visit(this); };
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
