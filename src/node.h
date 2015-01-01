@@ -30,7 +30,7 @@ public:
     std::vector<ASTNode*> children;
     virtual ~ASTNode() {}
     virtual void accept(ASTVisitor* visitor) {};
-    virtual llvm::Value* codeGen(CodeGenContext& context) { }
+
 };
 
 class ASTVisitor {
@@ -112,10 +112,12 @@ public:
 
 
 class NExpression : public ASTNode {
+public:
+    virtual llvm::Value* codeGen(CodeGenContext& context) = 0;
 };
 
 
-class NStatement : public ASTNode {
+class NStatement : public NExpression {
 };
 
 class NLiteral : public NExpression {
@@ -198,34 +200,46 @@ public:
 class NBinaryOperator : public NExpression {
 public:
     int op;
-    NExpression& lhs;
-    NExpression& rhs;
-    NBinaryOperator(NExpression& lhs, int op, NExpression& rhs) :
-        lhs(lhs), rhs(rhs), op(op) { }
+    NExpression* lhs;
+    NExpression* rhs;
+    NBinaryOperator(NExpression* lhs, int op, NExpression* rhs) :
+        lhs(lhs), rhs(rhs), op(op) {}
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NReturn : public NStatement {
 public:
-    NExpression& ret;
-    NReturn(NExpression& ret)
+    NExpression* ret;
+    NReturn(NExpression* ret)
     : ret(ret) {}
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NAssignment : public NExpression {
 public:
-    NIdentifier& lhs;
-    NExpression& rhs;
-    NAssignment(NIdentifier& lhs, NExpression& rhs) : 
+    NIdentifier lhs;
+    NExpression* rhs;
+    NAssignment(const NIdentifier& lhs, NExpression* rhs) :
         lhs(lhs), rhs(rhs) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NBlock : public NExpression {
+class NBlock : public NStatement {
 public:
     StatementList statements;
     NBlock() { }
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NIfStatement : public NStatement {
+public:
+    NExpression* condition;
+    NStatement* thenBlock;
+    NStatement* elseBlock;
+
+    NIfStatement(NExpression* condition, NStatement* thenBlock, NStatement* elseBlock)
+    : condition(condition), thenBlock(thenBlock), elseBlock(elseBlock) {}
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 

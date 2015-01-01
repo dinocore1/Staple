@@ -61,9 +61,9 @@ void yyerror(const char *s)
  */
 %type <type> type
 %type <ident> ident
-%type <expr> literal expr compexpr multexpr addexpr unaryexpr
+%type <block> block stmts
+%type <expr> expr compexpr multexpr addexpr unaryexpr literal
 %type <exprvec> call_args
-%type <block> program stmts block
 %type <stmt> stmt var_decl
 %type <token> comparison
 %type <nodelist> class_members
@@ -139,20 +139,19 @@ method
 
 block
         : TLBRACE stmts TRBRACE { $$ = $2; }
-        | TLBRACE TRBRACE { $$ = new NBlock(); }
         ;
 
 stmts
-        : stmt { $$ = new NBlock(); $$->statements.push_back($<stmt>1); }
-        | stmts stmt { $1->statements.push_back($<stmt>2); }
+        : stmts stmt { $1->statements.push_back($2); }
+        | { $$ = new NBlock(); }
         ;
 
 stmt    : var_decl TSEMI
         | expr TSEMI { $$ = new NExpressionStatement(*$1); }
-        | TRETURN expr TSEMI { $$ = new NReturn(*$2); }
-        | TIF TLPAREN expr TRPAREN stmt
-        | TIF TLPAREN expr TRPAREN stmt TELSE stmt
-        | block
+        | TRETURN expr TSEMI { $$ = new NReturn($2); }
+        | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); }
+        | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); }
+        | block { $$ = $1; }
         ;
 
 
@@ -172,13 +171,13 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; }
         ;
     
-expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, *$3); }
+expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, $3); }
      | compexpr { $$ = $1; }
      | TLPAREN expr TRPAREN { $$ = $2; }
      ;
 
 compexpr
-        : addexpr comparison addexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+        : addexpr comparison addexpr { $$ = new NBinaryOperator($1, $2, $3); }
         | addexpr { $$ = $1; }
         ;
 
@@ -186,13 +185,13 @@ comparison
         : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE
         ;
 
-addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-        | multexpr TMINUS multexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator($1, $2, $3); }
+        | multexpr TMINUS multexpr { $$ = new NBinaryOperator($1, $2, $3); }
         | multexpr { $$ = $1; }
         ;
 
-multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
-         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator(*$1, $2, *$3); }
+multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
+         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
          | unaryexpr { $$ = $1; }
          ;
 

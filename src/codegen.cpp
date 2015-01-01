@@ -44,7 +44,7 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 		(*it)->codeGen(*this);
 	}
 
-	
+
 	/* Print the bytecode in a human-readable format 
 	   to see if our program compiled properly
 	 */
@@ -113,11 +113,11 @@ Value* NStringLiteral::codeGen(CodeGenContext& context)
 
 Value* NIdentifier::codeGen(CodeGenContext& context)
 {
-	if (context.locals().find(name) == context.locals().end()) {
+	Value* v = context.getSymbol(name);
+	if (v == NULL) {
 		std::cerr << "undeclared variable " << name << std::endl;
 		return NULL;
 	}
-	Value* v = context.locals()[name];
 	return context.Builder.CreateLoad(v, name.c_str());
 }
 
@@ -138,8 +138,8 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
 {
-	Value *l = lhs.codeGen(context);
-	Value *r = rhs.codeGen(context);
+	Value *l = lhs->codeGen(context);
+	Value *r = rhs->codeGen(context);
 
 
 	switch (op) {
@@ -157,12 +157,13 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
-	if (context.locals().find(lhs.name) == context.locals().end()) {
+	Value* lhsValue = context.getSymbol(lhs.name);
+	if (lhsValue == NULL) {
 		std::cerr << "undeclared variable " << lhs.name << std::endl;
 		return NULL;
 	}
-	Value *r = rhs.codeGen(context);
-	return context.Builder.CreateStore(r, context.locals()[lhs.name]);
+	Value *r = rhs->codeGen(context);
+	return context.Builder.CreateStore(r, lhsValue);
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -183,9 +184,9 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	AllocaInst *alloc = context.Builder.CreateAlloca(type.getLLVMType(), 0, id.name.c_str());
-	context.locals()[id.name] = alloc;
+	context.defineSymbol(id.name, alloc);
 	if (assignmentExpr != NULL) {
-		NAssignment assn(id, *assignmentExpr);
+		NAssignment assn(id, assignmentExpr);
 		assn.codeGen(context);
 	}
 	return alloc;
@@ -193,7 +194,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
 Value* NReturn::codeGen(CodeGenContext &context)
 {
-	Value* r = ret.codeGen(context);
+	Value* r = ret->codeGen(context);
 	return context.Builder.CreateRet(r);
 }
 
@@ -205,22 +206,63 @@ static AllocaInst* CreateEntryBlockAlloca(Function *TheFunction, Type* type, con
 
 Value* NFunction::codeGen(CodeGenContext& context)
 {
-	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction, 0);
 
+	BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
 	context.pushBlock(bblock);
+	context.Builder.SetInsertPoint(bblock);
 
 	Function::arg_iterator AI = llvmFunction->arg_begin();
 	for(size_t i=0,e=llvmFunction->arg_size();i!=e;++i,++AI){
 		NArgument* arg = arguments[i];
 		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(), arg->name);
-		context.locals()[arg->name] = alloc;
+		context.defineSymbol(arg->name, alloc);
 		context.Builder.CreateStore(AI, alloc);
 	}
 	
 	block.codeGen(context);
 
+	context.popBlock();
+
 	context.fpm->run(*llvmFunction);
 
-	context.popBlock();
 	return llvmFunction;
+}
+
+Value* NIfStatement::codeGen(CodeGenContext &context)
+{
+	Function* parent = context.Builder.GetInsertBlock()->getParent();
+
+	BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "then", parent);
+	BasicBlock* elseBB = BasicBlock::Create(getGlobalContext(), "else");
+	BasicBlock* mergeBlock = BasicBlock::Create(getGlobalContext(), "cont");
+
+
+	Value* conditionValue = condition->codeGen(context);
+	context.Builder.CreateCondBr(conditionValue, thenBB, elseBB);
+
+	//parent->getBasicBlockList().push_back(thenBB);
+	//parent->getBasicBlockList().push_back(elseBB);
+	//parent->getBasicBlockList().push_back(mergeBlock);
+
+
+	context.pushBlock(thenBB);
+	context.Builder.SetInsertPoint(thenBB);
+	thenBlock->codeGen(context);
+	context.Builder.CreateBr(mergeBlock);
+	context.popBlock();
+
+
+	context.pushBlock(elseBB);
+	parent->getBasicBlockList().push_back(elseBB);
+	context.Builder.SetInsertPoint(elseBB);
+	if(elseBlock != NULL) {
+		elseBlock->codeGen(context);
+	}
+	context.Builder.CreateBr(mergeBlock);
+	context.popBlock();
+
+	parent->getBasicBlockList().push_back(mergeBlock);
+	context.Builder.SetInsertPoint(mergeBlock);
+
+
 }
