@@ -49,11 +49,16 @@ public:
 
 
 class NType : public ASTNode {
+private:
+    std::string name;
+    bool isArray;
+    union {
+        int numPointers;
+        int size;
+    };
 public:
-    std::string text;
-    bool isPointer;
-    NType(const std::string& text, bool isPointer)
-            : text(text), isPointer(isPointer) { }
+    static NType* GetPointerType(const std::string& name, int numPtrs);
+    static NType* GetArrayType(const std::string& name, int size);
 
     llvm::Type* getLLVMType() const;
 };
@@ -197,6 +202,26 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
+class NArrayElementPtr : public NExpression {
+public:
+    NIdentifier* id;
+    NExpression* expr;
+
+    NArrayElementPtr(NIdentifier* id, NExpression* expr)
+    : id(id), expr(expr) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NLoad : public NExpression {
+public:
+    NExpression* expr;
+    NLoad(NExpression* expr)
+    : expr(expr) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
 class NBinaryOperator : public NExpression {
 public:
     int op;
@@ -217,9 +242,9 @@ public:
 
 class NAssignment : public NExpression {
 public:
-    NIdentifier lhs;
+    NExpression* lhs;
     NExpression* rhs;
-    NAssignment(const NIdentifier& lhs, NExpression* rhs) :
+    NAssignment(NExpression* lhs, NExpression* rhs) :
         lhs(lhs), rhs(rhs) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -253,13 +278,14 @@ public:
 
 class NVariableDeclaration : public NStatement {
 public:
-    const NType type;
-    NIdentifier id;
-    NExpression *assignmentExpr;
-    NVariableDeclaration(const NType& type, const NIdentifier& id) :
-        type(type), id(id) { }
-    NVariableDeclaration(const NType& type, const NIdentifier& id, NExpression *assignmentExpr) :
-        type(type), id(id), assignmentExpr(assignmentExpr) { }
+    NType* type;
+    std::string name;
+    NExpression* assignmentExpr;
+    NVariableDeclaration(NType* type, const std::string& name) :
+        type(type), name(name) {}
+    NVariableDeclaration(NType* type, const std::string& name, NExpression *assignmentExpr) :
+        type(type), name(name), assignmentExpr(assignmentExpr) {}
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 

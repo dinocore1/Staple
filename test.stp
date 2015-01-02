@@ -11,11 +11,13 @@ int fib(int x) {
 }
 
 
-int main() {
-  int x = fib(12);
-  printf("fib(12) = %d", x);
+int main(int argc, uint8** argv) {
+  int x = atoi(argv[1]);
+  int y = fib(x);
+  printf("fib(%d) = %d", x, y);
   return 0;
 }
 
 
 extern int printf(uint8*, ...)
+extern int atoi(uint8*)

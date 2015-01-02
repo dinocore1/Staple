@@ -51,25 +51,54 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 	module->dump();
 }
 
-Type* NType::getLLVMType() const
+NType* NType::GetPointerType(const std::string& name, int numPtrs)
 {
-	Type* retval = 0;
-	if(text.compare("void") == 0) {
+	NType* retval = new NType();
+	retval->name = name;
+	retval->isArray = false;
+	retval->numPointers = numPtrs;
+	return retval;
+}
+
+NType* NType::GetArrayType(const std::string& name, int size)
+{
+	NType* retval = new NType();
+	retval->name = name;
+	retval->isArray = true;
+	retval->size = size;
+	return retval;
+}
+
+
+static Type* getBaseType(const std::string& name)
+{
+	Type* retval = NULL;
+	if(name.compare("void") == 0) {
 		retval = Type::getVoidTy(getGlobalContext());
-	} else if(text.compare("int") == 0){
+	} else if(name.compare("int") == 0){
 		retval = Type::getInt32Ty(getGlobalContext());
-	} else if(text.compare(0, 3, "int") == 0) {
-		int width = atoi(text.substr(3).c_str());
+	} else if(name.compare(0, 3, "int") == 0) {
+		int width = atoi(name.substr(3).c_str());
 		retval = Type::getIntNTy(getGlobalContext(), width);
-	} else if(text.compare(0, 4, "uint") == 0) {
-		int width = atoi(text.substr(4).c_str());
+	} else if(name.compare(0, 4, "uint") == 0) {
+		int width = atoi(name.substr(4).c_str());
 		retval = Type::getIntNTy(getGlobalContext(), width);
-	} else if(text.compare("float") == 0) {
+	} else if(name.compare("float") == 0) {
 		retval = Type::getFloatTy(getGlobalContext());
 	}
 
-	if(isPointer) {
-		retval = PointerType::getUnqual(retval);
+	return retval;
+}
+
+Type* NType::getLLVMType() const
+{
+	Type* retval = getBaseType(name);
+	if(isArray) {
+		retval = ArrayType::get(retval, size);
+	} else {
+		for(int i=0;i<numPointers;i++) {
+			retval = PointerType::getUnqual(retval);
+		}
 	}
 
 	return retval;
@@ -118,7 +147,8 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		std::cerr << "undeclared variable " << name << std::endl;
 		return NULL;
 	}
-	return context.Builder.CreateLoad(v, name.c_str());
+	return v;
+	//return context.Builder.CreateLoad(v, name.c_str());
 }
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
@@ -134,6 +164,21 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	}
 
 	return context.Builder.CreateCall(function, args);
+}
+
+Value*NArrayElementPtr::codeGen(CodeGenContext &context)
+{
+	//Value* idSymbol = id->codeGen(context);
+	Value* idSymbol = NLoad(id).codeGen(context);
+	Value* exprVal = expr->codeGen(context);
+
+	return context.Builder.CreateGEP(idSymbol, exprVal);
+}
+
+Value* NLoad::codeGen(CodeGenContext &context)
+{
+	Value* exprVal = expr->codeGen(context);
+	return context.Builder.CreateLoad(exprVal);
 }
 
 Value* NBinaryOperator::codeGen(CodeGenContext& context)
@@ -157,13 +202,9 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
-	Value* lhsValue = context.getSymbol(lhs.name);
-	if (lhsValue == NULL) {
-		std::cerr << "undeclared variable " << lhs.name << std::endl;
-		return NULL;
-	}
-	Value *r = rhs->codeGen(context);
-	return context.Builder.CreateStore(r, lhsValue);
+	Value* lhsValue = lhs->codeGen(context);
+	Value *rhsValue = rhs->codeGen(context);
+	return context.Builder.CreateStore(rhsValue, lhsValue);
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -183,10 +224,10 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	AllocaInst *alloc = context.Builder.CreateAlloca(type.getLLVMType(), 0, id.name.c_str());
-	context.defineSymbol(id.name, alloc);
+	AllocaInst *alloc = context.Builder.CreateAlloca(type->getLLVMType(), 0, name.c_str());
+	context.defineSymbol(name, alloc);
 	if (assignmentExpr != NULL) {
-		NAssignment assn(id, assignmentExpr);
+		NAssignment assn(new NIdentifier(name), assignmentExpr);
 		assn.codeGen(context);
 	}
 	return alloc;

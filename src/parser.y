@@ -41,6 +41,7 @@ void yyerror(const char *s)
     std::vector<NArgument*> *func_args;
     bool boolean;
     NFunction *function;
+    int count;
 }
 
 /* Define our terminal symbols (tokens). This should
@@ -51,7 +52,7 @@ void yyerror(const char *s)
 %token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
 %token <token> TIF TELSE
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
-%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TCOMMA TDOT
+%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
 
 /* Define the type of node our nonterminal symbols represent.
@@ -62,7 +63,7 @@ void yyerror(const char *s)
 %type <type> type
 %type <ident> ident
 %type <block> block stmts
-%type <expr> expr compexpr multexpr addexpr unaryexpr literal
+%type <expr> expr lhs rhs compexpr multexpr addexpr unaryexpr literal
 %type <exprvec> call_args
 %type <stmt> stmt var_decl
 %type <token> comparison
@@ -73,6 +74,7 @@ void yyerror(const char *s)
 %type <func_args> proto_args
 %type <boolean> ellipse_arg
 %type <function> global_func method
+%type <count> numPointers
 
 %start program
 
@@ -155,13 +157,18 @@ stmt    : var_decl TSEMI
         ;
 
 
-var_decl : type ident { $$ = new NVariableDeclaration(*$1, *$2); }
-         | type ident TEQUAL expr { $$ = new NVariableDeclaration(*$1, *$2, $4); }
+var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; }
+         | type TIDENTIFIER TEQUAL rhs { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
          ;
 
-type : TIDENTIFIER {  $$ = new NType(*$1, false); }
-     | TIDENTIFIER TMUL { $$ = new NType(*$1, true); }
-     ;
+type
+        : TIDENTIFIER numPointers { $$ = NType::GetPointerType(*$1, $2); delete $1; }
+        | TIDENTIFIER TLBRACKET TINTEGER TRBRACKET { $$ = NType::GetArrayType(*$1, atoi($3->c_str())); delete $1; delete $3; }
+        ;
+
+numPointers
+        : numPointers TMUL { $$ += 1; }
+        | { $$ = 0; }
 
 ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
       ;
@@ -171,10 +178,19 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; }
         ;
     
-expr : ident TEQUAL expr { $$ = new NAssignment(*$<ident>1, $3); }
+expr : lhs TEQUAL rhs { $$ = new NAssignment($1, $3); }
      | compexpr { $$ = $1; }
      | TLPAREN expr TRPAREN { $$ = $2; }
      ;
+
+lhs
+        : ident { $$ = $1; }
+        | ident TLBRACKET expr TRBRACKET { $$ = new NArrayElementPtr($1, $3); } /* array access */
+        ;
+
+rhs
+        : expr
+        ;
 
 compexpr
         : addexpr comparison addexpr { $$ = new NBinaryOperator($1, $2, $3); }
@@ -195,9 +211,10 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
          | unaryexpr { $$ = $1; }
          ;
 
-unaryexpr : ident { $<ident>$ = $1; }
+unaryexpr : ident { $$ = new NLoad($1); }
           | literal { $$ = $1; }
           | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
+          | ident TLBRACKET expr TRBRACKET { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
           ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }
