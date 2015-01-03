@@ -150,7 +150,9 @@ stmts
         | { $$ = new NBlock(); }
         ;
 
-stmt    : expr TSEMI { $$ = new NExpressionStatement($1); }
+stmt    : lhs TEQUAL rhs TSEMI { $$ = new NAssignment($1, $3); }
+        | var_decl TSEMI
+        | ident TLPAREN call_args TRPAREN TSEMI { $$ = new NExpressionStatement(new NMethodCall(*$1, *$3)); delete $3; }
         | TRETURN expr TSEMI { $$ = new NReturn($2); }
         | TIF TLPAREN expr TRPAREN stmt %prec "then" { $$ = new NIfStatement($3, $5, NULL); }
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); }
@@ -159,7 +161,7 @@ stmt    : expr TSEMI { $$ = new NExpressionStatement($1); }
 
 
 var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; }
-         //| type TIDENTIFIER TEQUAL rhs { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
+         | type TIDENTIFIER TEQUAL rhs { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
          ;
 
 type
@@ -181,9 +183,7 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         ;
 
 expr
-        : lhs TEQUAL rhs { $$ = new NAssignment($1, $3); }
-        //| var_decl
-        | compexpr { $$ = $1; }
+        : compexpr { $$ = $1; }
         ;
 
 lhs

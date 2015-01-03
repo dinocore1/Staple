@@ -168,11 +168,22 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
 {
-	//Value* idSymbol = id->codeGen(context);
-	Value* idSymbol = NLoad(id).codeGen(context);
+	Value* idSymbol = id->codeGen(context);
+	//Value* idSymbol = NLoad(id).codeGen(context);
 	Value* exprVal = expr->codeGen(context);
 
-	return context.Builder.CreateGEP(idSymbol, exprVal);
+	std::vector<Value*> indecies;
+
+	Type* baseType = idSymbol->getType()->getPointerElementType();
+	if(baseType->isArrayTy()) {
+		indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+	} else {
+		idSymbol = NLoad(id).codeGen(context);
+	}
+
+	indecies.push_back(exprVal);
+
+	return context.Builder.CreateGEP(idSymbol, indecies);
 }
 
 Value* NLoad::codeGen(CodeGenContext &context)
