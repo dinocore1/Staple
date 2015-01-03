@@ -50,7 +50,7 @@ void yyerror(const char *s)
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
 %token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
-%token <token> TIF TELSE
+%token <token> TIF TELSE TAT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -75,6 +75,8 @@ void yyerror(const char *s)
 %type <boolean> ellipse_arg
 %type <function> global_func method
 %type <count> numPointers
+
+%right "then" TELSE
 
 %start program
 
@@ -148,17 +150,16 @@ stmts
         | { $$ = new NBlock(); }
         ;
 
-stmt    : var_decl TSEMI
-        | expr TSEMI { $$ = new NExpressionStatement(*$1); }
+stmt    : expr TSEMI { $$ = new NExpressionStatement($1); }
         | TRETURN expr TSEMI { $$ = new NReturn($2); }
-        | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); }
+        | TIF TLPAREN expr TRPAREN stmt %prec "then" { $$ = new NIfStatement($3, $5, NULL); }
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); }
         | block { $$ = $1; }
         ;
 
 
 var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; }
-         | type TIDENTIFIER TEQUAL rhs { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
+         //| type TIDENTIFIER TEQUAL rhs { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
          ;
 
 type
@@ -170,22 +171,24 @@ numPointers
         : numPointers TMUL { $$ += 1; }
         | { $$ = 0; }
 
-ident : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
-      ;
+ident
+        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
+        ;
 
 literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; }
         | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; }
         ;
-    
-expr : lhs TEQUAL rhs { $$ = new NAssignment($1, $3); }
-     | compexpr { $$ = $1; }
-     | TLPAREN expr TRPAREN { $$ = $2; }
-     ;
+
+expr
+        : lhs TEQUAL rhs { $$ = new NAssignment($1, $3); }
+        //| var_decl
+        | compexpr { $$ = $1; }
+        ;
 
 lhs
         : ident { $$ = $1; }
-        | ident TLBRACKET expr TRBRACKET { $$ = new NArrayElementPtr($1, $3); } /* array access */
+        | ident TAT unaryexpr { $$ = new NArrayElementPtr($1, $3); } /* array access */
         ;
 
 rhs
@@ -213,8 +216,9 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
 
 unaryexpr : ident { $$ = new NLoad($1); }
           | literal { $$ = $1; }
+          | TLPAREN expr TRPAREN { $$ = $2; }
           | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
-          | ident TLBRACKET expr TRBRACKET { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
+          | ident TAT unaryexpr { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
           ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }

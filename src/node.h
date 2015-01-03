@@ -240,7 +240,7 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NAssignment : public NExpression {
+class NAssignment : public NStatement {
 public:
     NExpression* lhs;
     NExpression* rhs;
@@ -270,8 +270,8 @@ public:
 
 class NExpressionStatement : public NStatement {
 public:
-    NExpression& expression;
-    NExpressionStatement(NExpression& expression) : 
+    NExpression* expression;
+    NExpressionStatement(NExpression* expression) :
         expression(expression) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };

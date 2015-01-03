@@ -31,6 +31,28 @@ Staple has a multi-pass compiler, and there is no need to forward-declare your f
 Staple is designed to "play nice" with libraries written in C. Calling a function written in C is as easy as declaring
 its prototype with `extern` keyword and then calling it like a regular function.
 
+    
+    class LinkedList {
+      uint size;
+      Node head;
+      Node tail;
+      
+      void add(obj data) {
+        Node newNode = new Node();
+        newNode.data = data;
+        head.next = newNode;
+        head = newNode;
+      }
+      
+    }
+    
+    class Node {
+      Node next;
+      Node prev;
+      obj data;
+    }
+      
+
 ### Compile ###
 
 you need LLVM 3.6 to build Staple. On Ubuntu:

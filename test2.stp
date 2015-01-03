@@ -1,0 +1,25 @@
+int fib(int x) {
+  int retval;
+  if(x == 0) {
+    retval = 0;
+  } else if(x == 1) {
+    retval = 1;
+  } else {
+    retval = fib(x-1) + fib(x-2);
+  }
+  return retval;
+}
+
+
+int main(int argc, uint8** argv) {
+  int[5] q;
+  q@2 = 1;
+  int x = atoi(argv[1]);
+  int y = fib(x);
+  printf("fib(%d) = %d", x, y);
+  return 0;
+}
+
+
+extern int printf(uint8*, ...)
+extern int atoi(uint8*)
