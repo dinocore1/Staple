@@ -273,6 +273,11 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	
 	block.codeGen(context);
 
+	Instruction &last = *bblock->getInstList().rbegin();
+	if(llvmFunction->getReturnType()->isVoidTy() && !last.isTerminator()){
+		ReturnInst::Create(getGlobalContext(), bblock);
+	}
+
 	context.popBlock();
 
 	context.fpm->run(*llvmFunction);
