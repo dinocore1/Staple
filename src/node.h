@@ -92,6 +92,8 @@ public:
 };
 
 class NClassDeclaration : public ASTNode {
+private:
+    StructType* structType;
 public:
     const std::string name;
     std::vector<NField*> fields;
@@ -100,11 +102,11 @@ public:
     NClassDeclaration(const std::string& name,
             const std::vector<NField*>& fields,
             const std::vector<NFunction*>& functions)
-    : name(name), fields(fields), functions(functions)
+    : structType(NULL), name(name), fields(fields), functions(functions)
     {}
 
     NClassDeclaration(const std::string& name, ASTNode* members)
-    : name(name)
+    : structType(NULL), name(name)
     {
         ClassMemberVisitor collector;
         collector.fields = &fields;
@@ -114,11 +116,14 @@ public:
     }
 
     Type* getLLVMType(const CodeGenContext &context) {
-        std::vector<Type*> typeFields;
-        for(int i=0;i<fields.size();i++){
-            typeFields.push_back(fields[i]->type.getLLVMType(context));
+        if(structType == NULL) {
+            std::vector<Type *> typeFields;
+            for (int i = 0; i < fields.size(); i++) {
+                typeFields.push_back(fields[i]->type.getLLVMType(context));
+            }
+            structType = StructType::create(typeFields, name);
         }
-        return StructType::create(typeFields, name);
+        return structType;
     }
 };
 
@@ -217,6 +222,26 @@ public:
 
     NArrayElementPtr(NIdentifier* id, NExpression* expr)
     : id(id), expr(expr) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NNew : public NExpression {
+public:
+    std::string id;
+
+    NNew(const std::string& id)
+    : id(id) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NSizeOf : public NExpression {
+public:
+    std::string id;
+
+    NSizeOf(const std::string& id)
+    : id(id) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };

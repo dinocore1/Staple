@@ -50,7 +50,7 @@ void yyerror(const char *s)
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
 %token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
-%token <token> TIF TELSE TAT
+%token <token> TIF TELSE TAT TNEW TSIZEOF
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token <token> TPLUS TMINUS TMUL TDIV
@@ -219,6 +219,8 @@ unaryexpr : ident { $$ = new NLoad($1); }
           | TLPAREN expr TRPAREN { $$ = $2; }
           | ident TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $3; }
           | ident TAT unaryexpr { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
+          | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; }
+          | TSIZEOF TIDENTIFIER { $$ = new NSizeOf(*$2); delete $2; }
           ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }

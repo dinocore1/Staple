@@ -341,6 +341,57 @@ Value* NIfStatement::codeGen(CodeGenContext &context)
 
 	parent->getBasicBlockList().push_back(mergeBlock);
 	context.Builder.SetInsertPoint(mergeBlock);
+}
 
+Function* getMalloc(CodeGenContext& context) {
 
+	Function* retval = context.module->getFunction("malloc");
+	if(retval == NULL) {
+		std::vector<Type*> argTypes;
+		argTypes.push_back(IntegerType::getInt32Ty(getGlobalContext()));
+
+		Type* returnType = Type::getInt8PtrTy(getGlobalContext());
+		FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
+		retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "malloc", context.module);
+	}
+
+	return retval;
+}
+
+Value* NSizeOf::codeGen(CodeGenContext &context)
+{
+	NClassDeclaration* classDeclaration = context.getClass(id);
+	Type* type = classDeclaration->getLLVMType(context);
+
+	PointerType* pointerType = PointerType::getUnqual(type);
+	Value* ptr = ConstantPointerNull::get(pointerType);
+	Value* one = ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 1);
+
+	Value* size = context.Builder.CreateGEP(ptr, one, "size");
+	size = context.Builder.CreatePointerCast(size, IntegerType::getInt32Ty(getGlobalContext()));
+	return size;
+}
+
+Value* NNew::codeGen(CodeGenContext& context)
+{
+	NClassDeclaration* classDeclaration = context.getClass(id);
+	Type* type = classDeclaration->getLLVMType(context);
+
+	PointerType* pointerType = PointerType::getUnqual(type);
+
+	Value* ptr = ConstantPointerNull::get(pointerType);
+	Value* one = ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 1);
+
+	Value* size = context.Builder.CreateGEP(ptr, one, "size");
+	size = context.Builder.CreatePointerCast(size, IntegerType::getInt32Ty(getGlobalContext()));
+
+	Function* malloc = getMalloc(context);
+
+	std::vector<Value*> args;
+	args.push_back(size);
+
+	Value* retval = context.Builder.CreateCall(malloc, args);
+
+	retval = context.Builder.CreatePointerCast(retval, pointerType);
+	return retval;
 }
