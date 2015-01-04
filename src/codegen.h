@@ -10,6 +10,7 @@
 using namespace llvm;
 
 class NCompileUnit;
+class NClassDeclaration;
 
 class CodeGenBlock {
 public:
@@ -36,6 +37,7 @@ public:
 
 class CodeGenContext {
     CodeGenBlock* top;
+    NCompileUnit* compileUnitRoot;
 
 public:
     Module *module;
@@ -70,6 +72,7 @@ public:
     void defineSymbol(const std::string& name, Value* value) {
         top->locals[name] = value;
     }
+    NClassDeclaration* getClass(const std::string& name) const;
     void pushBlock(BasicBlock *block) {
         CodeGenBlock* newBlock = new CodeGenBlock(top, block);
         top = newBlock;

@@ -60,7 +60,7 @@ public:
     static NType* GetPointerType(const std::string& name, int numPtrs);
     static NType* GetArrayType(const std::string& name, int size);
 
-    llvm::Type* getLLVMType() const;
+    llvm::Type* getLLVMType(const CodeGenContext &context) const;
 };
 
 class NField : public ASTNode {
@@ -111,6 +111,14 @@ public:
         collector.functions = &functions;
 
         collector.visitChildren(members);
+    }
+
+    Type* getLLVMType(const CodeGenContext &context) {
+        std::vector<Type*> typeFields;
+        for(int i=0;i<fields.size();i++){
+            typeFields.push_back(fields[i]->type.getLLVMType(context));
+        }
+        return StructType::create(typeFields, name);
     }
 };
 

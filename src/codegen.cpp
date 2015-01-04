@@ -19,17 +19,30 @@ public:
 
 		vector<Type*> argTypes;
 		for (std::vector<NArgument*>::const_iterator it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
-			argTypes.push_back((**it).type.getLLVMType());
+			argTypes.push_back((**it).type.getLLVMType(*context));
 		}
-		FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(), argTypes, fun->isVarg);
+		FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(*context), argTypes, fun->isVarg);
 		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context->module);
 
 	}
 };
 
+NClassDeclaration* CodeGenContext::getClass(const std::string &name) const {
+	NClassDeclaration* retval = NULL;
+	std::vector<NClassDeclaration*>::iterator it;
+	for(it = compileUnitRoot->classes.begin(); it != compileUnitRoot->classes.end(); it++){
+		if((*it)->name.compare(name) == 0){
+			retval = *it;
+			break;
+		}
+	}
+	return retval;
+}
+
 /* Compile the AST into a module */
 void CodeGenContext::generateCode(NCompileUnit& root)
 {
+	compileUnitRoot = &root;
 
 	for(std::vector<NFunctionPrototype*>::iterator it = root.externFunctions.begin(); it != root.externFunctions.end(); it++) {
 		(*it)->codeGen(*this);
@@ -70,7 +83,7 @@ NType* NType::GetArrayType(const std::string& name, int size)
 }
 
 
-static Type* getBaseType(const std::string& name)
+static Type* getBaseType(const std::string& name, const CodeGenContext& ctx)
 {
 	Type* retval = NULL;
 	if(name.compare("void") == 0) {
@@ -85,14 +98,22 @@ static Type* getBaseType(const std::string& name)
 		retval = Type::getIntNTy(getGlobalContext(), width);
 	} else if(name.compare("float") == 0) {
 		retval = Type::getFloatTy(getGlobalContext());
+	} else if(name.compare("bool") == 0) {
+		retval = Type::getInt1Ty(getGlobalContext());
+	} else {
+		//class type
+		NClassDeclaration* classDecl = ctx.getClass(name);
+		if(classDecl != NULL) {
+			retval = classDecl->getLLVMType(ctx);
+		}
 	}
 
 	return retval;
 }
 
-Type* NType::getLLVMType() const
+Type* NType::getLLVMType(const CodeGenContext &context) const
 {
-	Type* retval = getBaseType(name);
+	Type* retval = getBaseType(name, context);
 	if(isArray) {
 		retval = ArrayType::get(retval, size);
 	} else {
@@ -114,9 +135,9 @@ Value* NFunctionPrototype::codeGen(CodeGenContext &context)
 	std::vector<Type*> argTypes;
 	std::vector<NArgument*>::iterator it;
 	for (it = arguments.begin(); it != arguments.end(); it++) {
-		argTypes.push_back((**it).type.getLLVMType());
+		argTypes.push_back((**it).type.getLLVMType(context));
 	}
-	FunctionType *ftype = FunctionType::get(returnType.getLLVMType(), argTypes, isVarg);
+	FunctionType *ftype = FunctionType::get(returnType.getLLVMType(context), argTypes, isVarg);
 
 	Function *function = Function::Create(ftype, GlobalValue::ExternalLinkage, name.c_str(), context.module);
 
@@ -235,7 +256,7 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	AllocaInst *alloc = context.Builder.CreateAlloca(type->getLLVMType(), 0, name.c_str());
+	AllocaInst *alloc = context.Builder.CreateAlloca(type->getLLVMType(context), 0, name.c_str());
 	context.defineSymbol(name, alloc);
 	if (assignmentExpr != NULL) {
 		NAssignment assn(new NIdentifier(name), assignmentExpr);
@@ -266,7 +287,7 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	Function::arg_iterator AI = llvmFunction->arg_begin();
 	for(size_t i=0,e=llvmFunction->arg_size();i!=e;++i,++AI){
 		NArgument* arg = arguments[i];
-		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(), arg->name);
+		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(context), arg->name);
 		context.defineSymbol(arg->name, alloc);
 		context.Builder.CreateStore(AI, alloc);
 	}

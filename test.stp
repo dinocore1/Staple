@@ -1,23 +1,17 @@
-int fib(int x) {
-  int retval;
-  if(x == 0) {
-    retval = 0;
-  } else if(x == 1) {
-    retval = 1;
-  } else {
-    retval = fib(x-1) + fib(x-2);
-  }
-  return retval;
+void bar() {
+  printf("in bar");
 }
 
 
 int main(int argc, uint8** argv) {
-  int[5] q;
-  q@2 = 1;
-  int x = atoi(argv@1);
-  int y = fib(x);
-  printf("fib(%d) = %d", x, y);
+  Foo rad;
+  bar();
   return 0;
+}
+
+class Foo {
+  int num;
+  int[10] q;
 }
 
 
