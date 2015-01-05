@@ -44,6 +44,7 @@ extern "C" int yywrap() { }
 "*"                     return TOKEN(TMUL);
 "/"                     return TOKEN(TDIV);
 ";"                     return TOKEN(TSEMI);
+"!"                     return TOKEN(TNOT);
 "..."                   return TOKEN(TELLIPSIS);
 .                       printf("Unknown token!\n"); yyterminate();
 

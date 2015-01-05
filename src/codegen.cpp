@@ -174,9 +174,9 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 
 Value* NMethodCall::codeGen(CodeGenContext& context)
 {
-	Function *function = context.module->getFunction(id.name.c_str());
+	Function *function = context.module->getFunction(name.c_str());
 	if (function == NULL) {
-		std::cerr << "no such function " << id.name << std::endl;
+		std::cerr << "no such function " << name << std::endl;
 	}
 	std::vector<Value*> args;
 	ExpressionList::const_iterator it;
@@ -189,7 +189,7 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
 {
-	Value* idSymbol = id->codeGen(context);
+	Value* idSymbol = base->codeGen(context);
 	//Value* idSymbol = NLoad(id).codeGen(context);
 	Value* exprVal = expr->codeGen(context);
 
@@ -199,7 +199,7 @@ Value*NArrayElementPtr::codeGen(CodeGenContext &context)
 	if(baseType->isArrayTy()) {
 		indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
 	} else {
-		idSymbol = NLoad(id).codeGen(context);
+		idSymbol = NLoad(base).codeGen(context);
 	}
 
 	indecies.push_back(exprVal);
@@ -235,7 +235,9 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 Value* NAssignment::codeGen(CodeGenContext& context)
 {
 	Value* lhsValue = lhs->codeGen(context);
-	Value *rhsValue = rhs->codeGen(context);
+	Value* rhsValue = rhs->codeGen(context);
+
+	//rhsValue = context.Builder.CreateLoad(rhsValue);
 	return context.Builder.CreateStore(rhsValue, lhsValue);
 }
 
@@ -394,4 +396,8 @@ Value* NNew::codeGen(CodeGenContext& context)
 
 	retval = context.Builder.CreatePointerCast(retval, pointerType);
 	return retval;
+}
+
+Value* NMemberAccess::codeGen(CodeGenContext &context)
+{
 }

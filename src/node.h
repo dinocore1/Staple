@@ -207,21 +207,22 @@ public:
 
 class NMethodCall : public NExpression {
 public:
-    const NIdentifier& id;
+    std::string name;
     ExpressionList arguments;
-    NMethodCall(const NIdentifier& id, ExpressionList& arguments) :
-        id(id), arguments(arguments) { }
-    NMethodCall(const NIdentifier& id) : id(id) { }
+    NMethodCall(const std::string& name, ExpressionList& arguments)
+    : name(name), arguments(arguments) { }
+    NMethodCall(const std::string& name)
+    : name(name) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NArrayElementPtr : public NExpression {
 public:
-    NIdentifier* id;
+    NExpression* base;
     NExpression* expr;
 
-    NArrayElementPtr(NIdentifier* id, NExpression* expr)
-    : id(id), expr(expr) {}
+    NArrayElementPtr(NExpression* id, NExpression* expr)
+    : base(id), expr(expr) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -251,6 +252,16 @@ public:
     NExpression* expr;
     NLoad(NExpression* expr)
     : expr(expr) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NMemberAccess : public NExpression {
+public:
+    NExpression* base;
+    std::string field;
+    NMemberAccess(NExpression* base, const std::string& field)
+    : base(base), field(field) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
