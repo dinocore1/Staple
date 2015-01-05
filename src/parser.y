@@ -61,7 +61,7 @@ void yyerror(const char *s)
  */
 %type <type> type
 %type <block> block stmts
-%type <expr> expr lhs compexpr multexpr addexpr unaryexpr ident literal
+%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr base arrayindex
 %type <exprvec> call_args
 %type <stmt> stmt stmtexpr var_decl
 %type <token> comparison
@@ -191,7 +191,7 @@ lhs
         : ident
         | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
         | lhs TDOT TIDENTIFIER TLPAREN call_args TRPAREN
-        | lhs TAT unaryexpr { $$ = new NArrayElementPtr($1, $3); } /* array access */
+        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); } /* array access */
         ;
 
 expr
@@ -222,11 +222,21 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
 unaryexpr
         : TLPAREN expr TRPAREN { $$ = $2; }
         | literal { $$ = $1; }
-        | ident { $$ = new NLoad($1); }
+        | base { $$ = new NLoad($1); }
         | TIDENTIFIER TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $1; delete $3; }
-        | ident TAT unaryexpr { $$ = new NLoad(new NArrayElementPtr($1, $3)); } /* array access */
         ;
 
+arrayindex
+        : ident { $$ = new NLoad($1); }
+        | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
+        | TLPAREN expr TRPAREN { $$ = $2; }
+        ;
+
+base
+        : ident
+        | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
+        | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
+        ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }
           | expr { $$ = new ExpressionList(); $$->push_back($1); }
