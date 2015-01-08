@@ -236,6 +236,7 @@ base
         : ident
         | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
         | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
+        | base TDOT TIDENTIFIER TLPAREN call_args TRPAREN {  }
         ;
     
 call_args : /*blank*/  { $$ = new ExpressionList(); }

@@ -14,10 +14,12 @@ class CodeGenContext;
 class NStatement;
 class NExpression;
 class NVariableDeclaration;
-class NFunctionDeclaration;
+class NClassDeclaration;
 class NType;
 class NField;
 class NFunction;
+class NCompileUnit;
+class NAssignment;
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
@@ -29,22 +31,30 @@ class ASTNode {
 public:
     std::vector<ASTNode*> children;
     virtual ~ASTNode() {}
-    virtual void accept(ASTVisitor* visitor) {};
+    virtual void accept(ASTVisitor* visitor) {}
 
 };
+
+
+#define ACCEPT virtual void accept(ASTVisitor* visitor) { visitor->visit(this); }
+#define VISIT(x) virtual void visit(x* field) {}
 
 class ASTVisitor {
 public:
     virtual ~ASTVisitor() {}
-    virtual void visit(ASTNode* node) {}
     void visitChildren(ASTNode* node) {
         for(std::vector<ASTNode*>::iterator it = node->children.begin(); it != node->children.end(); it++) {
             (*it)->accept(this);
         }
     }
-    virtual void visit(NField* field) {}
-    virtual void visit(NType* type) {}
-    virtual void visit(NFunction* func) {}
+    VISIT(ASTNode)
+    VISIT(NField)
+    VISIT(NClassDeclaration)
+    VISIT(NType)
+    VISIT(NFunction)
+    VISIT(NCompileUnit)
+    VISIT(NVariableDeclaration)
+    VISIT(NAssignment)
 };
 
 
@@ -57,6 +67,8 @@ private:
         int size;
     };
 public:
+    ACCEPT
+
     static NType* GetPointerType(const std::string& name, int numPtrs);
     static NType* GetArrayType(const std::string& name, int size);
 
@@ -65,14 +77,13 @@ public:
 
 class NField : public ASTNode {
 public:
+    ACCEPT
     const std::string name;
     const NType type;
 
     NField(const NType& type, const std::string& name)
     : type(type), name(name)
     {}
-
-    virtual void accept(ASTVisitor* visitor) { visitor->visit(this); };
 
 };
 
@@ -95,6 +106,7 @@ class NClassDeclaration : public ASTNode {
 private:
     StructType* structType;
 public:
+    ACCEPT
     const std::string name;
     std::vector<NField*> fields;
     std::vector<NFunction*> functions;
@@ -174,6 +186,7 @@ public:
 
 class NIdentifier : public NExpression {
 public:
+    ACCEPT
     std::string name;
     NIdentifier(const std::string& name) : name(name) { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -181,7 +194,8 @@ public:
 
 class NArgument : public ASTNode {
 public:
-    const NType type;
+    ACCEPT
+    NType type;
     std::string name;
 
     NArgument(const NType& type)
@@ -191,22 +205,9 @@ public:
     : type(type), name(name) {}
 };
 
-class NFunctionPrototype : public ASTNode {
-public:
-    const NType returnType;
-    const std::string name;
-    std::vector<NArgument*> arguments;
-    const bool isVarg;
-
-    NFunctionPrototype(const NType& type, const std::string& name,
-            const std::vector<NArgument*>& arguments, bool isVarg) :
-            returnType(type), name(name), arguments(arguments), isVarg(isVarg) {}
-
-    virtual llvm::Value* codeGen(CodeGenContext& context);
-};
-
 class NMethodCall : public NExpression {
 public:
+    ACCEPT
     std::string name;
     ExpressionList arguments;
     NMethodCall(const std::string& name, ExpressionList& arguments)
@@ -218,6 +219,7 @@ public:
 
 class NArrayElementPtr : public NExpression {
 public:
+    ACCEPT
     NExpression* base;
     NExpression* expr;
 
@@ -229,6 +231,7 @@ public:
 
 class NNew : public NExpression {
 public:
+    ACCEPT
     std::string id;
 
     NNew(const std::string& id)
@@ -258,6 +261,7 @@ public:
 
 class NMemberAccess : public NExpression {
 public:
+    ACCEPT
     NExpression* base;
     std::string field;
     NMemberAccess(NExpression* base, const std::string& field)
@@ -268,6 +272,7 @@ public:
 
 class NBinaryOperator : public NExpression {
 public:
+    ACCEPT
     int op;
     NExpression* lhs;
     NExpression* rhs;
@@ -278,6 +283,7 @@ public:
 
 class NReturn : public NStatement {
 public:
+    ACCEPT
     NExpression* ret;
     NReturn(NExpression* ret)
     : ret(ret) {}
@@ -286,6 +292,7 @@ public:
 
 class NAssignment : public NStatement {
 public:
+    ACCEPT
     NExpression* lhs;
     NExpression* rhs;
     NAssignment(NExpression* lhs, NExpression* rhs) :
@@ -295,6 +302,7 @@ public:
 
 class NBlock : public NStatement {
 public:
+    ACCEPT
     StatementList statements;
     NBlock() { }
     virtual llvm::Value* codeGen(CodeGenContext& context);
@@ -302,6 +310,7 @@ public:
 
 class NIfStatement : public NStatement {
 public:
+    ACCEPT
     NExpression* condition;
     NStatement* thenBlock;
     NStatement* elseBlock;
@@ -322,6 +331,7 @@ public:
 
 class NVariableDeclaration : public NStatement {
 public:
+    ACCEPT
     NType* type;
     std::string name;
     NExpression* assignmentExpr;
@@ -333,12 +343,24 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
-class NFunction : public ASTNode {
+class NFunctionPrototype : public ASTNode {
 public:
+    ACCEPT
     const NType returnType;
     const std::string name;
     std::vector<NArgument*> arguments;
     const bool isVarg;
+
+    NFunctionPrototype(const NType& type, const std::string& name,
+            const std::vector<NArgument*>& arguments, bool isVarg) :
+            returnType(type), name(name), arguments(arguments), isVarg(isVarg) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NFunction : public NFunctionPrototype {
+public:
+    ACCEPT
     NBlock block;
     llvm::Function::LinkageTypes linkage;
     llvm::Function* llvmFunction;
@@ -346,18 +368,16 @@ public:
     NFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
             const NBlock& block)
-            : returnType(type), name(name), arguments(arguments),
-              isVarg(isVarg), block(block) {
+            : NFunctionPrototype(type, name, arguments, isVarg), block(block) {
         linkage = GlobalValue::ExternalLinkage;
     }
-
-    virtual void accept(ASTVisitor* visitor) { visitor->visit(this); };
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NCompileUnit : public ASTNode {
 public:
+    ACCEPT
     std::vector<NClassDeclaration*> classes;
     std::vector<NFunction*> functions;
     std::vector<NFunctionPrototype*> externFunctions;

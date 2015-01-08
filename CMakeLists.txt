@@ -46,6 +46,7 @@ set(SOURCE_FILES
     src/codegen.cpp
     src/codegen.h
     src/main.cpp
+    src/sempass.cpp
     src/node.h)
 
 include_directories("/usr/lib/llvm-3.6/include")

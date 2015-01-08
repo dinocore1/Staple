@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <iostream>
 #include "codegen.h"
+#include "sempass.h"
 #include "node.h"
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
@@ -76,6 +77,9 @@ int main(int argc, char **argv)
     do {
         yyparse();
     } while (!feof(yyin));
+
+    SemPass semPass;
+    semPass.doSemPass(*compileUnit);
 
     CodeGenContext codeGen(inputfile);
     codeGen.generateCode(*compileUnit);

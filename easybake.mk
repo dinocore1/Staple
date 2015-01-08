@@ -19,6 +19,7 @@ LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
 	src/codegen.cpp \
+	src/sempass.cpp \
 	src/main.cpp 
 
 LOCAL_CLEAN := \
