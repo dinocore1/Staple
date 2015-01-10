@@ -19,7 +19,51 @@ void yyerror(const char *s)
 }
 
 
+
 %}
+
+%code requires {
+
+extern char *filename; /* current filename here for the lexer */
+
+
+
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+  char* filename;
+} YYLTYPE;
+# define yyltype YYLTYPE /* obsolescent; will be withdrawn */
+# define YYLTYPE_IS_DECLARED 1
+#endif
+
+
+# define YYLLOC_DEFAULT(Current, Rhs, N)                               \
+    do                                                                 \
+      if (N)                                                           \
+        {                                                              \
+          (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;       \
+          (Current).first_column = YYRHSLOC (Rhs, 1).first_column;     \
+          (Current).last_line    = YYRHSLOC (Rhs, N).last_line;        \
+          (Current).last_column  = YYRHSLOC (Rhs, N).last_column;      \
+          (Current).filename     = YYRHSLOC (Rhs, 1).filename;         \
+        }                                                              \
+      else                                                             \
+        { /* empty RHS */                                              \
+          (Current).first_line   = (Current).last_line   =             \
+            YYRHSLOC (Rhs, 0).last_line;                               \
+          (Current).first_column = (Current).last_column =             \
+            YYRHSLOC (Rhs, 0).last_column;                             \
+          (Current).filename  = NULL;                        /* new */ \
+        }                                                              \
+    while (0)
+}
+
+
 
 /* Represents the many different ways we can access our data */
 %union {
@@ -157,13 +201,13 @@ stmt    : stmtexpr TSEMI { $$ = $1; }
         ;
 
 
-var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; }
-         | type TIDENTIFIER TEQUAL expr { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; }
+var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; $$->location = @2; }
+         | type TIDENTIFIER TEQUAL expr { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; $$->location = @2; }
          ;
 
 type
-        : TIDENTIFIER numPointers { $$ = NType::GetPointerType(*$1, $2); delete $1; }
-        | TIDENTIFIER TLBRACKET TINTEGER TRBRACKET { $$ = NType::GetArrayType(*$1, atoi($3->c_str())); delete $1; delete $3; }
+        : TIDENTIFIER numPointers { $$ = NType::GetPointerType(*$1, $2); delete $1; $$->location = @$; }
+        | TIDENTIFIER TLBRACKET TINTEGER TRBRACKET { $$ = NType::GetArrayType(*$1, atoi($3->c_str())); delete $1; delete $3; $$->location = @$; }
         ;
 
 numPointers
@@ -172,19 +216,19 @@ numPointers
         ;
 
 ident
-        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; }
+        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
         ;
 
-literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
-        | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; }
-        | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; }
+literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
+        | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; $$->location = @$; }
+        | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; $$->location = @$; }
         ;
 
 
 stmtexpr
         : var_decl
-        | TIDENTIFIER TLPAREN call_args TRPAREN { $$ = new NExpressionStatement(new NMethodCall(*$1, *$3)); delete $1; delete $3; }
-        | lhs TEQUAL expr { $$ = new NAssignment($1, $3); }
+        | TIDENTIFIER TLPAREN call_args TRPAREN { $$ = new NExpressionStatement(new NMethodCall(*$1, *$3)); delete $1; delete $3; $$->location = @$; }
+        | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         ;
 
 lhs
@@ -201,7 +245,7 @@ expr
         ;
 
 compexpr
-        : addexpr comparison addexpr { $$ = new NBinaryOperator($1, $2, $3); }
+        : addexpr comparison addexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
         | addexpr { $$ = $1; }
         ;
 
@@ -209,13 +253,13 @@ comparison
         : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE
         ;
 
-addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator($1, $2, $3); }
-        | multexpr TMINUS multexpr { $$ = new NBinaryOperator($1, $2, $3); }
+addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
+        | multexpr TMINUS multexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
         | multexpr { $$ = $1; }
         ;
 
-multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
-         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator($1, $2, $3); }
+multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
+         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
          | unaryexpr { $$ = $1; }
          ;
 

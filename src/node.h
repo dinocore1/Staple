@@ -23,6 +23,11 @@ class NAssignment;
 class NArrayElementPtr;
 class NIdentifier;
 class NIntLiteral;
+class NBlock;
+class NArgument;
+class NFunctionPrototype;
+
+#include "parser.hpp"
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
@@ -32,6 +37,7 @@ using namespace llvm;
 
 class ASTNode {
 public:
+    YYLTYPE location;
     std::vector<ASTNode*> children;
     virtual ~ASTNode() {}
     virtual void accept(ASTVisitor* visitor) {}

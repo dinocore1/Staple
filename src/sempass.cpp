@@ -30,8 +30,11 @@ class TypeVisitor : public ASTVisitor {
 public:
     std::map<ASTNode*, SType*> typeTable;
     Scope* scope;
+    SemPass* sempass;
 
-    TypeVisitor() : scope(NULL) {
+    TypeVisitor(SemPass* sempass)
+    : scope(NULL)
+    , sempass(sempass) {
 
     }
 
@@ -98,6 +101,13 @@ public:
         return retval;
     }
 
+#define CheckType(type, location, name, positive) \
+if(type == NULL) { \
+    sempass->logError(location, "undefined type: '%s'", name.c_str()); \
+} else { \
+    positive \
+}
+
     virtual void visit(NCompileUnit* compileUnit) {
 
         push();
@@ -111,19 +121,20 @@ public:
         for(vector<NFunctionPrototype*>::iterator it = compileUnit->externFunctions.begin();it != compileUnit->externFunctions.end();it++) {
             NFunctionPrototype* functionPrototype = *it;
 
-            //TODO: validate the function arguments and return type
             std::vector<SType*> argsType;
             for(vector<NArgument*>::iterator it = functionPrototype->arguments.begin();it != functionPrototype->arguments.end();it++){
                 NArgument* arg = *it;
                 SType* type = getType(&arg->type);
 
-                argsType.push_back(type);
+                CheckType(type, arg->location, arg->name, argsType.push_back(type);)
             }
 
             SType* returnType = getType(&functionPrototype->returnType);
+            CheckType(returnType, functionPrototype->location, functionPrototype->returnType.name,
+                    SFunctionType* functionType = new SFunctionType(returnType, argsType, functionPrototype->isVarg);
+                    define(functionPrototype->name, functionType);
+            )
 
-            SFunctionType* functionType = new SFunctionType(returnType, argsType, functionPrototype->isVarg);
-            define(functionPrototype->name, functionType);
         }
 
         for(vector<NFunction *>::iterator it = compileUnit->functions.begin();it != compileUnit->functions.end();it++){
@@ -139,8 +150,8 @@ public:
             NArgument* arg = *it;
             SType* type = getType(&arg->type);
 
-            //TODO: check if valid type
-            define(arg->name, type);
+            CheckType(type, arg->location, arg->type.name, define(arg->name, type);)
+
         }
 
         for(vector<NStatement*>::iterator it = function->block.statements.begin();it != function->block.statements.end();it++){
@@ -153,9 +164,9 @@ public:
     virtual void visit(NVariableDeclaration* variableDeclaration) {
 
         SType* type = getType(variableDeclaration->type);
-        //TODO: check if valid type
 
-        define(variableDeclaration->name, type);
+        CheckType(type, variableDeclaration->location, variableDeclaration->type->name, define(variableDeclaration->name, type);)
+
     }
 
     virtual void visit(NIntLiteral* intLiteral) {
@@ -210,8 +221,44 @@ public:
     }
 };
 
+SemPass::SemPass()
+: numErrors(0) {
+
+}
+
+bool SemPass::hasErrors() {
+    return numErrors > 0;
+}
+
 void SemPass::doSemPass(NCompileUnit& root)
 {
-    TypeVisitor typeVisitor;
+    TypeVisitor typeVisitor(this);
     root.accept(&typeVisitor);
 }
+
+void SemPass::logError(YYLTYPE location, const char *format, ...)
+{
+    numErrors++;
+    va_list argptr;
+    va_start(argptr, format);
+
+    fprintf(stderr, "%s:%d:%d: ", location.filename, location.first_line, location.first_column);
+    fprintf(stderr, "error: ");
+    vfprintf(stderr, format, argptr);
+    va_end(argptr);
+}
+
+void SemPass::logWarning(YYLTYPE location, const char *format, ...)
+{
+    va_list argptr;
+    va_start(argptr, format);
+
+    fprintf(stderr, "%s:%d:%d: ", location.filename, location.first_line, location.first_column);
+    fprintf(stderr, "warning: ");
+    vfprintf(stderr, format, argptr);
+    va_end(argptr);
+}
+
+
+
+

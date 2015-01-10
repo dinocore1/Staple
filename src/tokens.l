@@ -1,17 +1,33 @@
 %{
+
+
 #include <string>
 #include "node.h"
 #include "parser.hpp"
+
+
+/* handle locations */
+int yycolumn = 1;
+#define YY_USER_ACTION yylloc.filename = filename; \
+    yylloc.first_line = yylloc.last_line = yylineno; \
+    yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
+    yycolumn += yyleng;
+
+
+
 #define SAVE_TOKEN yylval.string = new std::string(yytext, yyleng)
 #define TOKEN(t) (yylval.token = t)
 extern "C" int yywrap() { }
 %}
 
+
+
 %option yylineno
 
 %%
 
-[ \t\n]                 ;
+[ \t]                   ;
+\n                      { yycolumn = 1; }
 "extern"                return TOKEN(TEXTERN);
 "class"                 return TOKEN(TCLASS);
 "if"                    return TOKEN(TIF);

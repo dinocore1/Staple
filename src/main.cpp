@@ -1,8 +1,9 @@
 #include <cstdio>
 #include <iostream>
 #include "codegen.h"
-#include "sempass.h"
+
 #include "node.h"
+#include "sempass.h"
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -13,6 +14,8 @@ extern "C" int yylex();
 int yyparse();
 extern "C" FILE *yyin;
 extern "C" int yydebug;
+
+char *filename;
 
 using namespace std;
 
@@ -65,6 +68,7 @@ int main(int argc, char **argv)
 
     yydebug = 1;
 
+    filename = (char *) inputfile;
     FILE *myfile = fopen(inputfile, "r");
     if (!myfile) {
         fprintf(stderr, "cannot open file: %s", inputfile);
@@ -80,6 +84,10 @@ int main(int argc, char **argv)
 
     SemPass semPass;
     semPass.doSemPass(*compileUnit);
+
+    if(semPass.hasErrors()) {
+        exit(1);
+    }
 
     CodeGenContext codeGen(inputfile);
     codeGen.generateCode(*compileUnit);
