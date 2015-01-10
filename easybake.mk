@@ -20,6 +20,7 @@ LOCAL_SRCS := \
 	src/parser.cpp \
 	src/codegen.cpp \
 	src/sempass.cpp \
+	src/type.cpp \
 	src/main.cpp 
 
 LOCAL_CLEAN := \

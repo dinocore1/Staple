@@ -20,6 +20,9 @@ class NField;
 class NFunction;
 class NCompileUnit;
 class NAssignment;
+class NArrayElementPtr;
+class NIdentifier;
+class NIntLiteral;
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
@@ -55,18 +58,21 @@ public:
     VISIT(NCompileUnit)
     VISIT(NVariableDeclaration)
     VISIT(NAssignment)
+    VISIT(NArrayElementPtr)
+    VISIT(NIdentifier)
+    VISIT(NIntLiteral)
 };
 
 
 class NType : public ASTNode {
-private:
+public:
     std::string name;
     bool isArray;
     union {
         int numPointers;
         int size;
     };
-public:
+
     ACCEPT
 
     static NType* GetPointerType(const std::string& name, int numPtrs);
@@ -160,6 +166,7 @@ public:
 
 class NIntLiteral : public NLiteral {
 public:
+    ACCEPT
     unsigned width;
     NIntLiteral(std::string const &str, unsigned width = 32)
     : NLiteral(str), width(width) {
@@ -170,6 +177,7 @@ public:
 
 class NFloatLiteral : public NLiteral {
 public:
+    ACCEPT
     NFloatLiteral(std::string const &str) : NLiteral(str) {
     }
 
@@ -178,6 +186,7 @@ public:
 
 class NStringLiteral : public NLiteral {
 public:
+    ACCEPT
     NStringLiteral(std::string const &str) : NLiteral(str) {
     }
 
