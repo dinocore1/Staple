@@ -105,8 +105,8 @@ typedef struct YYLTYPE
  */
 %type <type> type
 %type <block> block stmts
-%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr base arrayindex
-%type <exprvec> call_args
+%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr primary base arrayindex
+%type <exprvec> expr_list
 %type <stmt> stmt stmtexpr var_decl
 %type <token> comparison
 %type <nodelist> class_members
@@ -119,6 +119,7 @@ typedef struct YYLTYPE
 %type <count> numPointers
 
 %right "then" TELSE
+%right "order" TMINUS
 %left TAT TDOT
 
 %start program
@@ -227,14 +228,14 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
 
 stmtexpr
         : var_decl
-        | TIDENTIFIER TLPAREN call_args TRPAREN { $$ = new NExpressionStatement(new NMethodCall(*$1, *$3)); delete $1; delete $3; $$->location = @$; }
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NExpressionStatement(new NFunctionCall(*$1, *$3)); delete $1; delete $3; $$->location = @$; }
         | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         ;
 
 lhs
         : ident
         | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
-        | lhs TDOT TIDENTIFIER TLPAREN call_args TRPAREN
+        | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN
         | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); } /* array access */
         ;
 
@@ -264,11 +265,25 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->
          ;
 
 unaryexpr
-        : TLPAREN expr TRPAREN { $$ = $2; }
+        : TNOT primary { $$ = new NNot($2); }
+        | TMINUS primary { $$ = new NNegitive($2); }
+        | primary
+        ;
+
+primary
+        : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; } } %prec "order"
         | literal { $$ = $1; }
         | base { $$ = new NLoad($1); }
-        | TIDENTIFIER TLPAREN call_args TRPAREN { $$ = new NMethodCall(*$1, *$3); delete $1; delete $3; }
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; }
+        | TLPAREN expr_list TRPAREN TMINUS TCGT stmt /* anonymous function */
         ;
+
+expr_list
+        : expr { $$ = new ExpressionList(); $$->push_back($1); }
+        | expr_list TCOMMA expr { $$->push_back($3); }
+        | { $$ = new ExpressionList(); }
+        ;
+
 
 arrayindex
         : ident { $$ = new NLoad($1); }
@@ -280,13 +295,8 @@ base
         : ident
         | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
         | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
-        | base TDOT TIDENTIFIER TLPAREN call_args TRPAREN {  }
+        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5 }
         ;
-    
-call_args : /*blank*/  { $$ = new ExpressionList(); }
-          | expr { $$ = new ExpressionList(); $$->push_back($1); }
-          | call_args TCOMMA expr  { $1->push_back($3); }
-          ;
 
 
 

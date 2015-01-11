@@ -27,7 +27,7 @@ class NBlock;
 class NArgument;
 class NFunctionPrototype;
 class NMemberAccess;
-class NMethodCall;
+class NFunctionCall;
 class NExpressionStatement;
 class NStringLiteral;
 class NNew;
@@ -76,7 +76,7 @@ public:
     VISIT(NIntLiteral)
     VISIT(NStringLiteral)
     VISIT(NMemberAccess)
-    VISIT(NMethodCall)
+    VISIT(NFunctionCall)
     VISIT(NExpressionStatement)
     VISIT(NNew)
     VISIT(NSizeOf)
@@ -234,15 +234,27 @@ public:
     : type(type), name(name) {}
 };
 
+class NFunctionCall : public NExpression {
+public:
+    ACCEPT
+    std::string name;
+    ExpressionList arguments;
+    NFunctionCall(const std::string& name, ExpressionList& arguments)
+    : name(name), arguments(arguments) { }
+    NFunctionCall(const std::string& name)
+    : name(name) { }
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
 class NMethodCall : public NExpression {
 public:
     ACCEPT
     std::string name;
     ExpressionList arguments;
-    NMethodCall(const std::string& name, ExpressionList& arguments)
-    : name(name), arguments(arguments) { }
-    NMethodCall(const std::string& name)
-    : name(name) { }
+    NExpression* base;
+    NMethodCall(NExpression* base, const std::string& name, const ExpressionList& arguments)
+    : base(base), name(name), arguments(arguments) {}
+
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
@@ -301,6 +313,26 @@ public:
     virtual llvm::Value* codeGen(CodeGenContext& context);
 
     int fieldIndex;
+};
+
+class NNot : public NExpression {
+public:
+    ACCEPT
+    NExpression* base;
+    NNot(NExpression* base)
+    : base(base) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NNegitive : public NExpression {
+public:
+    ACCEPT
+    NExpression* base;
+    NNegitive(NExpression* base)
+    : base(base) {}
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NBinaryOperator : public NExpression {

@@ -306,7 +306,7 @@ if(type == NULL) { \
         }
     }
 
-    virtual void visit(NMethodCall* methodCall) {
+    virtual void visit(NFunctionCall* methodCall) {
         SType* type = scope->get(methodCall->name);
         if(type != NULL && type->isFunctionTy()){
 

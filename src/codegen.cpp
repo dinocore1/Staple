@@ -171,7 +171,7 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 	//return context.Builder.CreateLoad(v, name.c_str());
 }
 
-Value* NMethodCall::codeGen(CodeGenContext& context)
+Value* NFunctionCall::codeGen(CodeGenContext& context)
 {
 	Function *function = context.module->getFunction(name.c_str());
 	if (function == NULL) {
@@ -184,6 +184,10 @@ Value* NMethodCall::codeGen(CodeGenContext& context)
 	}
 
 	return context.Builder.CreateCall(function, args);
+}
+
+Value* NMethodCall::codeGen(CodeGenContext &context)
+{
 }
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
@@ -242,6 +246,18 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 			Error("invalid binary operator");
 			return 0;
 	}
+}
+
+Value* NNot::codeGen(CodeGenContext &context)
+{
+	Value* baseVal = base->codeGen(context);
+	return context.Builder.CreateNot(baseVal);
+}
+
+Value* NNegitive::codeGen(CodeGenContext &context)
+{
+	Value* baseVal = base->codeGen(context);
+	return context.Builder.CreateNeg(baseVal);
 }
 
 Value* NAssignment::codeGen(CodeGenContext& context)
