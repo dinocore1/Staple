@@ -1,5 +1,5 @@
 #include <llvm/IR/DerivedTypes.h>
-
+#include <utility>
 
 
 class SType {
@@ -11,6 +11,8 @@ public:
 
     static SType* get(llvm::Type* type);
 
+    virtual bool isFunctionTy() { return false; }
+    virtual bool isPointerTy() { return false; }
     virtual bool isClassTy() { return false; }
     virtual bool isArrayTy() { return type->isArrayTy(); }
     virtual bool isIntTy() { return type->isIntegerTy(); }
@@ -21,19 +23,23 @@ class SClassType : public SType {
 public:
     std::string name;
     SClassType* parent;
-    std::vector<SType*> fields;
-    std::vector<llvm::FunctionType*> methods;
+    std::vector<std::pair<std::string, SType*>> fields;
+    std::vector<std::pair<std::string, llvm::FunctionType*>> methods;
 
     SClassType() {}
     SClassType(const std::string& name) : name(name) {}
 
     SClassType(SClassType* parent,
-            std::vector<SType*> fields,
-            std::vector<llvm::FunctionType*> methods
+            std::vector<std::pair<std::string, SType*>> fields,
+            std::vector<std::pair<std::string, llvm::FunctionType*>> methods
     );
 
     virtual bool isClassTy() { return true; };
     virtual bool isAssignable(SType *dest);
+
+    int getFieldIndex(const std::string& name);
+
+    void createLLVMClass();
 };
 
 class SIntType : public SType {
@@ -55,6 +61,7 @@ public:
 
     SFunctionType(SType* retrunType, std::vector<SType *> args, bool isValArgs);
 
+    virtual bool isFunctionTy() { return true; }
 
     virtual bool isAssignable(SType *dest);
 };
@@ -71,10 +78,13 @@ public:
 };
 
 class SPointerType : public SType {
+    SPointerType(SType* elementType) : elementType(elementType) {}
 public:
     SType *elementType;
 
+    virtual bool isPointerTy() { return true; }
     virtual bool isAssignable(SType *dest);
 
     static SPointerType* get(SType* base);
 };
+

@@ -206,6 +206,19 @@ Value*NArrayElementPtr::codeGen(CodeGenContext &context)
 	return context.Builder.CreateGEP(idSymbol, indecies);
 }
 
+Value* NMemberAccess::codeGen(CodeGenContext &context)
+{
+	Value* baseVal = base->codeGen(context);
+
+	baseVal = context.Builder.CreateLoad(baseVal);
+
+	std::vector<Value*> indecies;
+	indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+	indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), fieldIndex, false));
+
+	return context.Builder.CreateGEP(baseVal, indecies);
+}
+
 Value* NLoad::codeGen(CodeGenContext &context)
 {
 	Value* exprVal = expr->codeGen(context);
@@ -395,8 +408,4 @@ Value* NNew::codeGen(CodeGenContext& context)
 
 	retval = context.Builder.CreatePointerCast(retval, pointerType);
 	return retval;
-}
-
-Value* NMemberAccess::codeGen(CodeGenContext &context)
-{
 }

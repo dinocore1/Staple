@@ -26,6 +26,13 @@ class NIntLiteral;
 class NBlock;
 class NArgument;
 class NFunctionPrototype;
+class NMemberAccess;
+class NMethodCall;
+class NExpressionStatement;
+class NStringLiteral;
+class NNew;
+class NSizeOf;
+class NLoad;
 
 #include "parser.hpp"
 
@@ -67,6 +74,13 @@ public:
     VISIT(NArrayElementPtr)
     VISIT(NIdentifier)
     VISIT(NIntLiteral)
+    VISIT(NStringLiteral)
+    VISIT(NMemberAccess)
+    VISIT(NMethodCall)
+    VISIT(NExpressionStatement)
+    VISIT(NNew)
+    VISIT(NSizeOf)
+    VISIT(NLoad)
 };
 
 
@@ -257,6 +271,7 @@ public:
 
 class NSizeOf : public NExpression {
 public:
+    ACCEPT
     std::string id;
 
     NSizeOf(const std::string& id)
@@ -267,6 +282,7 @@ public:
 
 class NLoad : public NExpression {
 public:
+    ACCEPT
     NExpression* expr;
     NLoad(NExpression* expr)
     : expr(expr) {}
@@ -283,6 +299,8 @@ public:
     : base(base), field(field) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
+
+    int fieldIndex;
 };
 
 class NBinaryOperator : public NExpression {
@@ -338,6 +356,7 @@ public:
 
 class NExpressionStatement : public NStatement {
 public:
+    ACCEPT
     NExpression* expression;
     NExpressionStatement(NExpression* expression) :
         expression(expression) { }
