@@ -336,6 +336,11 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	return llvmFunction;
 }
 
+Value* NMethodFunction::codeGen(CodeGenContext &context)
+{
+	//TODO: implement
+}
+
 Value* NIfStatement::codeGen(CodeGenContext &context)
 {
 	Function* parent = context.Builder.GetInsertBlock()->getParent();

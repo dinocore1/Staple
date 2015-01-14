@@ -33,6 +33,7 @@ class NStringLiteral;
 class NNew;
 class NSizeOf;
 class NLoad;
+class NMethodFunction;
 
 #include "parser.hpp"
 
@@ -81,6 +82,7 @@ public:
     VISIT(NNew)
     VISIT(NSizeOf)
     VISIT(NLoad)
+    VISIT(NMethodFunction)
 };
 
 
@@ -116,13 +118,13 @@ public:
 class ClassMemberVisitor : public ASTVisitor {
 public:
     std::vector<NField*>* fields;
-    std::vector<NFunction*>* functions;
+    std::vector<NMethodFunction*>* functions;
 
     virtual void visit(NField* field) {
         fields->push_back(field);
     }
 
-    virtual void visit(NFunction* function) {
+    virtual void visit(NMethodFunction* function) {
         functions->push_back(function);
     }
 
@@ -135,11 +137,11 @@ public:
     ACCEPT
     const std::string name;
     std::vector<NField*> fields;
-    std::vector<NFunction*> functions;
+    std::vector<NMethodFunction*> functions;
 
     NClassDeclaration(const std::string& name,
             const std::vector<NField*>& fields,
-            const std::vector<NFunction*>& functions)
+            const std::vector<NMethodFunction*>& functions)
     : structType(NULL), name(name), fields(fields), functions(functions)
     {}
 
@@ -432,6 +434,23 @@ public:
     llvm::Function* llvmFunction;
 
     NFunction(const NType& type, const std::string& name,
+            const std::vector<NArgument*>& arguments, bool isVarg,
+            const NBlock& block)
+            : NFunctionPrototype(type, name, arguments, isVarg), block(block) {
+        linkage = GlobalValue::ExternalLinkage;
+    }
+
+    virtual llvm::Value* codeGen(CodeGenContext& context);
+};
+
+class NMethodFunction : public NFunctionPrototype {
+public:
+    ACCEPT
+    NBlock block;
+    llvm::Function::LinkageTypes linkage;
+    llvm::Function* llvmFunction;
+
+    NMethodFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
             const NBlock& block)
             : NFunctionPrototype(type, name, arguments, isVarg), block(block) {

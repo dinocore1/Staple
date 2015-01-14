@@ -1,10 +1,10 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <utility>
 
+class SFunctionType;
 
 class SType {
 private:
-
 
 public:
     llvm::Type* type;
@@ -24,14 +24,14 @@ public:
     std::string name;
     SClassType* parent;
     std::vector<std::pair<std::string, SType*>> fields;
-    std::vector<std::pair<std::string, llvm::FunctionType*>> methods;
+    std::vector<std::pair<std::string, SFunctionType*>> methods;
 
     SClassType() {}
     SClassType(const std::string& name) : name(name) {}
 
     SClassType(SClassType* parent,
             std::vector<std::pair<std::string, SType*>> fields,
-            std::vector<std::pair<std::string, llvm::FunctionType*>> methods
+            std::vector<std::pair<std::string, SFunctionType*>> methods
     );
 
     virtual bool isClassTy() { return true; };
@@ -40,6 +40,8 @@ public:
     int getFieldIndex(const std::string& name);
 
     void createLLVMClass();
+
+    SFunctionType* getMethod(std::string name);
 };
 
 class SIntType : public SType {

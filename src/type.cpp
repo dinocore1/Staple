@@ -42,7 +42,7 @@ static void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 }
 
 SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, SType*>> fields,
-        std::vector<std::pair<std::string, llvm::FunctionType*>> methods)
+        std::vector<std::pair<std::string, SFunctionType*>> methods)
 : parent(parent)
 , fields(fields)
 , methods(methods) {
@@ -67,6 +67,16 @@ int SClassType::getFieldIndex(const std::string& name)
         index++;
     }
     return -1;
+}
+
+SFunctionType* SClassType::getMethod(std::string name) {
+
+    for(auto it=methods.begin();it!=methods.end();it++) {
+        if(name.compare((*it).first) == 0){
+            return (*it).second;
+        }
+    }
+    return NULL;
 }
 
 bool SClassType::isAssignable(SType *dest) {

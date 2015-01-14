@@ -84,6 +84,7 @@ typedef struct YYLTYPE
     std::vector<NArgument*> *func_args;
     bool boolean;
     NFunction *function;
+    NMethodFunction* method_function;
     int count;
 }
 
@@ -115,7 +116,8 @@ typedef struct YYLTYPE
 %type <prototype> proto_func
 %type <func_args> proto_args
 %type <boolean> ellipse_arg
-%type <function> global_func method
+%type <function> global_func
+%type <method_function> method
 %type <count> numPointers
 
 %right "then" TELSE
@@ -180,7 +182,7 @@ field
 
 method
         : type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN block
-         { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
+         { $$ = new NMethodFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
         ;
 
 ///// Statements //////
@@ -295,7 +297,7 @@ base
         : ident
         | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
         | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
-        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5 }
+        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }
         ;
 
 

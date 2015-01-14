@@ -109,6 +109,25 @@ if(type == NULL) { \
     positive \
 }
 
+    SFunctionType* getFunctionType(NMethodFunction* methodFunction) {
+
+        std::vector<SType*> args;
+
+        for(vector<NArgument*>::iterator it = methodFunction->arguments.begin();it != methodFunction->arguments.end();it++){
+            NArgument* arg = *it;
+            SType* type = getType(&arg->type);
+
+            CheckType(type, arg->location, arg->type.name, args.push_back(type); )
+        }
+
+        SType* returnType = getType(&methodFunction->returnType);
+        CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
+
+        SFunctionType* retval = new SFunctionType(returnType, args, methodFunction->isVarg);
+
+        return retval;
+    }
+
     virtual void visit(NCompileUnit* compileUnit) {
 
         currentClass = NULL;
@@ -130,7 +149,16 @@ if(type == NULL) { \
                 (*field)->accept(this);
             }
 
+            for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
+                SFunctionType* functionType = getFunctionType(*method);
+                currentClass->methods.push_back(make_pair((*method)->name, functionType));
+            }
+
             currentClass->createLLVMClass();
+
+            for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
+                (*method)->accept(this);
+            }
 
         }
 
@@ -191,6 +219,33 @@ if(type == NULL) { \
 
     virtual void visit(NExpressionStatement* expressionStatement) {
         expressionStatement->expression->accept(this);
+    }
+
+    virtual void visit(NMethodFunction* methodFunction) {
+        push();
+
+        SType* thisType = SPointerType::get(currentClass);
+        define("this", thisType);
+
+        for(auto field = currentClass->fields.begin();field != currentClass->fields.end();field++){
+            define((*field).first, (*field).second);
+        }
+
+        for(vector<NArgument*>::iterator it = methodFunction->arguments.begin();it != methodFunction->arguments.end();it++){
+            NArgument* arg = *it;
+            SType* type = getType(&arg->type);
+
+            CheckType(type, arg->location, arg->type.name, define(arg->name, type);)
+        }
+
+        SType* returnType = getType(&methodFunction->returnType);
+        CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
+
+        for(vector<NStatement*>::iterator it = methodFunction->block.statements.begin();it != methodFunction->block.statements.end();it++){
+            NStatement* statement = *it;
+            statement->accept(this);
+        }
+        pop();
     }
 
     virtual void visit(NFunction* function) {
@@ -304,6 +359,27 @@ if(type == NULL) { \
                 typeTable[memberAccess] = classType->fields[index].second;
             }
         }
+    }
+
+    virtual void visit(NMethodCall* methodCall) {
+        methodCall->base->accept(this);
+        SType* baseType = typeTable[methodCall->base];
+
+        if(baseType == NULL || (!baseType->isClassTy() && !(baseType->isPointerTy() && ((SPointerType*)baseType)->elementType->isClassTy()))) {
+            sempass->logError(methodCall->base->location, "not a class type");
+        } else {
+
+            SClassType* classType = NULL;
+            if(baseType->isClassTy()){
+                classType = (SClassType*) baseType;
+            } else {
+                classType = (SClassType *) ((SPointerType*)baseType)->elementType;
+            }
+
+            SFunctionType* method = classType->getMethod(methodCall->name);
+        }
+
+
     }
 
     virtual void visit(NFunctionCall* methodCall) {
