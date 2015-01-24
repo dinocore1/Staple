@@ -236,9 +236,9 @@ stmtexpr
 
 lhs
         : ident
-        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
+        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; }
         | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN
-        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); } /* array access */
+        | lhs TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); } /* array access */
         ;
 
 expr
@@ -275,7 +275,7 @@ unaryexpr
 primary
         : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; } } %prec "order"
         | literal { $$ = $1; }
-        | base { $$ = new NLoad($1); }
+        | base { $$ = $1; }
         | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; }
         | TLPAREN expr_list TRPAREN TMINUS TCGT stmt /* anonymous function */
         ;
@@ -294,7 +294,7 @@ arrayindex
         ;
 
 base
-        : ident
+        : ident { $$ = new NLoad($1); }
         | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
         | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
         | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }

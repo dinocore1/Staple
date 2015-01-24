@@ -7,6 +7,8 @@
 #include <iostream>
 #include <vector>
 
+class SClassType;
+
 class ASTNode;
 class ASTVisitor;
 
@@ -34,6 +36,7 @@ class NNew;
 class NSizeOf;
 class NLoad;
 class NMethodFunction;
+class NMethodCall;
 
 #include "parser.hpp"
 
@@ -83,6 +86,7 @@ public:
     VISIT(NSizeOf)
     VISIT(NLoad)
     VISIT(NMethodFunction)
+    VISIT(NMethodCall)
 };
 
 
@@ -254,8 +258,12 @@ public:
     std::string name;
     ExpressionList arguments;
     NExpression* base;
+
+    int methodIndex;
+    SClassType* classType;
+
     NMethodCall(NExpression* base, const std::string& name, const ExpressionList& arguments)
-    : base(base), name(name), arguments(arguments) {}
+    : base(base), name(name), arguments(arguments), methodIndex(-1), classType(NULL) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };
@@ -449,6 +457,7 @@ public:
     NBlock block;
     llvm::Function::LinkageTypes linkage;
     llvm::Function* llvmFunction;
+    SClassType* classType;
 
     NMethodFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,

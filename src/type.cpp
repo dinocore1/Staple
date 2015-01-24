@@ -57,16 +57,52 @@ void SClassType::createLLVMClass() {
     type = llvm::StructType::get(llvm::getGlobalContext(), elements);
 }
 
+static bool getClassFieldIndex(SClassType* classType, const std::string& name, int& index)
+{
+    bool found = classType->parent != NULL ? getClassFieldIndex(classType->parent, name, index) : false;
+    if(!found) {
+        for(auto it=classType->fields.begin();it!=classType->fields.end();it++) {
+            if(name.compare((*it).first) == 0){
+                return true;
+            }
+            index++;
+        }
+    }
+    return found;
+}
+
 int SClassType::getFieldIndex(const std::string& name)
 {
     int index = 0;
-    for(auto it=fields.begin();it!=fields.end();it++) {
-        if(name.compare((*it).first) == 0){
-            return index;
-        }
-        index++;
+    if(getClassFieldIndex(this, name, index)) {
+        return index;
+    } else {
+        return -1;
     }
-    return -1;
+}
+
+static bool getClassMethodIndex(SClassType* classType, const std::string& name, int& index)
+{
+    bool found = classType->parent != NULL ? getClassMethodIndex(classType->parent, name, index) : false;
+    if(!found) {
+        for(auto it=classType->methods.begin();it!=classType->methods.end();it++) {
+            if(name.compare((*it).first) == 0){
+                return true;
+            }
+            index++;
+        }
+    }
+    return found;
+}
+
+int SClassType::getMethodIndex(const std::string& name)
+{
+    int index = 0;
+    if(getClassMethodIndex(this, name, index)) {
+        return index;
+    } else {
+        return -1;
+    }
 }
 
 SFunctionType* SClassType::getMethod(std::string name) {

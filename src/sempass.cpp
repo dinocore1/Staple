@@ -152,6 +152,7 @@ if(type == NULL) { \
             for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
                 SFunctionType* functionType = getFunctionType(*method);
                 currentClass->methods.push_back(make_pair((*method)->name, functionType));
+                (*method)->classType = currentClass;
             }
 
             currentClass->createLLVMClass();
@@ -376,10 +377,34 @@ if(type == NULL) { \
                 classType = (SClassType *) ((SPointerType*)baseType)->elementType;
             }
 
-            SFunctionType* method = classType->getMethod(methodCall->name);
+            int index = classType->getMethodIndex(methodCall->name);
+            if(index < 0) {
+                sempass->logError(methodCall->location, "class '%s' does not have method: '%s'", classType->name.c_str(), methodCall->name.c_str());
+            } else {
+                methodCall->methodIndex = index;
+                methodCall->classType = classType;
+                SFunctionType* method = classType->getMethod(methodCall->name);
+
+                int i = 0;
+                for(auto it=methodCall->arguments.begin();it!=methodCall->arguments.end();it++) {
+                    (*it)->accept(this);
+                    SType* argType = typeTable[*it];
+
+                    if(i < method->arguments.size()) {
+                        SType *definedType = method->arguments[i];
+                        if (!argType->isAssignable(definedType)) {
+                            sempass->logError((*it)->location, "argument mismatch");
+                        }
+                    }
+
+                    i++;
+                }
+
+                typeTable[methodCall] = method->returnType;
+            }
+
+
         }
-
-
     }
 
     virtual void visit(NFunctionCall* methodCall) {

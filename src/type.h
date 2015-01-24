@@ -38,6 +38,7 @@ public:
     virtual bool isAssignable(SType *dest);
 
     int getFieldIndex(const std::string& name);
+    int getMethodIndex(const std::string& name);
 
     void createLLVMClass();
 

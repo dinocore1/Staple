@@ -1,5 +1,6 @@
 #include "node.h"
 #include "codegen.h"
+#include "type.h"
 
 using namespace std;
 
@@ -24,6 +25,22 @@ public:
 		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context->module);
 
 	}
+
+    virtual void visit(NMethodFunction* fun) {
+        std::vector<Type*> argTypes;
+        std::vector<NArgument*>::iterator it;
+        //add 'this' as first argument
+        argTypes.push_back(PointerType::getUnqual(fun->classType->type));
+        for (it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
+            argTypes.push_back((**it).type.getLLVMType(*context));
+        }
+        FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(*context), argTypes, fun->isVarg);
+
+        char funName[512];
+        snprintf(funName, 512, "%s_%s", fun->classType->name.c_str(), fun->name.c_str());
+        fun->llvmFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context->module);
+
+    }
 };
 
 NClassDeclaration* CodeGenContext::getClass(const std::string &name) const {
@@ -52,10 +69,22 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 		globalfuncdec.visit(*it);
 	}
 
+    for(auto it = root.classes.begin(); it != root.classes.end(); it++) {
+        for(auto function : (*it)->functions){
+            globalfuncdec.visit(function);
+        }
+    }
+
 	for (std::vector<NFunction*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
 		(*it)->codeGen(*this);
 	}
 
+
+    for(auto it = root.classes.begin(); it != root.classes.end(); it++) {
+        for(auto function : (*it)->functions){
+            function->codeGen(*this);
+        }
+    }
 
 	/* Print the bytecode in a human-readable format 
 	   to see if our program compiled properly
@@ -168,7 +197,6 @@ Value* NIdentifier::codeGen(CodeGenContext& context)
 		return NULL;
 	}
 	return v;
-	//return context.Builder.CreateLoad(v, name.c_str());
 }
 
 Value* NFunctionCall::codeGen(CodeGenContext& context)
@@ -188,12 +216,36 @@ Value* NFunctionCall::codeGen(CodeGenContext& context)
 
 Value* NMethodCall::codeGen(CodeGenContext &context)
 {
+    Value* baseVal = base->codeGen(context);
+
+    std::vector<Value*> indecies;
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), methodIndex, false));
+
+    //Value* functionPtr = context.Builder.CreateGEP(baseVal, indecies);
+
+    std::vector<Value*> args;
+    ExpressionList::const_iterator it;
+
+    //add 'this' as first argument
+    args.push_back(baseVal);
+    for (it = arguments.begin(); it != arguments.end(); it++) {
+        args.push_back((**it).codeGen(context));
+    }
+
+
+    char funName[512];
+    snprintf(funName, 512, "%s_%s", classType->name.c_str(), name.c_str());
+    Function *function = context.module->getFunction(funName);
+
+
+    return context.Builder.CreateCall(function, args);
 }
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
 {
 	Value* idSymbol = base->codeGen(context);
-	//Value* idSymbol = NLoad(id).codeGen(context);
 	Value* exprVal = expr->codeGen(context);
 
 	std::vector<Value*> indecies;
@@ -214,7 +266,7 @@ Value* NMemberAccess::codeGen(CodeGenContext &context)
 {
 	Value* baseVal = base->codeGen(context);
 
-	baseVal = context.Builder.CreateLoad(baseVal);
+	//baseVal = context.Builder.CreateLoad(baseVal);
 
 	std::vector<Value*> indecies;
 	indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
@@ -336,9 +388,37 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	return llvmFunction;
 }
 
-Value* NMethodFunction::codeGen(CodeGenContext &context)
-{
-	//TODO: implement
+Value* NMethodFunction::codeGen(CodeGenContext &context) {
+    BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
+    context.pushBlock(bblock);
+    context.Builder.SetInsertPoint(bblock);
+
+    {
+        AllocaInst *alloc = CreateEntryBlockAlloca(llvmFunction, PointerType::getUnqual(this->classType->type), "this");
+        context.defineSymbol("this", alloc);
+        context.Builder.CreateStore(llvmFunction->arg_begin(), alloc);
+    }
+
+    Function::arg_iterator AI = llvmFunction->arg_begin();
+    for(size_t i=1,e=llvmFunction->arg_size();i!=e;++i,++AI){
+        NArgument* arg = arguments[i];
+        AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(context), arg->name);
+        context.defineSymbol(arg->name, alloc);
+        context.Builder.CreateStore(AI, alloc);
+    }
+
+    block.codeGen(context);
+
+    Instruction &last = *bblock->getInstList().rbegin();
+    if(llvmFunction->getReturnType()->isVoidTy() && !last.isTerminator()){
+        ReturnInst::Create(getGlobalContext(), bblock);
+    }
+
+    context.popBlock();
+
+    context.fpm->run(*llvmFunction);
+
+    return llvmFunction;
 }
 
 Value* NIfStatement::codeGen(CodeGenContext &context)
