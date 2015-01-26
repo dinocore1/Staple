@@ -16,6 +16,7 @@ CXX := g++-4.9
 MODULE := compiler
 LOCAL_CXXFLAGS := $(shell llvm-config-3.6 --cxxflags --system-libs --libs all)
 LOCAL_SRCS := \
+    src/compilercontext.cpp \
 	src/tokens.cpp \
 	src/parser.cpp \
 	src/codegen.cpp \

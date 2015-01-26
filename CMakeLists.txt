@@ -43,6 +43,8 @@ IF(FLEX_FOUND)
 ENDIF()
 
 set(SOURCE_FILES
+    src/compilercontext.cpp
+    src/compilercontext.h
     src/codegen.cpp
     src/codegen.h
     src/main.cpp

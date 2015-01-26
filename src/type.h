@@ -1,3 +1,6 @@
+#ifndef STYPE_H_
+#define STYPE_H_
+
 #include <llvm/IR/DerivedTypes.h>
 #include <utility>
 
@@ -91,3 +94,4 @@ public:
     static SPointerType* get(SType* base);
 };
 
+#endif /* STYPE_H_ */

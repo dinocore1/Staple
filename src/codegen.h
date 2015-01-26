@@ -7,6 +7,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include <stack>
 
+#include "compilercontext.h"
+
 using namespace llvm;
 
 class NCompileUnit;
@@ -40,16 +42,17 @@ class ILClassType;
 class CodeGenContext {
     CodeGenBlock* top;
     NCompileUnit* compileUnitRoot;
-    std::map<std::string, ILClassType*> classType;
+    std::map<std::string, ILClassType*> classTypes;
 
 public:
+    CompilerContext& ctx;
     Module *module;
     FunctionPassManager *fpm;
     IRBuilder<> Builder;
-    CodeGenContext(const char* moduleName)
-    : top(NULL), Builder(getGlobalContext())
+    CodeGenContext(CompilerContext& ctx)
+    : ctx(ctx), top(NULL), Builder(getGlobalContext())
     {
-        module = new Module(moduleName, getGlobalContext());
+        module = new Module(ctx.inputFilename.c_str(), getGlobalContext());
         fpm = new FunctionPassManager(module);
 
         //fpm->add(new DataLayoutPass());
@@ -75,8 +78,7 @@ public:
     void defineSymbol(const std::string& name, Value* value) {
         top->locals[name] = value;
     }
-    Constant* getClassTypeConstant(const std::string& name);
-    NClassDeclaration* getClass(const std::string& name) const;
+
     void pushBlock(BasicBlock *block) {
         CodeGenBlock* newBlock = new CodeGenBlock(top, block);
         top = newBlock;

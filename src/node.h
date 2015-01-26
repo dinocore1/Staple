@@ -1,3 +1,6 @@
+#ifndef SNODE_H_
+#define SNODE_H_
+
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -111,7 +114,7 @@ class NField : public ASTNode {
 public:
     ACCEPT
     const std::string name;
-    const NType type;
+    NType type;
 
     NField(const NType& type, const std::string& name)
     : type(type), name(name)
@@ -422,7 +425,7 @@ public:
 class NFunctionPrototype : public ASTNode {
 public:
     ACCEPT
-    const NType returnType;
+    NType returnType;
     const std::string name;
     std::vector<NArgument*> arguments;
     const bool isVarg;
@@ -479,3 +482,5 @@ public:
     NCompileUnit() {}
 
 };
+
+#endif /* SNODE_H_ */

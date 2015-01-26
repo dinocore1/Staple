@@ -61,9 +61,7 @@ public:
 
 };
 
-static Type* getBaseType(const std::string& name, const CodeGenContext& ctx);
-
-
+#define getLLVMType(val) context.ctx.typeTable[val]->type
 
 void Error(const char* str)
 {
@@ -72,18 +70,18 @@ void Error(const char* str)
 
 class ForwardDeclareFunctionVisitor : public ASTVisitor {
 public:
-	const CodeGenContext* context;
+	const CodeGenContext& context;
 	ForwardDeclareFunctionVisitor(const CodeGenContext* context)
-	: context(context) {}
+	: context(*context) {}
 
 	virtual void visit(NFunction* fun) {
 
 		vector<Type*> argTypes;
 		for (std::vector<NArgument*>::const_iterator it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
-			argTypes.push_back((**it).type.getLLVMType(*context));
+			argTypes.push_back(getLLVMType(*it));
 		}
-		FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(*context), argTypes, fun->isVarg);
-		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context->module);
+		FunctionType *ftype = FunctionType::get(getLLVMType(&fun->returnType), argTypes, fun->isVarg);
+		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context.module);
 
 	}
 
@@ -98,28 +96,17 @@ public:
         //argTypes.push_back(PointerType::getUnqual(getBaseType(fun->classType->name, *context)));
         //argTypes.push_back(PointerType::getUnqual(fun->classType->type));
         for (it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
-            argTypes.push_back((**it).type.getLLVMType(*context));
+            //argTypes.push_back((**it).type.getLLVMType(*context));
+            argTypes.push_back(getLLVMType(*it));
         }
-        FunctionType *ftype = FunctionType::get(fun->returnType.getLLVMType(*context), argTypes, fun->isVarg);
+        FunctionType *ftype = FunctionType::get(getLLVMType(&fun->returnType), argTypes, fun->isVarg);
 
         char funName[512];
         snprintf(funName, 512, "%s_%s", fun->classType->name.c_str(), fun->name.c_str());
-        fun->llvmFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context->module);
+        fun->llvmFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context.module);
 
     }
 };
-
-NClassDeclaration* CodeGenContext::getClass(const std::string &name) const {
-	NClassDeclaration* retval = NULL;
-	std::vector<NClassDeclaration*>::iterator it;
-	for(it = compileUnitRoot->classes.begin(); it != compileUnitRoot->classes.end(); it++){
-		if((*it)->name.compare(name) == 0){
-			retval = *it;
-			break;
-		}
-	}
-	return retval;
-}
 
 /* Compile the AST into a module */
 void CodeGenContext::generateCode(NCompileUnit& root)
@@ -179,50 +166,6 @@ NType* NType::GetArrayType(const std::string& name, int size)
 }
 
 
-static Type* getBaseType(const std::string& name, const CodeGenContext& ctx)
-{
-	Type* retval = NULL;
-	if(name.compare("void") == 0) {
-		retval = Type::getVoidTy(getGlobalContext());
-	} else if(name.compare("int") == 0){
-		retval = Type::getInt32Ty(getGlobalContext());
-	} else if(name.compare(0, 3, "int") == 0) {
-		int width = atoi(name.substr(3).c_str());
-		retval = Type::getIntNTy(getGlobalContext(), width);
-	} else if(name.compare(0, 4, "uint") == 0) {
-		int width = atoi(name.substr(4).c_str());
-		retval = Type::getIntNTy(getGlobalContext(), width);
-	} else if(name.compare("float") == 0) {
-		retval = Type::getFloatTy(getGlobalContext());
-	} else if(name.compare("bool") == 0) {
-		retval = Type::getInt1Ty(getGlobalContext());
-	} else {
-		//class type
-		NClassDeclaration* classDecl = ctx.getClass(name);
-		if(classDecl != NULL) {
-			retval = classDecl->getLLVMType(ctx);
-		}
-	}
-
-	return retval;
-}
-
-Type* NType::getLLVMType(const CodeGenContext &context) const
-{
-	Type* retval = getBaseType(name, context);
-	if(isArray) {
-		retval = ArrayType::get(retval, size);
-	} else {
-		for(int i=0;i<numPointers;i++) {
-			retval = PointerType::getUnqual(retval);
-		}
-	}
-
-	return retval;
-}
-
-
-
 /* -- Code Generation -- */
 
 Value* NFunctionPrototype::codeGen(CodeGenContext &context)
@@ -231,9 +174,10 @@ Value* NFunctionPrototype::codeGen(CodeGenContext &context)
 	std::vector<Type*> argTypes;
 	std::vector<NArgument*>::iterator it;
 	for (it = arguments.begin(); it != arguments.end(); it++) {
-		argTypes.push_back((**it).type.getLLVMType(context));
+        Type* argType = getLLVMType(*it);
+		argTypes.push_back(argType);
 	}
-	FunctionType *ftype = FunctionType::get(returnType.getLLVMType(context), argTypes, isVarg);
+	FunctionType *ftype = FunctionType::get(context.ctx.typeTable[&returnType]->type, argTypes, isVarg);
 
 	Function *function = Function::Create(ftype, GlobalValue::ExternalLinkage, name.c_str(), context.module);
 
@@ -406,7 +350,7 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	AllocaInst *alloc = context.Builder.CreateAlloca(type->getLLVMType(context), 0, name.c_str());
+	AllocaInst *alloc = context.Builder.CreateAlloca(getLLVMType(this), 0, name.c_str());
 	context.defineSymbol(name, alloc);
 	if (assignmentExpr != NULL) {
 		NAssignment assn(new NIdentifier(name), assignmentExpr);
@@ -437,7 +381,7 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	Function::arg_iterator AI = llvmFunction->arg_begin();
 	for(size_t i=0,e=llvmFunction->arg_size();i!=e;++i,++AI){
 		NArgument* arg = arguments[i];
-		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(context), arg->name);
+		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, getLLVMType(arg), arg->name);
 		context.defineSymbol(arg->name, alloc);
 		context.Builder.CreateStore(AI, alloc);
 	}
@@ -470,7 +414,7 @@ Value* NMethodFunction::codeGen(CodeGenContext &context) {
     Function::arg_iterator AI = llvmFunction->arg_begin();
     for(size_t i=1,e=llvmFunction->arg_size();i!=e;++i,++AI){
         NArgument* arg = arguments[i];
-        AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, arg->type.getLLVMType(context), arg->name);
+        AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, getLLVMType(arg), arg->name);
         context.defineSymbol(arg->name, alloc);
         context.Builder.CreateStore(AI, alloc);
     }
@@ -543,8 +487,7 @@ Function* getMalloc(CodeGenContext& context) {
 
 Value* NSizeOf::codeGen(CodeGenContext &context)
 {
-	NClassDeclaration* classDeclaration = context.getClass(id);
-	Type* type = classDeclaration->getLLVMType(context);
+    Type* type = context.ctx.typeTable[this]->type;
 
 	PointerType* pointerType = PointerType::getUnqual(type);
 	Value* ptr = ConstantPointerNull::get(pointerType);
@@ -557,8 +500,7 @@ Value* NSizeOf::codeGen(CodeGenContext &context)
 
 Value* NNew::codeGen(CodeGenContext& context)
 {
-	NClassDeclaration* classDeclaration = context.getClass(id);
-	Type* type = classDeclaration->getLLVMType(context);
+    Type* type = context.ctx.typeTable[this]->type;
 
 	PointerType* pointerType = PointerType::getUnqual(type);
 

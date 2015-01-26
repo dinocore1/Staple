@@ -1,9 +1,11 @@
 #include <cstdio>
 #include <iostream>
-#include "codegen.h"
 
+#include "compilercontext.h"
+#include "codegen.h"
 #include "node.h"
 #include "sempass.h"
+
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -58,20 +60,20 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    const char* inputfile = parse.nonOption(0);
-    const char* outputfile;
+    CompilerContext context;
+    context.inputFilename = parse.nonOption(0);
+
     if(options[OUTPUT]) {
-        outputfile = options[OUTPUT].name;
+        context.outputFilename = options[OUTPUT].name;
     } else {
-        outputfile = "output.ll";
+        context.outputFilename = "output.ll";
     }
 
     yydebug = 1;
 
-    filename = (char *) inputfile;
-    FILE *myfile = fopen(inputfile, "r");
+    FILE *myfile = fopen(context.inputFilename.c_str(), "r");
     if (!myfile) {
-        fprintf(stderr, "cannot open file: %s", inputfile);
+        fprintf(stderr, "cannot open file: %s", context.inputFilename.c_str());
         return -1;
     }
     // set lex to read from it instead of defaulting to STDIN:
@@ -82,18 +84,18 @@ int main(int argc, char **argv)
         yyparse();
     } while (!feof(yyin));
 
-    SemPass semPass;
+    SemPass semPass(context);
     semPass.doSemPass(*compileUnit);
 
     if(semPass.hasErrors()) {
         exit(1);
     }
 
-    CodeGenContext codeGen(inputfile);
+    CodeGenContext codeGen(context);
     codeGen.generateCode(*compileUnit);
 
     std::error_code errorCode;
-    raw_fd_ostream output(outputfile, errorCode, sys::fs::OpenFlags::F_None);
+    raw_fd_ostream output(context.outputFilename.c_str(), errorCode, sys::fs::OpenFlags::F_None);
 
     codeGen.module->print(output, NULL);
 
