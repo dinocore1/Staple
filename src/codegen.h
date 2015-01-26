@@ -35,9 +35,12 @@ public:
     }
 };
 
+class ILClassType;
+
 class CodeGenContext {
     CodeGenBlock* top;
     NCompileUnit* compileUnitRoot;
+    std::map<std::string, ILClassType*> classType;
 
 public:
     Module *module;
@@ -72,6 +75,7 @@ public:
     void defineSymbol(const std::string& name, Value* value) {
         top->locals[name] = value;
     }
+    Constant* getClassTypeConstant(const std::string& name);
     NClassDeclaration* getClass(const std::string& name) const;
     void pushBlock(BasicBlock *block) {
         CodeGenBlock* newBlock = new CodeGenBlock(top, block);

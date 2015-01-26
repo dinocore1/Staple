@@ -1,19 +1,21 @@
-void bar() {
-  printf("in bar");
-}
-
 
 int main(int argc, uint8** argv) {
-  Foo rad;
-  bar();
+  Foo* foo1 = new Foo;
+  foo1.rad = 3;
+  printf("foo1.rad = %d", foo1.rad);
+  printf("foo1.calc() = %d", foo1.calc());
   return 0;
 }
 
-class Foo {
-  int num;
-  int[10] q;
-}
 
+class Foo {
+  int myInt;
+  int rad;
+
+  int calc() {
+    return 5;
+  }
+}
 
 extern int printf(uint8*, ...)
 extern int atoi(uint8*)

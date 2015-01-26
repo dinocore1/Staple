@@ -4,6 +4,67 @@
 
 using namespace std;
 
+class ILClassType {
+private:
+    StructType* objStruct;
+    StructType* runtimeStructType;
+    Constant* runtimeDef;
+
+public:
+    const SClassType* sClassType;
+
+
+    ILClassType(SClassType* classType)
+    : objStruct(NULL),
+      runtimeDef(NULL),
+      sClassType(classType) {
+
+    }
+
+    StructType* getRuntimeStructType() {
+        if(runtimeStructType == NULL) {
+            std::vector<Type*> types;
+
+            //classname
+            types.push_back(PointerType::getInt8PtrTy(getGlobalContext()));
+
+            //parent runtime struct ptr
+            types.push_back(PointerType::getInt8PtrTy(getGlobalContext()));
+
+            //vtable
+            for(auto it=sClassType->methods.begin();it!=sClassType->methods.end();it++) {
+                types.push_back(PointerType::getUnqual((*it).second->type));
+            }
+
+            char funName[512];
+            snprintf(funName, 512, "%s_class", sClassType->name.c_str());
+
+            runtimeStructType = StructType::create(types, funName);
+
+        }
+        return runtimeStructType;
+    }
+
+    StructType* getObjStructType() {
+        if (objStruct == NULL) {
+            std::vector<Type *> typeFields;
+
+            typeFields.push_back(PointerType::getUnqual(getRuntimeStructType()));
+
+            for (auto it=sClassType->fields.begin();it!=sClassType->fields.end();it++) {
+                typeFields.push_back((*it).second->type);
+            }
+            objStruct = StructType::create(typeFields, sClassType->name.c_str());
+        }
+        return objStruct;
+    }
+
+};
+
+static Type* getBaseType(const std::string& name, const CodeGenContext& ctx);
+
+
+
 void Error(const char* str)
 {
 	fprintf(stderr, "Error: %s\n", str);
@@ -30,7 +91,12 @@ public:
         std::vector<Type*> argTypes;
         std::vector<NArgument*>::iterator it;
         //add 'this' as first argument
-        argTypes.push_back(PointerType::getUnqual(fun->classType->type));
+
+        ILClassType classType(fun->classType);
+
+        argTypes.push_back(PointerType::getUnqual(classType.getObjStructType()));
+        //argTypes.push_back(PointerType::getUnqual(getBaseType(fun->classType->name, *context)));
+        //argTypes.push_back(PointerType::getUnqual(fun->classType->type));
         for (it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
             argTypes.push_back((**it).type.getLLVMType(*context));
         }
@@ -70,6 +136,8 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 	}
 
     for(auto it = root.classes.begin(); it != root.classes.end(); it++) {
+
+        
         for(auto function : (*it)->functions){
             globalfuncdec.visit(function);
         }
