@@ -42,7 +42,6 @@ class ILClassType;
 class CodeGenContext {
     CodeGenBlock* top;
     NCompileUnit* compileUnitRoot;
-    std::map<std::string, ILClassType*> classTypes;
 
 public:
     CompilerContext& ctx;

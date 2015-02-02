@@ -41,6 +41,12 @@ static void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
     }
 }
 
+SClassType::SClassType(const std::string &name)
+: name(name) {
+    type = NULL;
+
+}
+
 SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, SType*>> fields,
         std::vector<std::pair<std::string, SFunctionType*>> methods)
 : parent(parent)
@@ -51,10 +57,41 @@ SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, ST
 }
 
 void SClassType::createLLVMClass() {
-    std::vector<llvm::Type*> elements;
-    loadFields(this, elements);
+    if(type == NULL) {
+        std::vector<llvm::Type *> elements;
 
-    type = llvm::StructType::get(llvm::getGlobalContext(), elements);
+        //set the 'class' field as the first field
+        elements.push_back(llvm::PointerType::getUnqual(getRuntimeStructType()));
+
+        loadFields(this, elements);
+
+        type = llvm::StructType::create(elements, name.c_str());
+
+    }
+}
+
+llvm::StructType* SClassType::getRuntimeStructType() {
+    if(runtimeStructType == NULL) {
+        std::vector<llvm::Type*> types;
+
+        //classname
+        types.push_back(llvm::PointerType::getInt8PtrTy(llvm::getGlobalContext()));
+
+        //parent runtime struct ptr
+        types.push_back(llvm::PointerType::getInt8PtrTy(llvm::getGlobalContext()));
+
+        //vtable
+        for(auto it=methods.begin();it!=methods.end();it++) {
+            types.push_back(llvm::PointerType::getUnqual((*it).second->type));
+        }
+
+        char funName[512];
+        snprintf(funName, 512, "%s_class", name.c_str());
+
+        runtimeStructType = llvm::StructType::create(types, funName);
+
+    }
+    return runtimeStructType;
 }
 
 static bool getClassFieldIndex(SClassType* classType, const std::string& name, int& index)

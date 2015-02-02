@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <iostream>
+#include <system_error>
 
 #include "compilercontext.h"
 #include "codegen.h"
@@ -94,7 +95,7 @@ int main(int argc, char **argv)
     CodeGenContext codeGen(context);
     codeGen.generateCode(*compileUnit);
 
-    std::error_code errorCode;
+    std::string errorCode;
     raw_fd_ostream output(context.outputFilename.c_str(), errorCode, sys::fs::OpenFlags::F_None);
 
     codeGen.module->print(output, NULL);

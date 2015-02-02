@@ -23,14 +23,15 @@ public:
 };
 
 class SClassType : public SType {
+    llvm::StructType* runtimeStructType;
+
 public:
     std::string name;
     SClassType* parent;
     std::vector<std::pair<std::string, SType*>> fields;
     std::vector<std::pair<std::string, SFunctionType*>> methods;
 
-    SClassType() {}
-    SClassType(const std::string& name) : name(name) {}
+    SClassType(const std::string& name);
 
     SClassType(SClassType* parent,
             std::vector<std::pair<std::string, SType*>> fields,
@@ -44,6 +45,7 @@ public:
     int getMethodIndex(const std::string& name);
 
     void createLLVMClass();
+    llvm::StructType* getRuntimeStructType();
 
     SFunctionType* getMethod(std::string name);
 };

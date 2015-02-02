@@ -1,3 +1,5 @@
+#include <cstdarg>
+
 #include "node.h"
 #include "codegen.h"
 #include "type.h"
@@ -394,7 +396,7 @@ if(type == NULL) { \
             if(index < 0) {
                 sempass->logError(memberAccess->location, "class '%s' does not have field: '%s'", classType->name.c_str(), memberAccess->field.c_str());
             } else {
-                memberAccess->fieldIndex = index;
+                memberAccess->fieldIndex = index + 1;
                 sempass->ctx.typeTable[memberAccess] = classType->fields[index].second;
             }
         }

@@ -295,8 +295,8 @@ arrayindex
 
 base
         : ident { $$ = new NLoad($1); }
-        | base TAT arrayindex { $$ = new NArrayElementPtr($1, $3); }
-        | base TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
+        | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
+        | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; }
         | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }
         ;
 
