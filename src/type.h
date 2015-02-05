@@ -5,6 +5,9 @@
 #include <utility>
 
 class SFunctionType;
+class SMethodType;
+
+llvm::StructType* getStapleRuntimeClassStruct();
 
 class SType {
 private:
@@ -29,13 +32,13 @@ public:
     std::string name;
     SClassType* parent;
     std::vector<std::pair<std::string, SType*>> fields;
-    std::vector<std::pair<std::string, SFunctionType*>> methods;
+    std::vector<std::pair<std::string, SMethodType*>> methods;
 
     SClassType(const std::string& name);
 
     SClassType(SClassType* parent,
             std::vector<std::pair<std::string, SType*>> fields,
-            std::vector<std::pair<std::string, SFunctionType*>> methods
+            std::vector<std::pair<std::string, SMethodType*>> methods
     );
 
     virtual bool isClassTy() { return true; };
@@ -66,6 +69,7 @@ class SFunctionType : public SType {
 public:
     SType *returnType;
     std::vector<SType *> arguments;
+    bool isValArgs;
 
     SFunctionType(SType* retrunType, std::vector<SType *> args, bool isValArgs);
 
@@ -74,11 +78,19 @@ public:
     virtual bool isAssignable(SType *dest);
 };
 
+class SMethodType : public SFunctionType {
+public:
+    SClassType* classType;
+
+    SMethodType(SClassType *classType, SType *returnType, std::vector<SType *> args, bool const isVarg);
+
+};
+
 
 class SArrayType : public SType {
 public:
     SType *elementType;
-    unsigned int size;
+    uint64_t size;
 
     virtual bool isAssignable(SType *dest);
 

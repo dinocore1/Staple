@@ -94,7 +94,7 @@ if(type == NULL) { \
     positive \
 }
 
-    SFunctionType* getFunctionType(NMethodFunction* methodFunction) {
+    SMethodType* getMethodType(SClassType* classType, NMethodFunction *methodFunction) {
 
         std::vector<SType*> args;
 
@@ -108,7 +108,7 @@ if(type == NULL) { \
         SType* returnType = getType(&methodFunction->returnType);
         CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
 
-        SFunctionType* retval = new SFunctionType(returnType, args, methodFunction->isVarg);
+        SMethodType* retval = new SMethodType(classType, returnType, args, methodFunction->isVarg);
 
         return retval;
     }
@@ -181,7 +181,7 @@ if(type == NULL) { \
             }
 
             for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
-                SFunctionType* functionType = getFunctionType(*method);
+                SMethodType* functionType = getMethodType(currentClass, *method);
                 currentClass->methods.push_back(make_pair((*method)->name, functionType));
                 (*method)->classType = currentClass;
             }

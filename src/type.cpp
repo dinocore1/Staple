@@ -1,6 +1,23 @@
 #include <llvm/IR/LLVMContext.h>
 #include "type.h"
 
+llvm::StructType* sStapleRuntimeClassStruct = NULL;
+
+llvm::StructType* getStapleRuntimeClassStruct()
+{
+    if(sStapleRuntimeClassStruct == NULL) {
+        sStapleRuntimeClassStruct = llvm::StructType::create(llvm::getGlobalContext(), "class_pre");
+
+        std::vector<llvm::Type*> elements;
+        elements.push_back(llvm::Type::getInt8PtrTy(llvm::getGlobalContext()));
+        elements.push_back(llvm::PointerType::getUnqual(sStapleRuntimeClassStruct));
+
+        sStapleRuntimeClassStruct->setBody(elements);
+    }
+
+    return sStapleRuntimeClassStruct;
+}
+
 SType* SType::get(llvm::Type *type) {
     if(type->isPointerTy()){
         SPointerType* retval = SPointerType::get(SType::get(type->getPointerElementType()));
@@ -42,13 +59,12 @@ static void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 }
 
 SClassType::SClassType(const std::string &name)
-: name(name) {
-    type = NULL;
-
+: name(name), parent(NULL) {
+    type = llvm::StructType::create(llvm::getGlobalContext(), name.c_str());
 }
 
 SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, SType*>> fields,
-        std::vector<std::pair<std::string, SFunctionType*>> methods)
+        std::vector<std::pair<std::string, SMethodType*>> methods)
 : parent(parent)
 , fields(fields)
 , methods(methods) {
@@ -57,28 +73,20 @@ SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, ST
 }
 
 void SClassType::createLLVMClass() {
-    if(type == NULL) {
-        std::vector<llvm::Type *> elements;
+    std::vector<llvm::Type *> elements;
 
-        //set the 'class' field as the first field
-        elements.push_back(llvm::PointerType::getUnqual(getRuntimeStructType()));
+    //set the 'class' field as the first field
+    elements.push_back(llvm::PointerType::getUnqual(getRuntimeStructType()));
+    loadFields(this, elements);
 
-        loadFields(this, elements);
-
-        type = llvm::StructType::create(elements, name.c_str());
-
-    }
+    ((llvm::StructType*)type)->setBody(elements);
 }
 
 llvm::StructType* SClassType::getRuntimeStructType() {
     if(runtimeStructType == NULL) {
         std::vector<llvm::Type*> types;
 
-        //classname
-        types.push_back(llvm::PointerType::getInt8PtrTy(llvm::getGlobalContext()));
-
-        //parent runtime struct ptr
-        types.push_back(llvm::PointerType::getInt8PtrTy(llvm::getGlobalContext()));
+        types.push_back(getStapleRuntimeClassStruct());
 
         //vtable
         for(auto it=methods.begin();it!=methods.end();it++) {
@@ -163,7 +171,8 @@ bool SClassType::isAssignable(SType *dest) {
 
 SFunctionType::SFunctionType(SType* retrunType, std::vector<SType *> args, bool isValArgs)
 : returnType(retrunType)
-, arguments(args) {
+, arguments(args)
+, isValArgs(isValArgs) {
     std::vector<llvm::Type*> llvmArgs(args.size());
     for(std::vector<SType*>::iterator it = args.begin();it != args.end();it++){
         llvmArgs.push_back((*it)->type);
@@ -173,6 +182,22 @@ SFunctionType::SFunctionType(SType* retrunType, std::vector<SType *> args, bool 
 }
 
 bool SFunctionType::isAssignable(SType *dest) {
+}
+
+SMethodType::SMethodType(SClassType* classType, SType* retrunType, std::vector<SType *> args, bool const isValArgs)
+        : SFunctionType(retrunType, args, isValArgs)
+        , classType(classType){
+
+    std::vector<llvm::Type*> llvmArgs;
+
+    //first argument is 'this'
+    llvmArgs.push_back(llvm::PointerType::getUnqual(classType->type));
+
+    for(std::vector<SType*>::iterator it = arguments.begin();it != arguments.end();it++){
+        llvmArgs.push_back((*it)->type);
+    }
+
+    type = llvm::FunctionType::get(returnType->type, llvmArgs, isValArgs);
 }
 
 bool SArrayType::isAssignable(SType *dest) {

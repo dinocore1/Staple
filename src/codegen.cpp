@@ -174,9 +174,14 @@ Value* NMethodCall::codeGen(CodeGenContext &context)
     std::vector<Value*> indecies;
     indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
     indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), methodIndex, false));
+    Value* classObj = context.Builder.CreateGEP(baseVal, indecies);
+    classObj = context.Builder.CreateLoad(classObj);
 
-    //Value* functionPtr = context.Builder.CreateGEP(baseVal, indecies);
+    indecies.clear();
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), methodIndex+1, false));
+    Value* functionPtr = context.Builder.CreateGEP(classObj, indecies);
+    functionPtr = context.Builder.CreateLoad(functionPtr);
 
     std::vector<Value*> args;
     ExpressionList::const_iterator it;
@@ -188,12 +193,12 @@ Value* NMethodCall::codeGen(CodeGenContext &context)
     }
 
 
-    char funName[512];
-    snprintf(funName, 512, "%s_%s", classType->name.c_str(), name.c_str());
-    Function *function = context.module->getFunction(funName);
+    //char funName[512];
+    //snprintf(funName, 512, "%s_%s", classType->name.c_str(), name.c_str());
+    //Function *function = context.module->getFunction(funName);
+    //return context.Builder.CreateCall(function, args);
 
-
-    return context.Builder.CreateCall(function, args);
+    return context.Builder.CreateCall(functionPtr, args);
 }
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
