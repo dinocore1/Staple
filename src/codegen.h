@@ -48,6 +48,8 @@ public:
     Module *module;
     FunctionPassManager *fpm;
     IRBuilder<> Builder;
+    std::map<SClassType*, Constant*> classRuntimeStruct;
+
     CodeGenContext(CompilerContext& ctx)
     : ctx(ctx), top(NULL), Builder(getGlobalContext())
     {

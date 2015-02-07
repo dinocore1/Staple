@@ -122,6 +122,7 @@ if(type == NULL) { \
         for(vector<NClassDeclaration*>::iterator it = compileUnit->classes.begin();it != compileUnit->classes.end();it++){
             NClassDeclaration* classDeclaration = *it;
             SClassType* classType = new SClassType(classDeclaration->name);
+            sempass->ctx.typeTable[classDeclaration] = classType;
             define(classDeclaration->name, classType);
             sempass->ctx.defineClass(classType);
         }

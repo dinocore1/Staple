@@ -25,28 +25,67 @@ public:
 		}
 		FunctionType *ftype = FunctionType::get(getLLVMType(&fun->returnType), argTypes, fun->isVarg);
 		fun->llvmFunction = Function::Create(ftype, fun->linkage, fun->name.c_str(), context.module);
-
 	}
+
+};
+
+class ClassVisitor : public ASTVisitor {
+public:
+    CodeGenContext& context;
+
+    vector<Constant*> constants;
+    GlobalVariable *mRuntimeObj;
+
+    ClassVisitor(CodeGenContext* context)
+    : context(*context) {}
+
+    virtual void visit(NClassDeclaration* classDecl) {
+
+        SClassType* sClassType = (SClassType*) context.ctx.typeTable[classDecl];
+
+        Constant* className = ConstantDataArray::getString(getGlobalContext(), classDecl->name.c_str());
+        GlobalVariable* classNameVar = new GlobalVariable(*context.module, className->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, className);
+
+        Constant* classPre = ConstantStruct::get(getStapleRuntimeClassStruct(),
+                ConstantExpr::getBitCast(classNameVar, Type::getInt8PtrTy(getGlobalContext())),
+                ConstantPointerNull::get((PointerType *) getStapleRuntimeClassStruct()->getStructElementType(1)),
+                NULL);
+
+        constants.push_back(classPre);
+        for(auto method : classDecl->functions){
+            method->accept(this);
+        }
+
+
+        Constant *constantStruct = ConstantStruct::get(sClassType->getRuntimeStructType(), constants);
+
+        mRuntimeObj = new GlobalVariable(*context.module, constantStruct->getType(),
+                true, GlobalValue::LinkageTypes::PrivateLinkage, constantStruct);
+
+        context.classRuntimeStruct[sClassType] = mRuntimeObj;
+
+    }
 
     virtual void visit(NMethodFunction* fun) {
         std::vector<Type*> argTypes;
         std::vector<NArgument*>::iterator it;
         //add 'this' as first argument
-
         argTypes.push_back(PointerType::getUnqual(fun->classType->type));
-        //argTypes.push_back(PointerType::getUnqual(getBaseType(fun->classType->name, *context)));
-        //argTypes.push_back(PointerType::getUnqual(fun->classType->type));
         for (it = fun->arguments.begin(); it != fun->arguments.end(); it++) {
-            //argTypes.push_back((**it).type.getLLVMType(*context));
             argTypes.push_back(getLLVMType(*it));
         }
         FunctionType *ftype = FunctionType::get(getLLVMType(&fun->returnType), argTypes, fun->isVarg);
 
         char funName[512];
         snprintf(funName, 512, "%s_%s", fun->classType->name.c_str(), fun->name.c_str());
-        fun->llvmFunction = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context.module);
 
+        Function* functionType = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context.module);
+        fun->llvmFunction = functionType;
+
+        constants.push_back(functionType);
     }
+
+
 };
 
 /* Compile the AST into a module */
@@ -58,17 +97,14 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 		(*it)->codeGen(*this);
 	}
 
-	ForwardDeclareFunctionVisitor globalfuncdec(this);
 	for (std::vector<NFunction*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
+        ForwardDeclareFunctionVisitor globalfuncdec(this);
 		globalfuncdec.visit(*it);
 	}
 
-    for(auto it = root.classes.begin(); it != root.classes.end(); it++) {
-
-        
-        for(auto function : (*it)->functions){
-            globalfuncdec.visit(function);
-        }
+    for(auto classObj : root.classes) {
+        ClassVisitor classVisitor(this);
+        classVisitor.visit(classObj);
     }
 
 	for (std::vector<NFunction*>::iterator it = root.functions.begin(); it != root.functions.end(); it++) {
@@ -76,11 +112,12 @@ void CodeGenContext::generateCode(NCompileUnit& root)
 	}
 
 
-    for(auto it = root.classes.begin(); it != root.classes.end(); it++) {
-        for(auto function : (*it)->functions){
+    for(auto classObj : root.classes) {
+        for (auto function : classObj->functions) {
             function->codeGen(*this);
         }
     }
+
 
 	/* Print the bytecode in a human-readable format 
 	   to see if our program compiled properly
@@ -465,5 +502,19 @@ Value* NNew::codeGen(CodeGenContext& context)
 	Value* retval = context.Builder.CreateCall(malloc, args);
 
 	retval = context.Builder.CreatePointerCast(retval, pointerType);
+
+
+
+
+    std::vector<Value*> indecies;
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+
+    Value* classPtrVal = context.Builder.CreateGEP(retval, indecies);
+
+    Constant* constantStruct = context.classRuntimeStruct[classType];
+
+    context.Builder.CreateStore(constantStruct, classPtrVal);
+
 	return retval;
 }
