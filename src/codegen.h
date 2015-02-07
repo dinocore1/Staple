@@ -13,20 +13,21 @@ using namespace llvm;
 
 class NCompileUnit;
 class NClassDeclaration;
+class SymbolLookup;
 
 class CodeGenBlock {
 public:
     CodeGenBlock* parent;
     BasicBlock *block;
-    std::map<std::string, Value*> locals;
+    std::map<std::string, SymbolLookup*> locals;
 
     CodeGenBlock(CodeGenBlock* parent, BasicBlock* block)
     : parent(parent), block(block) {}
 
-    Value* getSymbol(const std::string& name) {
-        Value* retval = NULL;
+    SymbolLookup* getSymbol(const std::string& name) {
+        SymbolLookup* retval = NULL;
 
-        std::map<std::string, Value*>::iterator it;
+        std::map<std::string, SymbolLookup*>::iterator it;
         if((it = locals.find(name)) != locals.end()) {
             retval = it->second;
         } else if(parent != NULL) {
@@ -73,10 +74,10 @@ public:
     }
     
     void generateCode(NCompileUnit& root);
-    Value* getSymbol(const std::string& name) {
+    SymbolLookup* getSymbol(const std::string& name) {
         return top->getSymbol(name);
     }
-    void defineSymbol(const std::string& name, Value* value) {
+    void defineSymbol(const std::string& name, SymbolLookup* value) {
         top->locals[name] = value;
     }
 

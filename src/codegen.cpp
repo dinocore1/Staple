@@ -11,6 +11,54 @@ void Error(const char* str)
 	fprintf(stderr, "Error: %s\n", str);
 }
 
+class SymbolLookup {
+public:
+    virtual Value* getValue(CodeGenContext& context) = 0;
+};
+
+class LocalVarLookup : public SymbolLookup {
+private:
+    Value* value;
+
+public:
+
+    static LocalVarLookup* get(Value* value) {
+        LocalVarLookup* retval = new LocalVarLookup();
+        retval->value = value;
+        return retval;
+    }
+
+    virtual Value* getValue(CodeGenContext& context) {
+        return value;
+    }
+};
+
+class FieldLookup : public SymbolLookup {
+private:
+    Value* thisPtr;
+    int fieldIndex;
+
+public:
+
+    static FieldLookup* get(Value* thisPtr, int fieldIndex) {
+        FieldLookup* retval = new FieldLookup();
+        retval->thisPtr = thisPtr;
+        retval->fieldIndex = fieldIndex;
+        return retval;
+    }
+
+    virtual Value* getValue(CodeGenContext& context) {
+
+        Value* thisValue = context.Builder.CreateLoad(thisPtr);
+
+        std::vector<Value*> indecies;
+        indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+        indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), fieldIndex+1, false));
+
+        return context.Builder.CreateGEP(thisValue, indecies);
+    }
+};
+
 class ForwardDeclareFunctionVisitor : public ASTVisitor {
 public:
 	CodeGenContext& context;
@@ -181,7 +229,7 @@ Value* NStringLiteral::codeGen(CodeGenContext& context)
 
 Value* NIdentifier::codeGen(CodeGenContext& context)
 {
-	Value* v = context.getSymbol(name);
+	Value* v = context.getSymbol(name)->getValue(context);
 	if (v == NULL) {
 		std::cerr << "undeclared variable " << name << std::endl;
 		return NULL;
@@ -334,7 +382,7 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
 	AllocaInst *alloc = context.Builder.CreateAlloca(getLLVMType(this), 0, name.c_str());
-	context.defineSymbol(name, alloc);
+	context.defineSymbol(name, LocalVarLookup::get(alloc));
 	if (assignmentExpr != NULL) {
 		NAssignment assn(new NIdentifier(name), assignmentExpr);
 		assn.codeGen(context);
@@ -365,7 +413,7 @@ Value* NFunction::codeGen(CodeGenContext& context)
 	for(size_t i=0,e=llvmFunction->arg_size();i!=e;++i,++AI){
 		NArgument* arg = arguments[i];
 		AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, getLLVMType(arg), arg->name);
-		context.defineSymbol(arg->name, alloc);
+		context.defineSymbol(arg->name, LocalVarLookup::get(alloc));
 		context.Builder.CreateStore(AI, alloc);
 	}
 	
@@ -388,17 +436,25 @@ Value* NMethodFunction::codeGen(CodeGenContext &context) {
     context.pushBlock(bblock);
     context.Builder.SetInsertPoint(bblock);
 
+
+    Value* thisValue;
     {
         AllocaInst *alloc = CreateEntryBlockAlloca(llvmFunction, PointerType::getUnqual(this->classType->type), "this");
-        context.defineSymbol("this", alloc);
+        context.defineSymbol("this", LocalVarLookup::get(alloc));
         context.Builder.CreateStore(llvmFunction->arg_begin(), alloc);
+        thisValue = alloc;
+    }
+
+    for(auto fieldEntry : classType->fields) {
+        int fieldIndex = classType->getFieldIndex(fieldEntry.first);
+        context.defineSymbol(fieldEntry.first, FieldLookup::get(thisValue, fieldIndex));
     }
 
     Function::arg_iterator AI = llvmFunction->arg_begin();
     for(size_t i=1,e=llvmFunction->arg_size();i!=e;++i,++AI){
         NArgument* arg = arguments[i];
         AllocaInst* alloc = CreateEntryBlockAlloca(llvmFunction, getLLVMType(arg), arg->name);
-        context.defineSymbol(arg->name, alloc);
+        context.defineSymbol(arg->name, LocalVarLookup::get(alloc));
         context.Builder.CreateStore(AI, alloc);
     }
 
