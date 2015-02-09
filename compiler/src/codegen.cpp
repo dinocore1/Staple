@@ -1,8 +1,21 @@
 #include "node.h"
 #include "codegen.h"
 #include "type.h"
+#include "codegen/objecthelper.hpp"
 
 using namespace std;
+
+StructType* ObjectHelper::sStapleRuntimeClassStruct = NULL;
+
+void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
+{
+    if(classObj->parent != NULL){
+        loadFields(classObj->parent, elements);
+    }
+    for(auto field : classObj->fields){
+        elements.push_back(field.second->type);
+    }
+}
 
 #define getLLVMType(val) context.ctx.typeTable[val]->type
 
@@ -59,6 +72,8 @@ public:
     }
 };
 
+
+
 class ForwardDeclareFunctionVisitor : public ASTVisitor {
 public:
 	CodeGenContext& context;
@@ -78,39 +93,35 @@ public:
 };
 
 class ClassVisitor : public ASTVisitor {
+private:
+    ObjectHelper* mObjHelper;
 public:
     CodeGenContext& context;
 
-    vector<Constant*> constants;
-    GlobalVariable *mRuntimeObj;
-
     ClassVisitor(CodeGenContext* context)
-    : context(*context) {}
+    : context(*context)
+    , mObjHelper(NULL) {}
+
 
     virtual void visit(NClassDeclaration* classDecl) {
 
-        SClassType* sClassType = (SClassType*) context.ctx.typeTable[classDecl];
+        SClassType* classType = (SClassType*) context.ctx.typeTable[classDecl];
+        mObjHelper = new ObjectHelper(classType);
+        context.mClassObjMap[classType] = mObjHelper;
 
-        Constant* className = ConstantDataArray::getString(getGlobalContext(), classDecl->name.c_str());
-        GlobalVariable* classNameVar = new GlobalVariable(*context.module, className->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, className);
 
-        Constant* classPre = ConstantStruct::get(getStapleRuntimeClassStruct(),
-                ConstantExpr::getBitCast(classNameVar, Type::getInt8PtrTy(getGlobalContext())),
-                ConstantPointerNull::get((PointerType *) getStapleRuntimeClassStruct()->getStructElementType(1)),
-                NULL);
-
-        constants.push_back(classPre);
         for(auto method : classDecl->functions){
             method->accept(this);
         }
 
+        //init the full object type
+        mObjHelper->getObjectType();
 
-        Constant *constantStruct = ConstantStruct::get(sClassType->getRuntimeStructType(), constants);
+        //output class class object definition
+        mObjHelper->getClassDef(context);
 
-        mRuntimeObj = new GlobalVariable(*context.module, constantStruct->getType(),
-                true, GlobalValue::LinkageTypes::PrivateLinkage, constantStruct);
-
-        context.classRuntimeStruct[sClassType] = mRuntimeObj;
+        //output the init function
+        mObjHelper->getInitFunction(context);
 
     }
 
@@ -130,7 +141,7 @@ public:
         Function* functionType = Function::Create(ftype, GlobalValue::ExternalLinkage, funName, context.module);
         fun->llvmFunction = functionType;
 
-        constants.push_back(functionType);
+        mObjHelper->mMethods.push_back( std::make_pair(fun, functionType) );
     }
 
 
@@ -254,17 +265,21 @@ Value* NFunctionCall::codeGen(CodeGenContext& context)
 
 Value* NMethodCall::codeGen(CodeGenContext &context)
 {
+    ObjectHelper* objHelper = context.mClassObjMap[classType];
+
     Value* baseVal = base->codeGen(context);
 
     std::vector<Value*> indecies;
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
+    indecies.push_back(context.Builder.getInt32(0));
+    indecies.push_back(context.Builder.getInt32(0));
     Value* classObj = context.Builder.CreateGEP(baseVal, indecies);
+    classObj = context.Builder.CreateBitCast(classObj, PointerType::getUnqual(objHelper->getClassDef(context)->getType()));
     classObj = context.Builder.CreateLoad(classObj);
 
+
     indecies.clear();
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), methodIndex+1, false));
+    indecies.push_back(context.Builder.getInt32(0));
+    indecies.push_back(context.Builder.getInt32(methodIndex+1));
     Value* functionPtr = context.Builder.CreateGEP(classObj, indecies);
     functionPtr = context.Builder.CreateLoad(functionPtr);
 
@@ -278,12 +293,10 @@ Value* NMethodCall::codeGen(CodeGenContext &context)
     }
 
 
-    //char funName[512];
-    //snprintf(funName, 512, "%s_%s", classType->name.c_str(), name.c_str());
-    //Function *function = context.module->getFunction(funName);
-    //return context.Builder.CreateCall(function, args);
-
     return context.Builder.CreateCall(functionPtr, args);
+
+
+    //return context.Builder.getInt32(0);
 }
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
@@ -559,18 +572,9 @@ Value* NNew::codeGen(CodeGenContext& context)
 
 	retval = context.Builder.CreatePointerCast(retval, pointerType);
 
+    ObjectHelper* objHelper = context.mClassObjMap[classType];
+    Function* initFunction = objHelper->getInitFunction(context);
 
-
-
-    std::vector<Value*> indecies;
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
-    indecies.push_back(ConstantInt::get(IntegerType::getInt32Ty(getGlobalContext()), 0, false));
-
-    Value* classPtrVal = context.Builder.CreateGEP(retval, indecies);
-
-    Constant* constantStruct = context.classRuntimeStruct[classType];
-
-    context.Builder.CreateStore(constantStruct, classPtrVal);
-
+    context.Builder.CreateCall(initFunction, std::vector<Value*>{retval});
 	return retval;
 }

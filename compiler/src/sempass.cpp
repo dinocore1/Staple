@@ -187,7 +187,7 @@ if(type == NULL) { \
                 (*method)->classType = currentClass;
             }
 
-            currentClass->createLLVMClass();
+            //currentClass->createLLVMClass();
 
             for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
                 (*method)->accept(this);

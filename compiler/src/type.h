@@ -7,8 +7,6 @@
 class SFunctionType;
 class SMethodType;
 
-llvm::StructType* getStapleRuntimeClassStruct();
-
 class SType {
 private:
 
@@ -26,7 +24,6 @@ public:
 };
 
 class SClassType : public SType {
-    llvm::StructType* runtimeStructType;
 
 public:
     std::string name;
@@ -47,8 +44,6 @@ public:
     int getFieldIndex(const std::string& name);
     int getMethodIndex(const std::string& name);
 
-    void createLLVMClass();
-    llvm::StructType* getRuntimeStructType();
 
     SFunctionType* getMethod(std::string name);
 };

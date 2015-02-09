@@ -38,7 +38,7 @@ struct Arg: public option::Arg
 enum optionIndex { UNKNOWN, OUTPUT, INPUT };
 const option::Descriptor usage[] =
 {
-    {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: staple [-o] output.ll input.stp"},
+    {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: stp [-o] output.ll input.stp"},
     {OUTPUT, 0, "o", "output", Arg::Required, "-o <output.ll>, --output <output.ll> \tThe output LLVM file"},
     {UNKNOWN, 0, "", "", option::Arg::None, "<input.stp>\tThe input file"},
     { 0, 0, 0, 0, 0, 0 }
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
         context.outputFilename = "output.ll";
     }
 
-    yydebug = 1;
+    //yydebug = 1;
 
     FILE *myfile = fopen(context.inputFilename.c_str(), "r");
     if (!myfile) {

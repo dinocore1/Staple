@@ -1,22 +1,6 @@
 #include <llvm/IR/LLVMContext.h>
 #include "type.h"
 
-llvm::StructType* sStapleRuntimeClassStruct = NULL;
-
-llvm::StructType* getStapleRuntimeClassStruct()
-{
-    if(sStapleRuntimeClassStruct == NULL) {
-        sStapleRuntimeClassStruct = llvm::StructType::create(llvm::getGlobalContext(), "class_pre");
-
-        std::vector<llvm::Type*> elements;
-        elements.push_back(llvm::Type::getInt8PtrTy(llvm::getGlobalContext()));
-        elements.push_back(llvm::PointerType::getUnqual(sStapleRuntimeClassStruct));
-
-        sStapleRuntimeClassStruct->setBody(elements);
-    }
-
-    return sStapleRuntimeClassStruct;
-}
 
 SType* SType::get(llvm::Type *type) {
     if(type->isPointerTy()){
@@ -48,19 +32,9 @@ bool SType::isAssignable(SType *dest) {
     return retval;
 }
 
-static void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
-{
-    if(classObj->parent != NULL){
-        loadFields(classObj->parent, elements);
-    }
-    for(auto it = classObj->fields.begin();it!=classObj->fields.end();it++){
-        elements.push_back((*it).second->type);
-    }
-}
-
 SClassType::SClassType(const std::string &name)
 : name(name), parent(NULL) {
-    type = llvm::StructType::create(llvm::getGlobalContext(), name.c_str());
+    type = llvm::StructType::create(llvm::getGlobalContext());
 }
 
 SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, SType*>> fields,
@@ -69,37 +43,7 @@ SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, ST
 , fields(fields)
 , methods(methods) {
 
-    createLLVMClass();
-}
-
-void SClassType::createLLVMClass() {
-    std::vector<llvm::Type *> elements;
-
-    //set the 'class' field as the first field
-    elements.push_back(llvm::PointerType::getUnqual(getRuntimeStructType()));
-    loadFields(this, elements);
-
-    ((llvm::StructType*)type)->setBody(elements);
-}
-
-llvm::StructType* SClassType::getRuntimeStructType() {
-    if(runtimeStructType == NULL) {
-        std::vector<llvm::Type*> types;
-
-        types.push_back(getStapleRuntimeClassStruct());
-
-        //vtable
-        for(auto it=methods.begin();it!=methods.end();it++) {
-            types.push_back(llvm::PointerType::getUnqual((*it).second->type));
-        }
-
-        char funName[512];
-        snprintf(funName, 512, "%s_class", name.c_str());
-
-        runtimeStructType = llvm::StructType::create(types, funName);
-
-    }
-    return runtimeStructType;
+    type = llvm::StructType::create(llvm::getGlobalContext());
 }
 
 static bool getClassFieldIndex(SClassType* classType, const std::string& name, int& index)

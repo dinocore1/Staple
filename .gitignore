@@ -1,6 +1,6 @@
 build/
-src/parser.cpp
-src/parser.hpp
-src/tokens.cpp
+compiler/src/parser.cpp
+compiler/src/parser.hpp
+complier/src/tokens.cpp
 
 .idea/

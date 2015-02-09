@@ -1,3 +1,6 @@
+#ifndef CODEGEN_H_
+#define CODEGEN_H_
+
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -39,6 +42,7 @@ public:
 };
 
 class ILClassType;
+class ObjectHelper;
 
 class CodeGenContext {
     CodeGenBlock* top;
@@ -49,7 +53,7 @@ public:
     Module *module;
     FunctionPassManager *fpm;
     IRBuilder<> Builder;
-    std::map<SClassType*, Constant*> classRuntimeStruct;
+    std::map<SClassType*, ObjectHelper*> mClassObjMap;
 
     CodeGenContext(CompilerContext& ctx)
     : ctx(ctx), top(NULL), Builder(getGlobalContext())
@@ -97,3 +101,5 @@ public:
         }
     }
 };
+
+#endif /* CODEGEN_H_ */
