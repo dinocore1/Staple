@@ -1,0 +1,5 @@
+
+
+
+extern int printf(uint8*, ...)
+extern int atoi(uint8*)

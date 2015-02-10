@@ -2,18 +2,20 @@
 #ifndef OBJECTHELPER_H_
 #define OBJECTHELPER_H_
 
-#include "../codegen.h"
 
 void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements);
 
 class ObjectHelper {
 private:
     static StructType* sStapleRuntimeClassStruct;
+    static StructType* sGenericObjectType;
 
     bool mInitObjectStruct;
     Function* mInitFunction;
+    Function* mDestroyFunction;
     GlobalVariable* mClassNameVar;
     GlobalVariable* mClassDefVar;
+    StructType* mVirtualTableType;
 
 public:
     SClassType* classType;
@@ -22,8 +24,10 @@ public:
     ObjectHelper(SClassType* classType)
             : mInitObjectStruct(false)
             , mInitFunction(NULL)
+            , mDestroyFunction(NULL)
             , mClassNameVar(NULL)
             , mClassDefVar(NULL)
+            , mVirtualTableType(NULL)
             , classType(classType) {}
 
     GlobalVariable* getClassNameValue(CodeGenContext& context) {
@@ -34,69 +38,173 @@ public:
         return mClassNameVar;
     }
 
-
     Function* getInitFunction(CodeGenContext& context) {
         if(mInitFunction == NULL) {
-            ArrayRef<Type*> args = {PointerType::getUnqual(getObjectType())};
-            FunctionType* functionType = FunctionType::get(Type::getVoidTy(getGlobalContext()), args, false);
+            FunctionType *functionType = FunctionType::get(
+                    Type::getVoidTy(getGlobalContext()),
+                    std::vector<Type *>{PointerType::getUnqual(getObjectType())},
+                    false);
 
             Twine functionName(StringRef(classType->name), "_init");
-            mInitFunction = Function::Create(functionType, Function::LinkageTypes::PrivateLinkage, functionName, context.module);
-
-            BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
-            context.Builder.SetInsertPoint(bblock);
-
-            Value* thisValue = mInitFunction->arg_begin();
-
-            //set class def pointer
-            Value* classDefValue = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
-                    context.Builder.getInt32(0),
-                    context.Builder.getInt32(0)
-            });
-            classDefValue = context.Builder.CreateBitCast(classDefValue, PointerType::getUnqual(getClassDef(context)->getType()));
-            context.Builder.CreateStore(getClassDef(context), classDefValue);
-
-            //set refcount = 1
-            Value* refCount = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
-                    context.Builder.getInt32(0),
-                    context.Builder.getInt32(1)});
-            context.Builder.CreateStore(context.Builder.getInt32(1), refCount);
-
-            context.Builder.CreateRetVoid();
-
-            context.fpm->run(*mInitFunction);
+            mInitFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, context.module);
         }
-
         return mInitFunction;
     }
+
+    void emitInitFunction(CodeGenContext& context) {
+        getInitFunction(context);
+        BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
+        context.Builder.SetInsertPoint(bblock);
+
+        Value* thisValue = mInitFunction->arg_begin();
+
+        //set class def pointer
+        Value* classDefValue = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
+                context.Builder.getInt32(0),
+                context.Builder.getInt32(0)
+        });
+        classDefValue = context.Builder.CreateBitCast(classDefValue, PointerType::getUnqual(getClassDef(context)->getType()));
+        context.Builder.CreateStore(getClassDef(context), classDefValue);
+
+        //set refcount = 1
+        Value* refCount = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
+                context.Builder.getInt32(0),
+                context.Builder.getInt32(1)});
+        context.Builder.CreateStore(context.Builder.getInt32(1), refCount);
+
+        context.Builder.CreateRetVoid();
+
+        context.fpm->run(*mInitFunction);
+    }
+
+    Function* getDestroyFunction(CodeGenContext& context) {
+        if(mDestroyFunction == NULL) {
+            FunctionType* functionType = FunctionType::get(
+                    Type::getVoidTy(getGlobalContext()),
+                    std::vector<Type*>{PointerType::getUnqual(getObjectType())},
+                    false);
+
+            Twine functionName(StringRef(classType->name), "_dest");
+            mDestroyFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, context.module);
+        }
+        return mDestroyFunction;
+    }
+
+    void emitDestroyFunction(CodeGenContext& context) {
+        getDestroyFunction(context);
+        BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mDestroyFunction);
+        context.Builder.SetInsertPoint(bblock);
+
+        Value* thisValue = mInitFunction->arg_begin();
+
+        /*
+        int count = 0;
+        for(auto field : classType->fields) {
+            if(field.second->isClassTy()) {
+                SClassType* fieldClass = (SClassType*)field.second;
+
+                Value* objPtr = getFieldPtrValue(context, thisValue, count);
+
+                Function* destroyFunction = context.mClassObjMap[fieldClass]->getDestroyFunction(context);
+                context.Builder.CreateCall(destroyFunction, std::vector<Value*>{objPtr});
+            }
+            count++;
+        }
+        */
+
+        context.Builder.CreateRetVoid();
+
+        context.fpm->run(*mDestroyFunction);
+    }
+
+    static Value* getFieldPtrValue(CodeGenContext& context, Value* thisPtr, uint32_t fieldIndex) {
+        Value* retval = context.Builder.CreateGEP(thisPtr, std::vector<Value*>{
+                context.Builder.getInt32(0),
+                context.Builder.getInt32(fieldIndex+1)
+        });
+        return retval;
+    }
+
+
+    StructType* getVTableType() {
+        if(mVirtualTableType == NULL) {
+            std::vector<Type *> elements;
+
+            //destructor is always first virtual function
+            FunctionType* destructorType = FunctionType::get(
+                    Type::getVoidTy(getGlobalContext()),
+                    std::vector<Type*>{PointerType::getUnqual(getObjectType())},
+                    false);
+
+            elements.push_back(PointerType::getUnqual(destructorType));
+
+            //vtable
+            for (auto method : classType->methods) {
+                elements.push_back(PointerType::getUnqual(method.second->type));
+            }
+
+            {
+                char name[512];
+                snprintf(name, 512, "%s_vtable_type", classType->name.c_str());
+                mVirtualTableType = StructType::create(elements, name);
+            }
+
+        }
+        return mVirtualTableType;
+    }
+
+    Value* getVirtualFunction(CodeGenContext& context, Value* thisPtr, uint32_t functionIndex) {
+        Value* retval = context.Builder.CreateGEP(thisPtr, std::vector<Value*>{
+                context.Builder.getInt32(0),
+                context.Builder.getInt32(0)
+        });
+        retval = context.Builder.CreateBitCast(retval, PointerType::getUnqual(getClassDef(context)->getType()));
+        retval = context.Builder.CreateLoad(retval);
+
+
+        retval = context.Builder.CreateGEP(retval, std::vector<Value*>{
+                context.Builder.getInt32(0),
+                context.Builder.getInt32(1),
+                context.Builder.getInt32(functionIndex)
+        });
+
+        retval = context.Builder.CreateLoad(retval);
+
+        return retval;
+
+    }
+
 
     GlobalVariable* getClassDef(CodeGenContext& context) {
 
         if(mClassDefVar == NULL) {
             std::vector<llvm::Type*> types;
             types.push_back(getStapleRuntimeClassStruct());
+            types.push_back(getVTableType());
 
-            //vtable
-            for(auto method : classType->methods) {
-                types.push_back(llvm::PointerType::getUnqual(method.second->type));
-            }
 
             StructType* runtimeStructType = StructType::create(types);
-
 
             Constant *classPre = ConstantStruct::get(getStapleRuntimeClassStruct(),
                     ConstantExpr::getBitCast(getClassNameValue(context), Type::getInt8PtrTy(getGlobalContext())),
                     ConstantPointerNull::get((PointerType *) getStapleRuntimeClassStruct()->getStructElementType(1)),
                     NULL);
 
-            std::vector<Constant *> constants;
-            constants.push_back(classPre);
 
+            std::vector<Constant *> constants;
+            constants.push_back(getDestroyFunction(context));
             for (auto funPair : mMethods) {
                 constants.push_back(funPair.second);
             }
 
-            Constant *constantStruct = ConstantStruct::get(runtimeStructType, constants);
+            Constant* vtable = ConstantStruct::get(getVTableType(), constants);
+
+
+            Constant *constantStruct = ConstantStruct::get(runtimeStructType,
+                    classPre,
+                    vtable,
+                    NULL
+                    );
 
             mClassDefVar = new GlobalVariable(
                     *context.module,
@@ -114,8 +222,7 @@ public:
         if(!mInitObjectStruct) {
 
             std::vector<Type*> elements;
-            elements.push_back(PointerType::getUnqual(   getStapleRuntimeClassStruct()   ));
-            elements.push_back(Type::getInt32Ty(getGlobalContext()));
+            elements.push_back(PointerType::getUnqual(getStapleRuntimeClassStruct()));
 
             loadFields(classType, elements);
 
@@ -132,13 +239,24 @@ public:
         return (StructType*)classType->type;
     }
 
+    static StructType* getGenericObjType() {
+        if(sGenericObjectType == NULL) {
+            sGenericObjectType = StructType::create(getGlobalContext(), "stp_obj");
+
+            sGenericObjectType->setBody(std::vector<Type*>{
+                    PointerType::getUnqual(getStapleRuntimeClassStruct()),
+                    Type::getInt32Ty(getGlobalContext())});
+        }
+        return sGenericObjectType;
+    }
+
     static StructType* getStapleRuntimeClassStruct() {
         if(sStapleRuntimeClassStruct == NULL) {
             sStapleRuntimeClassStruct = StructType::create(llvm::getGlobalContext(), "stp_class");
 
             std::vector<llvm::Type*> elements;
-            elements.push_back(llvm::Type::getInt8PtrTy(llvm::getGlobalContext()));
-            elements.push_back(llvm::PointerType::getUnqual(sStapleRuntimeClassStruct));
+            elements.push_back(Type::getInt8PtrTy(getGlobalContext()));
+            elements.push_back(PointerType::getUnqual(sStapleRuntimeClassStruct));
 
             sStapleRuntimeClassStruct->setBody(elements);
         }

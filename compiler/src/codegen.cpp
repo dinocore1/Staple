@@ -6,6 +6,7 @@
 using namespace std;
 
 StructType* ObjectHelper::sStapleRuntimeClassStruct = NULL;
+StructType* ObjectHelper::sGenericObjectType = NULL;
 
 void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 {
@@ -22,6 +23,46 @@ void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 void Error(const char* str)
 {
 	fprintf(stderr, "Error: %s\n", str);
+}
+
+Function* getStaple_release(CodeGenContext& context) {
+    Function* retval = context.module->getFunction("stp_release");
+    if(retval == NULL) {
+        FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                std::vector<Type*>{
+                        PointerType::getUnqual(ObjectHelper::getGenericObjType())
+                },
+                false);
+        retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_release", context.module);
+    }
+
+    return retval;
+}
+
+Function* getStaple_StrongStore(CodeGenContext& context) {
+    Function* retval = context.module->getFunction("stp_storeStrong");
+    if(retval == NULL) {
+        FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                std::vector<Type*>{
+                        PointerType::getUnqual(PointerType::getUnqual(ObjectHelper::getGenericObjType())),
+                        PointerType::getUnqual(ObjectHelper::getGenericObjType())
+                },
+                false);
+        retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_storeStrong", context.module);
+    }
+
+    return retval;
+}
+
+
+static void doObjCleanup(CodeGenContext& context)
+{
+    for(Value* ptrToFree : context.top->ptrsToFree) {
+        Function* releaseFunction = getStaple_release(context);
+        context.Builder.CreateCall(releaseFunction,
+                std::vector<Value*>{context.Builder.CreatePointerCast(ptrToFree, PointerType::getUnqual(ObjectHelper::getGenericObjType()))}
+        );
+    }
 }
 
 class SymbolLookup {
@@ -117,11 +158,15 @@ public:
         //init the full object type
         mObjHelper->getObjectType();
 
+        //output the init function
+        mObjHelper->emitInitFunction(context);
+
+        //output the destructor function
+        mObjHelper->emitDestroyFunction(context);
+
         //output class class object definition
         mObjHelper->getClassDef(context);
 
-        //output the init function
-        mObjHelper->getInitFunction(context);
 
     }
 
@@ -269,19 +314,7 @@ Value* NMethodCall::codeGen(CodeGenContext &context)
 
     Value* baseVal = base->codeGen(context);
 
-    std::vector<Value*> indecies;
-    indecies.push_back(context.Builder.getInt32(0));
-    indecies.push_back(context.Builder.getInt32(0));
-    Value* classObj = context.Builder.CreateGEP(baseVal, indecies);
-    classObj = context.Builder.CreateBitCast(classObj, PointerType::getUnqual(objHelper->getClassDef(context)->getType()));
-    classObj = context.Builder.CreateLoad(classObj);
-
-
-    indecies.clear();
-    indecies.push_back(context.Builder.getInt32(0));
-    indecies.push_back(context.Builder.getInt32(methodIndex+1));
-    Value* functionPtr = context.Builder.CreateGEP(classObj, indecies);
-    functionPtr = context.Builder.CreateLoad(functionPtr);
+    Value* functionPtr = objHelper->getVirtualFunction(context, baseVal, methodIndex+1);
 
     std::vector<Value*> args;
     ExpressionList::const_iterator it;
@@ -292,11 +325,7 @@ Value* NMethodCall::codeGen(CodeGenContext &context)
         args.push_back((**it).codeGen(context));
     }
 
-
     return context.Builder.CreateCall(functionPtr, args);
-
-
-    //return context.Builder.getInt32(0);
 }
 
 Value*NArrayElementPtr::codeGen(CodeGenContext &context)
@@ -373,8 +402,17 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 	Value* lhsValue = lhs->codeGen(context);
 	Value* rhsValue = rhs->codeGen(context);
 
-	//rhsValue = context.Builder.CreateLoad(rhsValue);
-	return context.Builder.CreateStore(rhsValue, lhsValue);
+    SType* rhsType = context.ctx.typeTable[rhs];
+    if(rhsType->isPointerTy() && ((SPointerType*)rhsType)->elementType->isClassTy()) {
+
+        Function* strongStore = getStaple_StrongStore(context);
+        context.Builder.CreateCall(strongStore, std::vector<Value*>{
+                context.Builder.CreatePointerCast(lhsValue, PointerType::getUnqual(PointerType::getUnqual(ObjectHelper::getGenericObjType()))),
+                context.Builder.CreatePointerCast(rhsValue, PointerType::getUnqual(ObjectHelper::getGenericObjType()))
+        });
+    } else {
+        return context.Builder.CreateStore(rhsValue, lhsValue);
+    }
 }
 
 Value* NBlock::codeGen(CodeGenContext& context)
@@ -400,11 +438,18 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 		NAssignment assn(new NIdentifier(name), assignmentExpr);
 		assn.codeGen(context);
 	}
+
+    SType* varType = context.ctx.typeTable[this];
+    if(varType->isPointerTy() && ((SPointerType*)varType)->elementType->isClassTy()) {
+        context.top->ptrsToFree.push_back(alloc);
+    }
+
 	return alloc;
 }
 
 Value* NReturn::codeGen(CodeGenContext &context)
 {
+    doObjCleanup(context);
 	Value* r = ret->codeGen(context);
 	return context.Builder.CreateRet(r);
 }
@@ -434,6 +479,7 @@ Value* NFunction::codeGen(CodeGenContext& context)
 
 	Instruction &last = *bblock->getInstList().rbegin();
 	if(llvmFunction->getReturnType()->isVoidTy() && !last.isTerminator()){
+        doObjCleanup(context);
 		ReturnInst::Create(getGlobalContext(), bblock);
 	}
 
@@ -475,6 +521,7 @@ Value* NMethodFunction::codeGen(CodeGenContext &context) {
 
     Instruction &last = *bblock->getInstList().rbegin();
     if(llvmFunction->getReturnType()->isVoidTy() && !last.isTerminator()){
+        doObjCleanup(context);
         ReturnInst::Create(getGlobalContext(), bblock);
     }
 
@@ -506,6 +553,7 @@ Value* NIfStatement::codeGen(CodeGenContext &context)
 	context.Builder.SetInsertPoint(thenBB);
 	thenBlock->codeGen(context);
 	context.Builder.CreateBr(mergeBlock);
+    doObjCleanup(context);
 	context.popBlock();
 
 
@@ -516,6 +564,7 @@ Value* NIfStatement::codeGen(CodeGenContext &context)
 		elseBlock->codeGen(context);
 	}
 	context.Builder.CreateBr(mergeBlock);
+    doObjCleanup(context);
 	context.popBlock();
 
 	parent->getBasicBlockList().push_back(mergeBlock);

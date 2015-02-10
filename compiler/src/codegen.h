@@ -23,6 +23,7 @@ public:
     CodeGenBlock* parent;
     BasicBlock *block;
     std::map<std::string, SymbolLookup*> locals;
+    std::vector<Value*> ptrsToFree;
 
     CodeGenBlock(CodeGenBlock* parent, BasicBlock* block)
     : parent(parent), block(block) {}
@@ -45,10 +46,10 @@ class ILClassType;
 class ObjectHelper;
 
 class CodeGenContext {
-    CodeGenBlock* top;
     NCompileUnit* compileUnitRoot;
 
 public:
+    CodeGenBlock* top;
     CompilerContext& ctx;
     Module *module;
     FunctionPassManager *fpm;
@@ -88,16 +89,13 @@ public:
     void pushBlock(BasicBlock *block) {
         CodeGenBlock* newBlock = new CodeGenBlock(top, block);
         top = newBlock;
-        //Builder.SetInsertPoint(block);
     }
+
     void popBlock() {
         if(top != NULL) {
             CodeGenBlock* lastTop = top;
             top = top->parent;
             delete lastTop;
-            if(top != NULL) {
-                //Builder.SetInsertPoint(top->block);
-            }
         }
     }
 };

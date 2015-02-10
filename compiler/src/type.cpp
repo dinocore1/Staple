@@ -35,6 +35,7 @@ bool SType::isAssignable(SType *dest) {
 SClassType::SClassType(const std::string &name)
 : name(name), parent(NULL) {
     type = llvm::StructType::create(llvm::getGlobalContext());
+    fields.push_back( std::make_pair(std::string("refcount"), SType::get(llvm::Type::getInt32Ty(llvm::getGlobalContext()))));
 }
 
 SClassType::SClassType(SClassType* parent, std::vector<std::pair<std::string, SType*>> fields,
