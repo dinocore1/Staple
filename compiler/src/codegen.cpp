@@ -432,7 +432,13 @@ Value* NExpressionStatement::codeGen(CodeGenContext& context)
 
 Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 {
-	AllocaInst *alloc = context.Builder.CreateAlloca(getLLVMType(this), 0, name.c_str());
+	SType* thisType = context.ctx.typeTable[this];
+	AllocaInst *alloc = context.Builder.CreateAlloca(thisType->type, 0, name.c_str());
+
+	if(thisType->isPointerTy() && ((SPointerType*)thisType)->elementType->isClassTy()) {
+	    context.Builder.CreateStore(context.Builder.getInt32(0), alloc);
+	}
+
 	context.defineSymbol(name, LocalVarLookup::get(alloc));
 	if (assignmentExpr != NULL) {
 		NAssignment assn(new NIdentifier(name), assignmentExpr);
