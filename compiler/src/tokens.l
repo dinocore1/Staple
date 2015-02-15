@@ -20,11 +20,17 @@ int yycolumn = 1;
 extern "C" int yywrap() { }
 %}
 
-
+%x comment
 
 %option yylineno
 
 %%
+
+"/*"                    BEGIN(comment);
+<comment>[^*\n]*        /* eat anything that's not a '*' */
+<comment>"*"+[^*/\n]*   /* eat up '*'s not followed by '/'s */
+<comment>\n             yycolumn = 1;
+<comment>"*"+"/"        BEGIN(INITIAL);
 
 [ \t]                   ;
 \n                      { yycolumn = 1; }
