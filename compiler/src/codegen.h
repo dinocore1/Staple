@@ -98,6 +98,8 @@ public:
             delete lastTop;
         }
     }
+
+    Function* getFree();
 };
 
 #endif /* CODEGEN_H_ */

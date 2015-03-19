@@ -66,11 +66,11 @@ public:
         classDefValue = context.Builder.CreateBitCast(classDefValue, PointerType::getUnqual(getClassDef(context)->getType()));
         context.Builder.CreateStore(getClassDef(context), classDefValue);
 
-        //set refcount = 1
+        //set refcount = 0
         Value* refCount = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
                 context.Builder.getInt32(0),
                 context.Builder.getInt32(1)});
-        context.Builder.CreateStore(context.Builder.getInt32(1), refCount);
+        context.Builder.CreateStore(context.Builder.getInt32(0), refCount);
 
         context.Builder.CreateRetVoid();
 
@@ -95,7 +95,7 @@ public:
         BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mDestroyFunction);
         context.Builder.SetInsertPoint(bblock);
 
-        Value* thisValue = mInitFunction->arg_begin();
+        Value* thisValue = mDestroyFunction->arg_begin();
 
         /*
         int count = 0;
@@ -111,6 +111,10 @@ public:
             count++;
         }
         */
+
+        Function* freeFun = context.getFree();
+        Value* value = context.Builder.CreatePointerCast(thisValue, Type::getInt8PtrTy(getGlobalContext()));
+        context.Builder.CreateCall(freeFun, std::vector<Value*>({value}));
 
         context.Builder.CreateRetVoid();
 

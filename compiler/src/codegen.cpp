@@ -58,9 +58,13 @@ Function* getStaple_StrongStore(CodeGenContext& context) {
 static void doObjCleanup(CodeGenContext& context)
 {
     for(Value* ptrToFree : context.top->ptrsToFree) {
+
+		Value* ptr = context.Builder.CreateLoad(ptrToFree);
+		ptr = context.Builder.CreatePointerCast(ptr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
+
         Function* releaseFunction = getStaple_release(context);
         context.Builder.CreateCall(releaseFunction,
-                std::vector<Value*>{context.Builder.CreatePointerCast(ptrToFree, PointerType::getUnqual(ObjectHelper::getGenericObjType()))}
+                std::vector<Value*>{ptr}
         );
     }
 }
@@ -436,7 +440,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 	AllocaInst *alloc = context.Builder.CreateAlloca(thisType->type, 0, name.c_str());
 
 	if(thisType->isPointerTy() && ((SPointerType*)thisType)->elementType->isClassTy()) {
-	    context.Builder.CreateStore(context.Builder.getInt32(0), alloc);
+		context.Builder.CreateStore(ConstantPointerNull::get((PointerType*)thisType->type), alloc);
 	}
 
 	context.defineSymbol(name, LocalVarLookup::get(alloc));
@@ -587,6 +591,20 @@ Function* getMalloc(CodeGenContext& context) {
 		Type* returnType = Type::getInt8PtrTy(getGlobalContext());
 		FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
 		retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "malloc", context.module);
+	}
+
+	return retval;
+}
+
+Function* CodeGenContext::getFree() {
+	Function* retval = module->getFunction("free");
+	if(retval == NULL) {
+		std::vector<Type*> argTypes;
+		argTypes.push_back(Type::getInt8PtrTy(getGlobalContext()));
+
+		Type* returnType = Type::getVoidTy(getGlobalContext());
+		FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
+		retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "free", module);
 	}
 
 	return retval;

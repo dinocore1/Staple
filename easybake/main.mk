@@ -1,6 +1,7 @@
 
 CC := gcc
 CXX := g++
+LLC := llc
 LD := ld
 
 EASYBAKEDIR := $(dir $(lastword $(MAKEFILE_LIST)))
@@ -54,6 +55,24 @@ $(eval LOCAL_OBJS += $(OBJ))
 
 $(eval $(call make-intermediate-dir))
 $(eval $(call compile))
+endef
+
+define llvm_compile
+$(OBJ): $(SRC)
+	$(SILENT) mkdir -p $(intermediateDir)
+	$(COMPILER) $(cflags) -o $(OBJ) $(SRC)
+
+endef
+
+define llvm_template
+$(eval intermediateDir := $(BUILDDIR)/$(MODULE)/$(dir $(1)))
+$(eval COMPILER := $(LLC))
+$(eval SRC := $(LOCAL_PATH)$(1))
+$(eval OBJ := $(BUILDDIR)/$(MODULE)/$(1:.ll=.o))
+$(eval LOCAL_OBJS += $(OBJ))
+
+$(eval $(call make-intermediate-dir))
+$(eval $(call llvm_compile))
 endef
 
 ################################################
