@@ -8,6 +8,47 @@ using namespace std;
 StructType* ObjectHelper::sStapleRuntimeClassStruct = NULL;
 StructType* ObjectHelper::sGenericObjectType = NULL;
 
+Function* getStaple_release(CodeGenContext& context) {
+	Function* retval = context.module->getFunction("stp_release");
+	if(retval == NULL) {
+		FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()),
+				std::vector<Type*>{
+						PointerType::getUnqual(ObjectHelper::getGenericObjType())
+				},
+				false);
+		retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_release", context.module);
+	}
+
+	return retval;
+}
+
+
+
+class ReleasePtr : public ScopeCleanUp {
+public:
+	Value* ptrToFree;
+	bool shouldLoad;
+
+	ReleasePtr(Value* ptr, bool shouldLoad = false)
+	: ptrToFree(ptr), shouldLoad(shouldLoad)
+	{}
+
+	~ReleasePtr() {};
+
+	void scopeOut(CodeGenContext& context) {
+		Value* ptr = ptrToFree;
+		if(shouldLoad) {
+			ptr = context.Builder.CreateLoad(ptrToFree);
+		}
+		ptr = context.Builder.CreatePointerCast(ptr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
+
+		Function* releaseFunction = getStaple_release(context);
+		context.Builder.CreateCall(releaseFunction,
+				std::vector<Value*>{ptr}
+		);
+	}
+};
+
 void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 {
     if(classObj->parent != NULL){
@@ -23,20 +64,6 @@ void loadFields(SClassType* classObj, std::vector<llvm::Type*>& elements)
 void Error(const char* str)
 {
 	fprintf(stderr, "Error: %s\n", str);
-}
-
-Function* getStaple_release(CodeGenContext& context) {
-    Function* retval = context.module->getFunction("stp_release");
-    if(retval == NULL) {
-        FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()),
-                std::vector<Type*>{
-                        PointerType::getUnqual(ObjectHelper::getGenericObjType())
-                },
-                false);
-        retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_release", context.module);
-    }
-
-    return retval;
 }
 
 Function* getStaple_StrongStore(CodeGenContext& context) {
@@ -57,16 +84,9 @@ Function* getStaple_StrongStore(CodeGenContext& context) {
 
 static void doObjCleanup(CodeGenContext& context)
 {
-    for(Value* ptrToFree : context.top->ptrsToFree) {
-
-		Value* ptr = context.Builder.CreateLoad(ptrToFree);
-		ptr = context.Builder.CreatePointerCast(ptr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
-
-        Function* releaseFunction = getStaple_release(context);
-        context.Builder.CreateCall(releaseFunction,
-                std::vector<Value*>{ptr}
-        );
-    }
+	for(auto it=context.top->ptrsToFree.rbegin();it!=context.top->ptrsToFree.rend();it++){
+		(*it)->scopeOut(context);
+	}
 }
 
 class SymbolLookup {
@@ -451,7 +471,7 @@ Value* NVariableDeclaration::codeGen(CodeGenContext& context)
 
     SType* varType = context.ctx.typeTable[this];
     if(varType->isPointerTy() && ((SPointerType*)varType)->elementType->isClassTy()) {
-        context.top->ptrsToFree.push_back(alloc);
+        context.top->ptrsToFree.push_back(std::unique_ptr<ScopeCleanUp>(new ReleasePtr(alloc, true)));
     }
 
 	return alloc;
@@ -644,6 +664,8 @@ Value* NNew::codeGen(CodeGenContext& context)
 	Value* retval = context.Builder.CreateCall(malloc, args);
 
 	retval = context.Builder.CreatePointerCast(retval, pointerType);
+
+	context.top->ptrsToFree.push_back(std::unique_ptr<ScopeCleanUp>(new ReleasePtr(retval)));
 
     ObjectHelper* objHelper = context.mClassObjMap[classType];
     Function* initFunction = objHelper->getInitFunction(context);

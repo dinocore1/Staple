@@ -12,18 +12,26 @@
 
 #include "compilercontext.h"
 
+#include <memory>
+
 using namespace llvm;
 
 class NCompileUnit;
 class NClassDeclaration;
 class SymbolLookup;
 
+class ScopeCleanUp {
+public:
+    virtual ~ScopeCleanUp() {};
+    virtual void scopeOut(CodeGenContext& context) = 0;
+};
+
 class CodeGenBlock {
 public:
     CodeGenBlock* parent;
     BasicBlock *block;
     std::map<std::string, SymbolLookup*> locals;
-    std::vector<Value*> ptrsToFree;
+    std::vector<std::unique_ptr<ScopeCleanUp>> ptrsToFree;
 
     CodeGenBlock(CodeGenBlock* parent, BasicBlock* block)
     : parent(parent), block(block) {}

@@ -66,11 +66,11 @@ public:
         classDefValue = context.Builder.CreateBitCast(classDefValue, PointerType::getUnqual(getClassDef(context)->getType()));
         context.Builder.CreateStore(getClassDef(context), classDefValue);
 
-        //set refcount = 0
+        //set refcount = 1
         Value* refCount = context.Builder.CreateGEP(thisValue, std::vector<Value*>{
                 context.Builder.getInt32(0),
                 context.Builder.getInt32(1)});
-        context.Builder.CreateStore(context.Builder.getInt32(0), refCount);
+        context.Builder.CreateStore(context.Builder.getInt32(1), refCount);
 
         context.Builder.CreateRetVoid();
 

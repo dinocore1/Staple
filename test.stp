@@ -2,6 +2,8 @@
 int main(int argc, uint8** argv) {
   Foo* foo1 = new Foo;
   foo1.rad = 3;
+  foo1.myInt = 11;
+  printf("nice", new Foo);
   printf("foo1.rad = %d", foo1.rad);
   printf("foo1.calc() = %d", foo1.calc());
   return 0;
@@ -13,7 +15,7 @@ class Foo {
   int rad;
 
   int calc() {
-    return 5;
+    return myInt + rad;
   }
 }
 
