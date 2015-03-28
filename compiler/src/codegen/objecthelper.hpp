@@ -72,6 +72,27 @@ public:
                 context.Builder.getInt32(1)});
         context.Builder.CreateStore(context.Builder.getInt32(1), refCount);
 
+        //set member initial values
+        int count = 0;
+        for(auto field : classType->fields) {
+            if(field.second->isPointerTy() && ((SPointerType*)field.second)->elementType->isClassTy()) {
+                SPointerType* pointerType = (SPointerType*)field.second;
+                SClassType* fieldClass = (SClassType*)pointerType->elementType;
+
+                Value* nullValue = ConstantPointerNull::get(PointerType::getUnqual(fieldClass->type));
+
+                Value* objPtr = getFieldPtrValue(context, thisValue, count);
+                context.Builder.CreateStore(nullValue, objPtr);
+            } else if(field.second->isIntTy()) {
+                IntegerType* intType = (IntegerType*)field.second->type;
+
+                Value* objPtr = getFieldPtrValue(context, thisValue, count);
+                Value* zeroValue = ConstantInt::get(intType, 0, false);
+                context.Builder.CreateStore(zeroValue, objPtr);
+            }
+            count++;
+        }
+
         context.Builder.CreateRetVoid();
 
         context.fpm->run(*mInitFunction);
@@ -97,20 +118,22 @@ public:
 
         Value* thisValue = mDestroyFunction->arg_begin();
 
-        /*
         int count = 0;
         for(auto field : classType->fields) {
-            if(field.second->isClassTy()) {
-                SClassType* fieldClass = (SClassType*)field.second;
+            if(field.second->isPointerTy() && ((SPointerType*)field.second)->elementType->isClassTy()) {
+                SPointerType* pointerType = (SPointerType*)field.second;
+                SClassType* fieldClass = (SClassType*)pointerType->elementType;
 
                 Value* objPtr = getFieldPtrValue(context, thisValue, count);
+                objPtr = context.Builder.CreateLoad(objPtr);
 
-                Function* destroyFunction = context.mClassObjMap[fieldClass]->getDestroyFunction(context);
-                context.Builder.CreateCall(destroyFunction, std::vector<Value*>{objPtr});
+
+                Function* release = context.getRelease();
+                objPtr = context.Builder.CreatePointerCast(objPtr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
+                context.Builder.CreateCall(release, std::vector<Value*>{objPtr});
             }
             count++;
         }
-        */
 
         Function* freeFun = context.getFree();
         Value* value = context.Builder.CreatePointerCast(thisValue, Type::getInt8PtrTy(getGlobalContext()));

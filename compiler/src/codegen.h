@@ -108,6 +108,7 @@ public:
     }
 
     Function* getFree();
+    Function* getRelease();
 };
 
 #endif /* CODEGEN_H_ */

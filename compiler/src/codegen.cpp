@@ -630,6 +630,10 @@ Function* CodeGenContext::getFree() {
 	return retval;
 }
 
+Function* CodeGenContext::getRelease() {
+	return getStaple_release(*this);
+}
+
 Value* NSizeOf::codeGen(CodeGenContext &context)
 {
     Type* type = context.ctx.typeTable[this]->type;
