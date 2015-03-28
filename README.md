@@ -4,7 +4,8 @@ Staple Programming Language
 Staple is a general-purpose object-oriented programing language. Staple's focuses on being *simple*, __powerfull__, and fast.
 Staple is designed to be a better alternative to C, C++, or Obj-C. Built using [LLVM technology](http://llvm.org/), Staple
 code compiles directly to machine code for a growing number of architectures including x86/x86-64, ARM, MIPS, PowerPC, 
-SPARC, and more.
+SPARC, and more. Unlike some languages, Staple has a very light-weight runtime with a small dependency set. As a 
+result, Staple code can easily run on just about any operating system, or embedded environment. 
 
 Staple is designed to "play nice" with libraries written in C. Calling a function written in C is as easy as declaring
 its prototype with `extern` keyword and then calling it like a regular function.
@@ -51,6 +52,14 @@ with Staple.
       obj data;
     }
       
+### Refernece Counting and ARC ###
+
+Staple walks a fine balance between simplicity to program and minimal runtime requirements. The use of object reference
+counting is one example of such a trade-off. Staple's compiler uses a technique called Automatic Reference Counting (ARC)
+simular to the one available in Obj-C. This relieves the programmer from worrying about managing memory explicitly like they
+would with a language like C or C++. 
+
+
 
 ### Compile ###
 
