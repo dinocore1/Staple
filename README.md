@@ -1,12 +1,13 @@
 Staple Programming Language 
 ============================
 
-Staple is a fast, *simple*, and powerful Object-oriented programming language. Staple is designed as replacement 
-for C or C++. Staple compiles to machine language and produces programs that run nearly as fast as assembly, 
-just like C. Staple is also object-oriented, and unlike C++ or Obj-C, Staple has a user friendly syntax.
+Staple is a general-purpose object-oriented programing language. Staple's focuses on being *simple*, __powerfull__, and fast.
+Staple is designed to be a better alternative to C, C++, or Obj-C. Built using [LLVM technology](http://llvm.org/), Staple
+code compiles directly to machine code for a growing number of architectures including x86/x86-64, ARM, MIPS, PowerPC, 
+SPARC, and more.
 
-
-Staple can do simple stuff that you might use C for:
+Staple is designed to "play nice" with libraries written in C. Calling a function written in C is as easy as declaring
+its prototype with `extern` keyword and then calling it like a regular function.
 
     int main() {
       int x = fib(12);
@@ -27,18 +28,16 @@ Staple can do simple stuff that you might use C for:
     extern int printf(uint8*, ...)
     
 
-Staple has a multi-pass compiler, and there is no need to forward-declare your functions before you call them. Also, 
-Staple is designed to "play nice" with libraries written in C. Calling a function written in C is as easy as declaring
-its prototype with `extern` keyword and then calling it like a regular function.
-
+Staple's syntax feels similar to Java or C++. If you are already comfortable with Java, you will feel right at home
+with Staple.
     
     class LinkedList {
       uint size;
-      Node head;
-      Node tail;
+      Node* head;
+      Node* tail;
       
       void add(obj data) {
-        Node newNode = new Node();
+        Node* newNode = new Node();
         newNode.data = data;
         head.next = newNode;
         head = newNode;
@@ -47,8 +46,8 @@ its prototype with `extern` keyword and then calling it like a regular function.
     }
     
     class Node {
-      Node next;
-      Node prev;
+      Node* next;
+      Node* prev;
       obj data;
     }
       
