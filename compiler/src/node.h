@@ -40,6 +40,8 @@ class NSizeOf;
 class NLoad;
 class NMethodFunction;
 class NMethodCall;
+class NIfStatement;
+class NBinaryOperator;
 
 #include "parser.hpp"
 
@@ -90,6 +92,9 @@ public:
     VISIT(NLoad)
     VISIT(NMethodFunction)
     VISIT(NMethodCall)
+    VISIT(NIfStatement)
+    VISIT(NBinaryOperator)
+    VISIT(NBlock)
 };
 
 

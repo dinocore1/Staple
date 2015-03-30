@@ -403,6 +403,48 @@ if(type == NULL) { \
         }
     }
 
+    virtual void visit(NIfStatement* ifStatement) {
+        ifStatement->condition->accept(this);
+        SType* conditionType = sempass->ctx.typeTable[ifStatement->condition];
+        if(!conditionType->type->isIntegerTy(1)) {
+            sempass->logError(ifStatement->condition->location, "if condition is not a boolean");
+        }
+
+        ifStatement->thenBlock->accept(this);
+        if(ifStatement->elseBlock != NULL) {
+            ifStatement->elseBlock->accept(this);
+        }
+    }
+
+    virtual void visit(NBinaryOperator* binaryOperator) {
+        binaryOperator->lhs->accept(this);
+        binaryOperator->rhs->accept(this);
+
+        SType* returnType;
+
+
+
+        switch(binaryOperator->op) {
+            case TCEQ:
+            case TCNE:
+            case TCGT:
+            case TCLT:
+            case TCGE:
+            case TCLE:
+                returnType = SType::get(llvm::Type::getInt1Ty(getGlobalContext()));
+                break;
+
+            case TPLUS:
+            case TMINUS:
+            case TMUL:
+            case TDIV:
+                returnType = sempass->ctx.typeTable[binaryOperator->lhs];
+                break;
+        }
+
+        sempass->ctx.typeTable[binaryOperator] = returnType;
+    }
+
     virtual void visit(NMethodCall* methodCall) {
         methodCall->base->accept(this);
         SType* baseType = sempass->ctx.typeTable[methodCall->base];
