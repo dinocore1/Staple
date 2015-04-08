@@ -93,7 +93,7 @@ typedef struct YYLTYPE
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
-%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS
+%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE
 %token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
@@ -119,20 +119,36 @@ typedef struct YYLTYPE
 %type <function> global_func
 %type <method_function> method
 %type <count> numPointers
+%type <string> package
 
 %right "then" TELSE
 %right "order" TMINUS
 %left TAT TDOT
 
-%start program
+%start compileUnit
 
 %%
 
-program
+compileUnit
         : { compileUnit = new NCompileUnit(); }
-        | program class_decl { compileUnit->classes.push_back($2); }
+          includes program
+        ;
+
+includes
+        : includes TINCLUDE package { compileUnit->mIncludes.push_back(*$3); delete $3; }
+        |
+        ;
+
+package
+        : TIDENTIFIER { $$ = new std::string(*$1); delete $1; }
+        | package TDOT TIDENTIFIER { (*$$)+="."; (*$$)+=*$3; delete $3;  }
+        ;
+
+program
+        : program class_decl { compileUnit->classes.push_back($2); }
         | program global_func { compileUnit->functions.push_back($2); }
         | program proto_func { compileUnit->externFunctions.push_back($2); }
+        |
         ;
 
 ////// Extern Function Prototype //////

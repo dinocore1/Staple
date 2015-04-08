@@ -35,10 +35,11 @@ struct Arg: public option::Arg
     }
 };
 
-enum optionIndex { UNKNOWN, OUTPUT, INPUT };
+enum optionIndex { UNKNOWN, PACKAGE, OUTPUT, INPUT };
 const option::Descriptor usage[] =
 {
     {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: stp [-o] output.ll input.stp"},
+    {PACKAGE, 0, "p", "package", Arg::Required, "-p <package name>, --package <package name> \tThe package name"},
     {OUTPUT, 0, "o", "output", Arg::Required, "-o <output.ll>, --output <output.ll> \tThe output LLVM file"},
     {UNKNOWN, 0, "", "", option::Arg::None, "<input.stp>\tThe input file"},
     { 0, 0, 0, 0, 0, 0 }
@@ -65,9 +66,15 @@ int main(int argc, char **argv)
     context.inputFilename = parse.nonOption(0);
 
     if(options[OUTPUT]) {
-        context.outputFilename = options[OUTPUT].name;
+        context.outputFilename = options[OUTPUT].arg;
     } else {
         context.outputFilename = "output.ll";
+    }
+
+    if(options[PACKAGE]) {
+        context.package = options[PACKAGE].arg;
+    } else {
+        context.package = "";
     }
 
     //yydebug = 1;
@@ -85,7 +92,7 @@ int main(int argc, char **argv)
         yyparse();
     } while (!feof(yyin));
 
-    SemPass semPass(context);
+    staple::SemPass semPass(context);
     semPass.doSemPass(*compileUnit);
 
     if(semPass.hasErrors()) {

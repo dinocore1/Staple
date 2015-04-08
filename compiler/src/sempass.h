@@ -4,6 +4,8 @@
 
 #include "compilercontext.h"
 
+namespace staple {
+
 class SemPass {
 friend class TypeVisitor;
 
@@ -24,4 +26,5 @@ public:
     void logWarning(YYLTYPE location, const char* format, ...);
 };
 
+}
 #endif /* SEMPASS_H_ */

@@ -3,8 +3,11 @@
 #include "node.h"
 #include "codegen.h"
 #include "type.h"
+#include "types/stapletype.h"
 
 #include "sempass.h"
+
+namespace staple {
 
 using namespace std;
 
@@ -125,6 +128,9 @@ if(type == NULL) { \
             sempass->ctx.typeTable[classDeclaration] = classType;
             define(classDeclaration->name, classType);
             sempass->ctx.defineClass(classType);
+
+            StapleClass* stpClass = new StapleClass(classDeclaration->name);
+
         }
 
         //first pass extern functions
@@ -574,6 +580,6 @@ void SemPass::logWarning(YYLTYPE location, const char *format, ...)
     va_end(argptr);
 }
 
-
+}
 
 

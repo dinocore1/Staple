@@ -35,7 +35,39 @@ public:
 
 	~ReleasePtr() {};
 
+	User* getLastUsage(Value* value) {
+		User* lastUser = value->user_back();
+		if(BitCastInst* inst = dyn_cast<BitCastInst>(lastUser)) {
+			return getLastUsage(inst);
+		}
+		return lastUser;
+	}
+
 	void scopeOut(CodeGenContext& context) {
+
+		Function* releaseFunction = getStaple_release(context);
+
+		Value* ptr = ptrToFree;
+		if(shouldLoad) {
+			ptr = context.Builder.CreateLoad(ptrToFree);
+			ptr = context.Builder.CreatePointerCast(ptr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
+			context.Builder.CreateCall(releaseFunction,
+					std::vector<Value*>{ptr}
+			);
+		} else {
+			User *lastUser = getLastUsage(ptr);
+			if (Instruction *inst = dyn_cast<Instruction>(lastUser)) {
+				if (!isa<ReturnInst>(lastUser)) {
+					IRBuilder<> Builder(inst->getNextNode());
+					ptr = Builder.CreatePointerCast(ptr, PointerType::getUnqual(ObjectHelper::getGenericObjType()));
+					Builder.CreateCall(releaseFunction,
+							std::vector<Value *>{ptr}
+					);
+				}
+			}
+		}
+
+		/*
 		Value* ptr = ptrToFree;
 		if(shouldLoad) {
 			ptr = context.Builder.CreateLoad(ptrToFree);
@@ -46,6 +78,7 @@ public:
 		context.Builder.CreateCall(releaseFunction,
 				std::vector<Value*>{ptr}
 		);
+		*/
 	}
 };
 
@@ -402,6 +435,11 @@ Value* NBinaryOperator::codeGen(CodeGenContext& context)
 		case TMUL: 		return context.Builder.CreateMul(l, r);
 		case TDIV: 		return context.Builder.CreateSDiv(l, r);
 		case TCEQ:		return context.Builder.CreateICmpEQ(l, r);
+		case TCNE:		return context.Builder.CreateICmpNE(l, r);
+		case TCGT:		return context.Builder.CreateICmpSGT(l, r);
+		case TCLT:		return context.Builder.CreateICmpSLT(l, r);
+		case TCGE:		return context.Builder.CreateICmpSGE(l, r);
+		case TCLE:		return context.Builder.CreateICmpSLE(l, r);
 				
 		default:
 			Error("invalid binary operator");

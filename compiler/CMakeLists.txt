@@ -48,7 +48,12 @@ set(SOURCE_FILES
     src/main.cpp
     src/type.cpp
     src/sempass.cpp
-    src/node.h)
+    src/node.h
+    src/codegen/pointerscopepass.cpp
+    src/codegen/pointerscopepass.h
+    src/types/stapletype.h
+    src/types/stapletype.cpp
+    )
 
 include_directories("/usr/lib/llvm-3.5/include")
 add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES})

@@ -30,6 +30,10 @@ $(OBJ): $(SRC)
 	$(SILENT) mkdir -p $(intermediateDir)
 	$(COMPILER) -c -o $(OBJ) $(cflags) $(SRC)
 
+$(DEPEND): $(SRC)
+	$(SILENT) mkdir -p $(intermediateDir)
+	$(COMPILER) -MM $(cflags) $(SRC) > $(DEPEND)
+
 -include $(DEPEND)
 
 endef

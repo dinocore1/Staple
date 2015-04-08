@@ -83,7 +83,7 @@ public:
 
                 Value* objPtr = getFieldPtrValue(context, thisValue, count);
                 context.Builder.CreateStore(nullValue, objPtr);
-            } else if(field.second->isIntTy()) {
+            } else if(field.second->isIntTy() && count > 0) {
                 IntegerType* intType = (IntegerType*)field.second->type;
 
                 Value* objPtr = getFieldPtrValue(context, thisValue, count);
