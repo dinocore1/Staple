@@ -27,6 +27,13 @@ namespace staple {
         return mCachedType;
     }
 
+    llvm::Type *StaplePointer::getLLVMType() {
+        if(mCachedType == nullptr) {
+            mCachedType = PointerType::getUnqual(mElementType->getLLVMType());
+        }
+        return mCachedType;
+    }
+
     llvm::Type* StapleInt::getLLVMType() {
         if(mCachedType == nullptr) {
             mCachedType = Type::getIntNTy(getGlobalContext(), mWidth);

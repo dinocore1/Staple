@@ -13,6 +13,7 @@ namespace staple {
         SK_Class,
         SK_Function,
         SK_Array,
+        SK_Pointer,
         SK_Integer,
         SK_Float
     };
@@ -35,14 +36,24 @@ namespace staple {
 
     class StapleClass : public StapleType {
     private:
-        StapleClass* mParent;
         string mName;
+        StapleClass* mParent;
+
 
     public:
         StapleClass(const string& name)
-        : StapleType(SK_Class), mName(name) {}
+        : StapleType(SK_Class), mName(name), mParent(nullptr) {}
 
         const string getClassName() const { return mName; }
+        const string getSimpleName() const {
+            size_t pos = mName.find_last_of('.');
+            if(pos == string::npos) {
+                return mName;
+            } else {
+                return mName.substr(pos+1);
+            }
+        }
+        const StapleClass* getParent() const { return mParent; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Class;
@@ -84,6 +95,22 @@ namespace staple {
         llvm::Type* getLLVMType();
     };
 
+    class StaplePointer : public StapleType {
+    private:
+        StapleType* mElementType;
+
+    public:
+        StaplePointer(StapleType* elementType)
+        : StapleType(SK_Pointer), mElementType(elementType) {}
+
+        const StapleType* getElementType() const { return mElementType; };
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Pointer;
+        }
+
+        llvm::Type* getLLVMType();
+    };
 
     class StapleInt : public StapleType {
     private:
