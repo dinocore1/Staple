@@ -465,7 +465,7 @@ public:
     NBlock block;
     llvm::Function::LinkageTypes linkage;
     llvm::Function* llvmFunction;
-    SClassType* classType;
+    StapleClass* classType;
 
     NMethodFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,

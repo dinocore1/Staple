@@ -5,7 +5,9 @@
 #include <map>
 
 #include "node.h"
-#include "type.h"
+#include "types/stapletype.h"
+
+using namespace staple;
 
 class CompilerContext {
 public:
@@ -16,12 +18,12 @@ public:
     std::vector<std::string> includes;
 
     //fully qualifed name class map
-    std::map<std::string, SClassType*> classes;
+    std::map<std::string, StapleClass*> classes;
 
-    void defineClass(SClassType* localClass);
-    SClassType* lookupClassName(const std::string& className);
+    void defineClass(StapleClass* localClass);
+    StapleClass* lookupClassName(const std::string& className);
 
-    std::map<ASTNode*, SType*> typeTable;
+    std::map<ASTNode*, StapleType*> typeTable;
 
     CompilerContext();
 

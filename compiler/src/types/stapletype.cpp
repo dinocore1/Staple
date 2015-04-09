@@ -13,14 +13,48 @@ namespace staple {
     using namespace std;
     using namespace llvm;
 
-    llvm::Type *StapleClass::getLLVMType() {
+    class StapleVoidType : public StapleType {
+    public:
+        StapleVoidType() : StapleType(SK_Void) {}
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Void;
+        }
+
+        llvm::Type* getLLVMType() {
+            return llvm::Type::getVoidTy(getGlobalContext());
+        }
+    };
+
+    const StapleVoidType VoidType;
+
+    StapleType* StapleType::getVoidType() {
+        return &VoidType;
+    }
+
+    const StapleInt BoolType(1);
+
+    StapleType* StapleType::getBoolType() {
+        return &BoolType;
+    }
+
+    //////// Staple Class ///////
+
+    llvm::Type* StapleClass::getLLVMType() {
         if(mCachedType == nullptr) {
             mCachedType = StructType::create(getGlobalContext());
         }
         return mCachedType;
     }
 
-    llvm::Type *StapleArray::getLLVMType() {
+    StapleMethodFunction* StapleClass::addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg) {
+        StapleMethodFunction* retval = new StapleMethodFunction(this, returnType, argsType, isVarg);
+        mMethods.push_back(make_pair(name, retval));
+        return retval;
+    }
+
+
+    llvm::Type* StapleArray::getLLVMType() {
         if(mCachedType == nullptr) {
             mCachedType = ArrayType::get(mElementType->getLLVMType(), mSize);
         }

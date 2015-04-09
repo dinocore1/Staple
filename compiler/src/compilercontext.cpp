@@ -8,14 +8,14 @@ CompilerContext::CompilerContext()
 
 };
 
-void CompilerContext::defineClass(SClassType *localClass) {
-    string fqClassName = !package.empty() ? (package + "." + localClass->name) : localClass->name;
+void CompilerContext::defineClass(StapleClass *localClass) {
+    string fqClassName = localClass->getClassName();
     classes[fqClassName] = localClass;
 }
 
-SClassType* CompilerContext::lookupClassName(const std::string &className) {
+StapleClass* CompilerContext::lookupClassName(const std::string &className) {
 
-    SClassType* retval = NULL;
+    StapleClass* retval = NULL;
     //first try locally-defined classname
     string fqClassName = !package.empty() ? (package + "." + className) : className;
     auto it = classes.find(fqClassName);

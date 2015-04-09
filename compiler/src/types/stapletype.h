@@ -9,13 +9,17 @@ namespace staple {
 
     using namespace std;
 
+    class StapleMethodFunction;
+
     enum StapleKind {
         SK_Class,
         SK_Function,
+        SK_Method,
         SK_Array,
         SK_Pointer,
         SK_Integer,
-        SK_Float
+        SK_Float,
+        SK_Void
     };
 
     class StapleType {
@@ -32,12 +36,18 @@ namespace staple {
 
         virtual llvm::Type* getLLVMType() = 0;
 
+        static StapleType* getVoidType();
+        static StapleType* getBoolType();
     };
+
+
 
     class StapleClass : public StapleType {
     private:
         string mName;
         StapleClass* mParent;
+        vector<pair<string, StapleType*>> mFields;
+        vector<pair<string, StapleMethodFunction*>> mMethods;
 
 
     public:
@@ -55,6 +65,8 @@ namespace staple {
         }
         const StapleClass* getParent() const { return mParent; }
 
+        StapleMethodFunction* addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg);
+
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Class;
         }
@@ -63,17 +75,37 @@ namespace staple {
     };
 
     class StapleFunction : public StapleType {
-    private:
+    friend class StapleClass;
+    protected:
         StapleType* mReturnType;
         vector<StapleType*> mArgumentTypes;
-        bool mIsValArgs;
+        bool mIsVarg;
 
     public:
-        StapleFunction()
-        : StapleType(SK_Function) {}
+        StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+        : StapleType(SK_Function),
+        mReturnType(returnType),
+        mIsVarg(isVarg) {}
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function;
+        }
+
+        llvm::Type* getLLVMType();
+    };
+
+    class StapleMethodFunction : public StapleFunction {
+    protected:
+        StapleClass* mClass;
+
+    public:
+        StapleMethodFunction(StapleClass* classType, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+        : StapleFunction(returnType, argsType, isVarg),
+        StapleType(SK_Method),
+        mClass(classType) {}
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Function || T->getKind() == SK_Method;
         }
 
         llvm::Type* getLLVMType();
@@ -130,7 +162,6 @@ namespace staple {
     const StapleInt BOOL_TYPE(1);
     const StapleInt BYTE_TYPE(8);
     const StapleInt INT_TYPE(32);
-
 
 
 }
