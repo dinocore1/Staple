@@ -112,7 +112,6 @@ public:
     static NType* GetPointerType(const std::string& name, int numPtrs);
     static NType* GetArrayType(const std::string& name, int size);
 
-    llvm::Type* getLLVMType(const CodeGenContext &context) const;
 };
 
 class NField : public ASTNode {
@@ -302,10 +301,10 @@ public:
 class NSizeOf : public NExpression {
 public:
     ACCEPT
-    std::string id;
+    NType* type;
 
-    NSizeOf(const std::string& id)
-    : id(id) {}
+    NSizeOf(NType* type)
+    : type(type) {}
 
     virtual llvm::Value* codeGen(CodeGenContext& context);
 };

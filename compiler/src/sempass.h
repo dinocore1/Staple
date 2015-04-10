@@ -16,8 +16,6 @@ protected:
     CompilerContext& ctx;
 
 public:
-
-
     SemPass(CompilerContext& ctx);
 
     void doSemPass(NCompileUnit& root);

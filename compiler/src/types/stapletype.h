@@ -10,11 +10,13 @@ namespace staple {
     using namespace std;
 
     class StapleMethodFunction;
+    class StapleField;
 
     enum StapleKind {
         SK_Class,
         SK_Function,
         SK_Method,
+        SK_Field,
         SK_Array,
         SK_Pointer,
         SK_Integer,
@@ -35,24 +37,35 @@ namespace staple {
         StapleKind getKind() const { return mKind; }
 
         virtual llvm::Type* getLLVMType() = 0;
+        virtual bool isAssignable(StapleType* type) = 0;
 
         static StapleType* getVoidType();
         static StapleType* getBoolType();
+        static StapleType* getInt8Type();
+        static StapleType* getInt16Type();
+        static StapleType* getInt32Type();
+        static StapleType* getInt64Type();
+        static StapleType* getFloat32Type();
+        static StapleType* getFloat64Type();
+        static StapleType* getInt8PtrType();
     };
 
 
 
     class StapleClass : public StapleType {
     private:
-        string mName;
-        StapleClass* mParent;
-        vector<pair<string, StapleType*>> mFields;
-        vector<pair<string, StapleMethodFunction*>> mMethods;
+
+        const string mName;
+        const StapleClass* mParent;
+        vector<StapleField*> mFields;
+        vector<StapleMethodFunction*> mMethods;
 
 
     public:
-        StapleClass(const string& name)
-        : StapleType(SK_Class), mName(name), mParent(nullptr) {}
+        static StapleClass* getBaseObject();
+
+        StapleClass(const string& name, StapleClass* parent = nullptr);
+
 
         const string getClassName() const { return mName; }
         const string getSimpleName() const {
@@ -63,52 +76,82 @@ namespace staple {
                 return mName.substr(pos+1);
             }
         }
+
         const StapleClass* getParent() const { return mParent; }
+        void setParent(StapleClass* parent);
 
         StapleMethodFunction* addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg);
+        const vector<StapleMethodFunction*> getMethods() const { return mMethods; }
+
+        StapleField* addField(const string& name, StapleType* type);
+        const vector<StapleField*> getFields() const { return mFields; }
+
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Class;
         }
 
         llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
     };
 
     class StapleFunction : public StapleType {
     friend class StapleClass;
     protected:
+        StapleFunction(StapleKind kind, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+        : StapleType(kind), mReturnType(returnType), mIsVarg(isVarg){}
+
         StapleType* mReturnType;
         vector<StapleType*> mArgumentTypes;
         bool mIsVarg;
 
     public:
         StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleType(SK_Function),
-        mReturnType(returnType),
-        mIsVarg(isVarg) {}
+        : StapleType(SK_Function), mReturnType(returnType), mIsVarg(isVarg) {}
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function;
         }
 
         llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
     };
 
     class StapleMethodFunction : public StapleFunction {
     protected:
         StapleClass* mClass;
+        string mName;
 
     public:
-        StapleMethodFunction(StapleClass* classType, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleFunction(returnType, argsType, isVarg),
-        StapleType(SK_Method),
-        mClass(classType) {}
+        StapleMethodFunction(StapleClass* classType, const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+        : StapleFunction(SK_Method, returnType, argsType, isVarg), mClass(classType), mName(name) {}
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function || T->getKind() == SK_Method;
         }
 
         llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
+    };
+
+    class StapleField : public StapleType {
+    protected:
+        StapleClass* mClass;
+        string mName;
+        StapleType* mType;
+
+    public:
+        StapleField(StapleClass* classType, const string& name, StapleType* type)
+        : StapleType(SK_Field), mClass(classType), mName(name), mType(type) {}
+
+        const string& getName() const { return mName; }
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Field;
+        }
+
+        llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
     };
 
     class StapleArray : public StapleType {
@@ -117,14 +160,23 @@ namespace staple {
         uint64_t mSize;
 
     public:
-        StapleArray()
-        : StapleType(SK_Array){}
+        StapleArray(StapleType* elementType, uint64_t size)
+        : StapleType(SK_Array), mElementType(elementType), mSize(size) {}
+
+        const StapleType* getElementType() const {
+            return mElementType;
+        }
+
+        const uint64_t getSize() const {
+            return mSize;
+        }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Array;
         }
 
         llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
     };
 
     class StaplePointer : public StapleType {
@@ -142,6 +194,8 @@ namespace staple {
         }
 
         llvm::Type* getLLVMType();
+
+        bool isAssignable(StapleType* type);
     };
 
     class StapleInt : public StapleType {
@@ -157,11 +211,31 @@ namespace staple {
         }
 
         llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
     };
 
-    const StapleInt BOOL_TYPE(1);
-    const StapleInt BYTE_TYPE(8);
-    const StapleInt INT_TYPE(32);
+    class StapleFloat : public StapleType {
+    public:
+        enum Type {
+            f16,
+            f32,
+            f64
+        };
+
+        StapleFloat(Type type)
+        : StapleType(SK_Float), mType(type) {}
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Float;
+        }
+
+        llvm::Type* getLLVMType();
+        bool isAssignable(StapleType* type);
+
+    private:
+        Type mType;
+    };
+
 
 
 }

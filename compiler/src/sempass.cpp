@@ -6,32 +6,12 @@
 #include "types/stapletype.h"
 
 #include "sempass.h"
+#include "sempass/Pass1ClassVisitor.h"
 
 namespace staple {
 
 using namespace std;
 
-static StapleType* getBaseType(const std::string& name)
-{
-    StapleType* retval = NULL;
-    if(name.compare("void") == 0) {
-        retval = StapleType::getVoidType();
-    } else if(name.compare("int") == 0){
-        retval = Type::getInt32Ty(getGlobalContext());
-    } else if(name.compare(0, 3, "int") == 0) {
-        int width = atoi(name.substr(3).c_str());
-        retval = Type::getIntNTy(getGlobalContext(), width);
-    } else if(name.compare(0, 4, "uint") == 0) {
-        int width = atoi(name.substr(4).c_str());
-        retval = Type::getIntNTy(getGlobalContext(), width);
-    } else if(name.compare("float") == 0) {
-        retval = Type::getFloatTy(getGlobalContext());
-    } else if(name.compare("bool") == 0) {
-        retval = Type::getInt1Ty(getGlobalContext());
-    }
-
-    return retval;
-}
 
 class Scope {
 public:
@@ -61,9 +41,7 @@ public:
 
     TypeVisitor(SemPass* sempass)
     : scope(NULL)
-    , sempass(sempass) {
-
-    }
+    , sempass(sempass) {}
 
     void push() {
         Scope* newScope = new Scope();
@@ -93,38 +71,15 @@ if(type == NULL) { \
     positive \
 }
 
-    StapleMethodFunction* getMethodType(StapleClass* classType, NMethodFunction *methodFunction) {
-
-        std::vector<StapleType*> args;
-
-        for(vector<NArgument*>::iterator it = methodFunction->arguments.begin();it != methodFunction->arguments.end();it++){
-            NArgument* arg = *it;
-            StapleType* type = getType(&arg->type);
-
-            CheckType(type, arg->location, arg->type.name, args.push_back(type); )
-        }
-
-        StapleType* returnType = getType(&methodFunction->returnType);
-        CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
-
-        StapleMethodFunction* retval = new StapleMethodFunction(classType, returnType, args, methodFunction->isVarg);
-
-        return retval;
-    }
-
     virtual void visit(NCompileUnit* compileUnit) {
 
         currentClass = NULL;
         push();
 
         //first pass class declaration
-        for(vector<NClassDeclaration*>::iterator it = compileUnit->classes.begin();it != compileUnit->classes.end();it++){
-            NClassDeclaration* classDeclaration = *it;
-
-            string fqClassName = !sempass->ctx.package.empty() ? (sempass->ctx.package + "." + classDeclaration->name) : classDeclaration->name;
-            StapleClass* stpClass = new StapleClass(fqClassName);
-            sempass->ctx.typeTable[classDeclaration] = stpClass;
-            sempass->ctx.defineClass(stpClass);
+        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
+            Pass1ClassVisitor visitor(&sempass->ctx);
+            classDeclaration->accept(&visitor);
         }
 
         //first pass extern functions
@@ -214,21 +169,37 @@ if(type == NULL) { \
     }
 
     virtual void visit(NType* type) {
-        StapleType* retval = getBaseType(type->name);
-        if(retval == NULL){
-            //might be class type
-            retval = scope->get(type->name);
-            if(retval == NULL || !retval->isClassTy()){
+
+        const string name = type->name;
+
+        StapleType* retval = NULL;
+        if(name.compare("void") == 0) {
+            retval = StapleType::getVoidType();
+        } else if(name.compare("int") == 0 || name.compare("int32") == 0){
+            retval = StapleType::getInt32Type();
+        } else if(name.compare("int8") == 0) {
+            retval = StapleType::getInt8Type();
+        } else if(name.compare("int16") == 0) {
+            retval = StapleType::getInt16Type();
+        } else if(name.compare("float") == 0 || name.compare("float32") == 0) {
+            retval = StapleType::getFloat32Type();
+        } else if(name.compare("bool") == 0) {
+            retval = StapleType::getBoolType();
+        } else {
+
+            retval = scope->get(name);
+            if(retval == nullptr || !isa<StapleClass>(retval)) {
                 sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
                 sempass->ctx.typeTable[type] = NULL;
                 return;
             }
         }
+
         if(type->isArray) {
-            retval = SArrayType::get(retval, type->size);
+            retval = new StapleArray(retval, type->size);
         } else {
             for(int i=0;i<type->numPointers;i++) {
-                retval = SPointerType::get(retval);
+                retval = new StaplePointer(retval);
             }
         }
         sempass->ctx.typeTable[type] = retval;
@@ -237,8 +208,7 @@ if(type == NULL) { \
     virtual void visit(NField* field) {
         StapleType* fieldType = getType(&field->type);
         CheckType(fieldType, field->location, field->type.name,
-                currentClass->fields.push_back(make_pair(field->name, fieldType));
-                sempass->ctx.typeTable[field] = fieldType;
+                sempass->ctx.typeTable[field] = currentClass->addField(field->name, fieldType);
         )
     }
 
@@ -249,15 +219,14 @@ if(type == NULL) { \
     virtual void visit(NMethodFunction* methodFunction) {
         push();
 
-        StapleType* thisType = SPointerType::get(currentClass);
+        StapleType* thisType = new StaplePointer(currentClass);
         define("this", thisType);
 
-        for(auto field = currentClass->fields.begin();field != currentClass->fields.end();field++){
-            define((*field).first, (*field).second);
+        for(StapleField* field : currentClass->getFields()){
+            define(field->getName(), field);
         }
 
-        for(vector<NArgument*>::iterator it = methodFunction->arguments.begin();it != methodFunction->arguments.end();it++){
-            NArgument* arg = *it;
+        for(NArgument* arg : methodFunction->arguments){
             StapleType* type = getType(&arg->type);
 
             CheckType(type, arg->location, arg->type.name,
@@ -316,11 +285,11 @@ if(type == NULL) { \
     }
 
     virtual void visit(NIntLiteral* intLiteral) {
-        sempass->ctx.typeTable[intLiteral] = SType::get(llvm::Type::getInt32Ty(getGlobalContext()));
+        sempass->ctx.typeTable[intLiteral] = StapleType::getInt32Type();
     }
 
     virtual void visit(NStringLiteral* literal) {
-        sempass->ctx.typeTable[literal] = SType::get(llvm::Type::getInt8PtrTy(getGlobalContext()));
+        sempass->ctx.typeTable[literal] = StapleType::getInt8PtrType();
     }
 
     virtual void visit(NAssignment* assignment) {
@@ -336,26 +305,20 @@ if(type == NULL) { \
     }
 
     virtual void visit(NSizeOf* nsizeOf) {
-        StapleType* type = scope->get(nsizeOf->id);
-        if(type == NULL) {
-            //its not a local var name, maybe its a primitive type
-            type = getBaseType(nsizeOf->id);
-        }
+        StapleType* type = getType(nsizeOf->type);
 
-        if(type == NULL) {
-            sempass->logError(nsizeOf->location, "undefined class: '%s'", nsizeOf->id.c_str());
-        } else {
-            sempass->ctx.typeTable[nsizeOf] = type;
+        if(type != NULL) {
+            sempass->ctx.typeTable[nsizeOf] = StapleType::getInt32Type();
         }
     }
 
     virtual void visit(NNew* newNode) {
         StapleType* type = scope->get(newNode->id);
-        if(type == NULL || !type->isClassTy()) {
-            sempass->logError(newNode->location, "undefined class: '%s'", newNode->id.c_str());
+
+        if(StapleClass* classType = dyn_cast<StapleClass>(type)) {
+            sempass->ctx.typeTable[newNode] = new StaplePointer(classType);
         } else {
-            SClassType* classType = (SClassType*)type;
-            sempass->ctx.typeTable[newNode] = SPointerType::get(classType);
+            sempass->logError(newNode->location, "undefined class: '%s'", newNode->id.c_str());
         }
     }
 
@@ -366,28 +329,33 @@ if(type == NULL) { \
 
     virtual void visit(NArrayElementPtr* arrayElementPtr) {
 
-        arrayElementPtr->base->accept(this);
-        StapleType* baseType = sempass->ctx.typeTable[arrayElementPtr->base];
+        StapleType* baseType = getType(arrayElementPtr->base);
 
-        if(!baseType->isArrayTy()){
-            sempass->logError(arrayElementPtr->location, "not an array type");
-        } else {
+        if(StapleArray* arrayType = dyn_cast<StapleArray>(baseType)) {
+            StapleType* exprType = getType(arrayElementPtr->expr);
 
-            arrayElementPtr->expr->accept(this);
-            StapleType* exprType = sempass->ctx.typeTable[arrayElementPtr->expr];
-
-            if(!baseType->isIntTy()) {
-                sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
+            if(isa<StapleInt>(exprType)) {
+                sempass->ctx.typeTable[arrayElementPtr] = new StaplePointer(baseType);
             } else {
-                sempass->ctx.typeTable[arrayElementPtr] = ((SArrayType *) baseType)->elementType;
+                sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
             }
         }
+
     }
 
     virtual void visit(NMemberAccess* memberAccess) {
 
-        memberAccess->base->accept(this);
-        StapleType* baseType = sempass->ctx.typeTable[memberAccess->base];
+        StapleType* baseType = getType(memberAccess->base);
+
+        StaplePointer* ptr = nullptr;
+        StapleClass* classPtr = nullptr;
+
+        if((ptr = dyn_cast<StaplePointer>(baseType))
+                && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+
+            sempass->ctx.typeTable[memberAccess] = new StaplePointer(classPtr);
+
+        }
 
         if(baseType == NULL || (!baseType->isClassTy() && !(baseType->isPointerTy() && ((SPointerType*)baseType)->elementType->isClassTy()))) {
             sempass->logError(memberAccess->base->location, "not a class type");

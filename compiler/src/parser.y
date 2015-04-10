@@ -258,7 +258,7 @@ lhs
         ;
 
 expr
-        : TSIZEOF TIDENTIFIER { $$ = new NSizeOf(*$2); delete $2; }
+        : TSIZEOF type { $$ = new NSizeOf($2); }
         | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; }
         | compexpr { $$ = $1; }
         ;
