@@ -117,11 +117,52 @@ namespace staple {
         return retval;
     }
 
+    StapleMethodFunction* StapleClass::getMethod(const string &name, int &index) const {
+        StapleMethodFunction* retval = nullptr;
+
+        if(mParent != nullptr) {
+            retval = mParent->getMethod(name, index);
+        }
+
+        if(retval == nullptr) {
+            for(StapleMethodFunction* method : mMethods) {
+                if(method->getName().compare(name) == 0) {
+                    retval = method;
+                }
+                index++;
+            }
+        }
+
+        return retval;
+    }
+
     StapleField* StapleClass::addField(const string &name, StapleType *type) {
         StapleField* retval = new StapleField(this, name, type);
         mFields.push_back(retval);
         return retval;
     }
+
+    StapleField* StapleClass::getField(const string &name, int &index) const {
+        StapleField* retval = nullptr;
+
+        if(mParent != nullptr) {
+            retval = mParent->getField(name, index);
+        }
+
+        if(retval == nullptr) {
+            for(StapleField* field : mFields) {
+                if(field->getName().compare(name) == 0){
+                    retval = field;
+                    break;
+                }
+                index++;
+            }
+        }
+
+
+        return retval;
+    }
+
 
     llvm::Type* StapleField::getLLVMType() {
         if(mCachedType == nullptr) {

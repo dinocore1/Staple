@@ -350,38 +350,34 @@ if(type == NULL) { \
         StaplePointer* ptr = nullptr;
         StapleClass* classPtr = nullptr;
 
-        if((ptr = dyn_cast<StaplePointer>(baseType))
-                && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+        if(!(classPtr = dyn_cast<StapleClass>(baseType)) &&
+                !((ptr = dyn_cast<StaplePointer>(baseType))
+                 && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))
+                )) {
 
-            sempass->ctx.typeTable[memberAccess] = new StaplePointer(classPtr);
-
-        }
-
-        if(baseType == NULL || (!baseType->isClassTy() && !(baseType->isPointerTy() && ((SPointerType*)baseType)->elementType->isClassTy()))) {
             sempass->logError(memberAccess->base->location, "not a class type");
+
         } else {
-            SClassType* classType = NULL;
-            if(baseType->isClassTy()){
-                classType = (SClassType*) baseType;
+
+            int index = 0;
+            StapleField* field = classPtr->getField(memberAccess->field, index);
+            if(field != nullptr){
+                sempass->ctx.typeTable[memberAccess] = field;
+                memberAccess->fieldIndex = index;
             } else {
-                classType = (SClassType *) ((SPointerType*)baseType)->elementType;
+                sempass->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
+                                  classPtr->getClassName().c_str(),
+                                  memberAccess->field.c_str());
             }
 
-            int index = classType->getFieldIndex(memberAccess->field);
-            if(index < 0) {
-                sempass->logError(memberAccess->location, "class '%s' does not have field: '%s'", classType->name.c_str(), memberAccess->field.c_str());
-            } else {
-                memberAccess->fieldIndex = index + 1;
-                sempass->ctx.typeTable[memberAccess] = classType->fields[index].second;
-            }
         }
     }
 
     virtual void visit(NIfStatement* ifStatement) {
-        ifStatement->condition->accept(this);
-        StapleType* conditionType = sempass->ctx.typeTable[ifStatement->condition];
-        if(!conditionType->type->isIntegerTy(1)) {
-            sempass->logError(ifStatement->condition->location, "if condition is not a boolean");
+        StapleType* conditionType = getType(ifStatement);
+
+        if(!isa<StapleInt>(conditionType)){
+            sempass->logError(ifStatement->condition->location, "cannot evaluate condition");
         }
 
         ifStatement->thenBlock->accept(this);
@@ -394,9 +390,7 @@ if(type == NULL) { \
         binaryOperator->lhs->accept(this);
         binaryOperator->rhs->accept(this);
 
-        StapleType* returnType;
-
-
+        StapleType* returnType = StapleType::getVoidType();
 
         switch(binaryOperator->op) {
             case TCEQ:
@@ -405,7 +399,7 @@ if(type == NULL) { \
             case TCLT:
             case TCGE:
             case TCLE:
-                returnType = SType::get(llvm::Type::getInt1Ty(getGlobalContext()));
+                returnType = StapleType::getBoolType();
                 break;
 
             case TPLUS:
@@ -420,89 +414,74 @@ if(type == NULL) { \
     }
 
     virtual void visit(NMethodCall* methodCall) {
-        methodCall->base->accept(this);
-        StapleType* baseType = sempass->ctx.typeTable[methodCall->base];
 
-        if(baseType == NULL || (!baseType->isClassTy() && !(baseType->isPointerTy() && ((SPointerType*)baseType)->elementType->isClassTy()))) {
+        StapleType* baseType = getType(methodCall->base);
+
+        StaplePointer* ptr = nullptr;
+        StapleClass* classPtr = nullptr;
+
+        if(!(classPtr = dyn_cast<StapleClass>(baseType)) &&
+           !((ptr = dyn_cast<StaplePointer>(baseType))
+             && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))
+           )) {
+
             sempass->logError(methodCall->base->location, "not a class type");
+
         } else {
-
-            SClassType* classType = NULL;
-            if(baseType->isClassTy()){
-                classType = (SClassType*) baseType;
-            } else {
-                classType = (SClassType *) ((SPointerType*)baseType)->elementType;
-            }
-
-            int index = classType->getMethodIndex(methodCall->name);
-            if(index < 0) {
-                sempass->logError(methodCall->location, "class '%s' does not have method: '%s'", classType->name.c_str(), methodCall->name.c_str());
-            } else {
+            int index = 0;
+            StapleMethodFunction* method = classPtr->getMethod(methodCall->name, index);
+            if(method != nullptr) {
                 methodCall->methodIndex = index;
-                methodCall->classType = classType;
-                StapleFunction* method = classType->getMethod(methodCall->name);
 
                 int i = 0;
-                for(auto it=methodCall->arguments.begin();it!=methodCall->arguments.end();it++) {
-                    (*it)->accept(this);
-                    StapleType* argType = sempass->ctx.typeTable[*it];
+                for(auto arg : methodCall->arguments) {
+                    StapleType* argType = getType(arg);
 
-                    if(i < method->arguments.size()) {
-                        StapleType *definedType = method->arguments[i];
-                        if (!argType->isAssignable(definedType)) {
-                            sempass->logError((*it)->location, "argument mismatch");
+                    if(i < method->getArguments().size()) {
+                        StapleType* definedArgType = method->getArguments()[i];
+                        if(!argType->isAssignable(definedArgType)) {
+                            sempass->logError(arg->location, "argument mismatch");
                         }
                     }
-
                     i++;
                 }
 
-                sempass->ctx.typeTable[methodCall] = method->returnType;
+                sempass->ctx.typeTable[methodCall] = method->getReturnType();
+
             }
-
-
         }
     }
 
-    virtual void visit(NFunctionCall* methodCall) {
-        StapleType* type = scope->get(methodCall->name);
-        if(type != NULL && type->isFunctionTy()){
+    virtual void visit(NFunctionCall* functionCall) {
+        StapleType* type = scope->get(functionCall->name);
 
-            StapleFunction* function = (StapleFunction*) type;
-
+        if(StapleFunction* function = dyn_cast<StapleFunction>(type)) {
             int i = 0;
-            for(auto it=methodCall->arguments.begin();it!=methodCall->arguments.end();it++) {
-                (*it)->accept(this);
-                StapleType* argType = sempass->ctx.typeTable[*it];
+            for(auto arg : functionCall->arguments) {
+                StapleType* argType = getType(arg);
 
-                if(i < function->arguments.size()) {
-                    StapleType *definedType = function->arguments[i];
-                    if (!argType->isAssignable(definedType)) {
-                        sempass->logError((*it)->location, "argument mismatch");
+                if(i < function->getArguments().size()) {
+                    StapleType* definedArgType = function->getArguments()[i];
+                    if(!argType->isAssignable(definedArgType)) {
+                        sempass->logError(arg->location, "argument mismatch");
                     }
                 }
-
                 i++;
             }
 
-
-            sempass->ctx.typeTable[methodCall] = function->returnType;
+            sempass->ctx.typeTable[functionCall] = function->getReturnType();
         } else {
-            sempass->logError(methodCall->location, "undefined function: '%s'", methodCall->name.c_str());
+            sempass->logError(functionCall->location, "undefined function: '%s'", functionCall->name.c_str());
         }
-
-
     }
 
     virtual void visit(NLoad* load) {
-        load->expr->accept(this);
-        sempass->ctx.typeTable[load] = sempass->ctx.typeTable[load->expr];
+        sempass->ctx.typeTable[load] = getType(load->expr);
     }
 
     virtual void visit(NBlock* block) {
         push();
-        for(vector<NStatement*>::iterator it = block->statements.begin();it != block->statements.end();it++){
-            NStatement* statement = *it;
+        for(NStatement* statement :block->statements){
             statement->accept(this);
         }
         pop();

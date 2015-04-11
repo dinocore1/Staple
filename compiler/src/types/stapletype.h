@@ -82,9 +82,11 @@ namespace staple {
 
         StapleMethodFunction* addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg);
         const vector<StapleMethodFunction*> getMethods() const { return mMethods; }
+        StapleMethodFunction* getMethod(const string& name, int& index) const;
 
         StapleField* addField(const string& name, StapleType* type);
         const vector<StapleField*> getFields() const { return mFields; }
+        StapleField* getField(const string& name, int& index) const;
 
 
         static bool classof(const StapleType *T) {
@@ -109,6 +111,9 @@ namespace staple {
         StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
         : StapleType(SK_Function), mReturnType(returnType), mIsVarg(isVarg) {}
 
+        const StapleType* getReturnType() const { return mReturnType; }
+        const vector<StapleType*> getArguments() const { return mArgumentTypes; }
+
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function;
         }
@@ -125,6 +130,8 @@ namespace staple {
     public:
         StapleMethodFunction(StapleClass* classType, const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
         : StapleFunction(SK_Method, returnType, argsType, isVarg), mClass(classType), mName(name) {}
+
+        const string& getName() const { return mName; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function || T->getKind() == SK_Method;
