@@ -2,6 +2,9 @@
 #ifndef _STAPLE_STAPLETYPE_H_
 #define _STAPLE_STAPLETYPE_H_
 
+#include <string>
+#include <vector>
+
 #include <llvm/Support/Casting.h>
 
 namespace staple {
@@ -26,7 +29,6 @@ namespace staple {
     class StapleType {
     private:
         const StapleKind mKind;
-
 
     public:
         StapleType(StapleKind k) : mKind(k) {}
@@ -110,7 +112,7 @@ namespace staple {
         const vector<StapleType*> getArguments() const { return mArgumentTypes; }
 
         static bool classof(const StapleType *T) {
-            return T->getKind() == SK_Function;
+            return T->getKind() == SK_Function || T->getKind() == SK_Method;
         }
 
         bool isAssignable(StapleType* type);
@@ -128,7 +130,7 @@ namespace staple {
         const string& getName() const { return mName; }
 
         static bool classof(const StapleType *T) {
-            return T->getKind() == SK_Function || T->getKind() == SK_Method;
+            return T->getKind() == SK_Method;
         }
 
         bool isAssignable(StapleType* type);

@@ -18,6 +18,24 @@ void yyerror(const char *s)
     exit(-1);
 }
 
+NType* NType::GetPointerType(const std::string& name, int numPtrs)
+{
+	NType* retval = new NType();
+	retval->name = name;
+	retval->isArray = false;
+	retval->numPointers = numPtrs;
+	return retval;
+}
+
+NType* NType::GetArrayType(const std::string& name, int size)
+{
+	NType* retval = new NType();
+	retval->name = name;
+	retval->isArray = true;
+	retval->size = size;
+	return retval;
+}
+
 %}
 
 %code requires {
@@ -280,9 +298,9 @@ stmtexpr
 
 lhs
         : ident
-        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; }
+        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
         | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN
-        | lhs TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); } /* array access */
+        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); } /* array access */
         ;
 
 expr
@@ -332,13 +350,13 @@ expr_list
 
 
 arrayindex
-        : ident { $$ = new NLoad($1); }
+        : ident { $$ = $1; }
         | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
         | TLPAREN expr TRPAREN { $$ = $2; }
         ;
 
 base
-        : ident { $$ = new NLoad($1); }
+        : ident { $$ = $1; }
         | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
         | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; }
         | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }

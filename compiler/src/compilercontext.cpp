@@ -1,5 +1,6 @@
 #include "compilercontext.h"
 
+namespace staple {
 
 using namespace std;
 
@@ -26,4 +27,6 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
     }
 
     return retval;
+}
+
 }

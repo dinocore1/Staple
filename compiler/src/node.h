@@ -19,6 +19,7 @@ class NExpression;
 class NVariableDeclaration;
 class NClassDeclaration;
 class NType;
+class NReturn;
 class NField;
 class NFunction;
 class NCompileUnit;
@@ -68,6 +69,7 @@ public:
         }
     }
     VISIT(ASTNode)
+    VISIT(NReturn)
     VISIT(NField)
     VISIT(NClassDeclaration)
     VISIT(NType)

@@ -14,6 +14,8 @@
 
 #include <memory>
 
+namespace staple {
+
 using namespace llvm;
 
 class NCompileUnit;
@@ -65,7 +67,6 @@ public:
     Module *module;
     FunctionPassManager *fpm;
     IRBuilder<> Builder;
-    std::map<SClassType*, ObjectHelper*> mClassObjMap;
 
     CodeGenContext(CompilerContext& ctx)
     : ctx(ctx), top(NULL), Builder(getGlobalContext())
@@ -113,5 +114,7 @@ public:
     Function* getFree();
     Function* getRelease();
 };
+
+} // namespace staple
 
 #endif /* CODEGEN_H_ */

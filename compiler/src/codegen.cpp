@@ -9,6 +9,9 @@
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Function.h>
 
+
+namespace staple {
+
 using namespace std;
 
 StructType* ObjectHelper::sStapleRuntimeClassStruct = NULL;
@@ -721,3 +724,5 @@ Value* NNew::codeGen(CodeGenContext& context)
     context.Builder.CreateCall(initFunction, std::vector<Value*>{retval});
 	return retval;
 }
+
+} // namespace staple

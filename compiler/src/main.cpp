@@ -3,15 +3,14 @@
 #include <system_error>
 
 #include "compilercontext.h"
-#include "codegen.h"
 #include "node.h"
 #include "sempass.h"
+#include "codegen/LLVMCodeGenerator.h"
 
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include "optionparser.h"
-extern NCompileUnit* compileUnit;
 
 extern "C" int yylex();
 int yyparse();
@@ -21,8 +20,12 @@ extern "C" int yydebug;
 char *filename;
 
 using namespace std;
+using namespace staple;
 
-struct Arg: public option::Arg
+extern NCompileUnit* compileUnit;
+
+
+struct Arg : public option::Arg
 {
     static option::ArgStatus Required(const option::Option& option, bool msg)
     {
@@ -99,13 +102,16 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    CodeGenContext codeGen(context);
-    codeGen.generateCode(*compileUnit);
+    LLVMCodeGenerator codeGenerator(&context);
+    codeGenerator.generateCode(compileUnit);
+
+    //CodeGenContext codeGen(context);
+    //codeGen.generateCode(*compileUnit);
 
     std::string errorCode;
     raw_fd_ostream output(context.outputFilename.c_str(), errorCode, sys::fs::OpenFlags::F_None);
 
-    codeGen.module->print(output, NULL);
+    codeGenerator.getModule()->print(output, NULL);
 
     /**
     * could also output to llvm bitcode using:

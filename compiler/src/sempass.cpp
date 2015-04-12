@@ -11,6 +11,12 @@ namespace staple {
 using namespace std;
 using namespace llvm;
 
+#define CheckType(type, location, name, positive) \
+if(type == NULL) { \
+    sempass->logError(location, "undefined type: '%s'", name.c_str()); \
+} else { \
+    positive \
+}
 
 class Scope {
 public:
@@ -34,6 +40,7 @@ public:
 
 class TypeVisitor : public ASTVisitor {
 public:
+    StapleFunction* mCurrentFunctionType;
     StapleClass *currentClass;
     Scope* scope;
     SemPass* sempass;
@@ -65,12 +72,7 @@ public:
         return sempass->ctx.typeTable[node];
     }
 
-#define CheckType(type, location, name, positive) \
-if(type == NULL) { \
-    sempass->logError(location, "undefined type: '%s'", name.c_str()); \
-} else { \
-    positive \
-}
+
 
     virtual void visit(NCompileUnit* compileUnit) {
 
@@ -84,57 +86,52 @@ if(type == NULL) { \
         }
 
         //first pass extern functions
-        for(vector<NFunctionPrototype*>::iterator it = compileUnit->externFunctions.begin();it != compileUnit->externFunctions.end();it++) {
-            NFunctionPrototype* functionPrototype = *it;
+        for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
 
             std::vector<StapleType*> argsType;
-            for(vector<NArgument*>::iterator it = functionPrototype->arguments.begin();it != functionPrototype->arguments.end();it++){
-                NArgument* arg = *it;
+            for(NArgument* arg : functionPrototype->arguments){
                 StapleType* type = getType(&arg->type);
 
                 CheckType(type, arg->location, arg->name,
-                        argsType.push_back(type);
-                        sempass->ctx.typeTable[arg] = type;
+                          argsType.push_back(type);
+                                  sempass->ctx.typeTable[arg] = type;
                 )
             }
 
             StapleType* returnType = getType(&functionPrototype->returnType);
             CheckType(returnType, functionPrototype->location, functionPrototype->returnType.name,
-                    StapleFunction* functionType = new StapleFunction(returnType, argsType, functionPrototype->isVarg);
-                    define(functionPrototype->name, functionType);
+                      sempass->ctx.typeTable[functionPrototype] = new StapleFunction(returnType, argsType, functionPrototype->isVarg);
+                              define(functionPrototype->name, sempass->ctx.typeTable[functionPrototype]);
             )
 
         }
 
         //first pass global functions
-        for(vector<NFunction *>::iterator it = compileUnit->functions.begin();it != compileUnit->functions.end();it++){
-            NFunction* function = *it;
-
+        for(NFunction* function : compileUnit->functions){
             std::vector<StapleType*> argsType;
-            for(vector<NArgument*>::iterator it = function->arguments.begin();it != function->arguments.end();it++){
-                NArgument* arg = *it;
+            for(NArgument* arg : function->arguments){
                 StapleType* type = getType(&arg->type);
 
                 CheckType(type, arg->location, arg->name,
-                        argsType.push_back(type);
-                        sempass->ctx.typeTable[arg] = type;
+                          argsType.push_back(type);
+                                  sempass->ctx.typeTable[arg] = type;
                 )
             }
 
             StapleType* returnType = getType(&function->returnType);
             CheckType(returnType, function->location, function->returnType.name,
-                    StapleFunction* functionType = new StapleFunction(returnType, argsType, function->isVarg);
-                    define(function->name, functionType);
+                      sempass->ctx.typeTable[function] = new StapleFunction(returnType, argsType, function->isVarg);
+                              define(function->name, sempass->ctx.typeTable[function]);
             )
         }
 
         //second pass class fields and methods
         for(vector<NClassDeclaration*>::iterator it = compileUnit->classes.begin();it != compileUnit->classes.end();it++){
             NClassDeclaration* classDeclaration = *it;
-            currentClass = cast<StapleClass>(scope->get(classDeclaration->name));
+            currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
 
-            for(auto field=classDeclaration->fields.begin();field != classDeclaration->fields.end();field++) {
-                (*field)->accept(this);
+            for(NField* field : classDeclaration->fields) {
+                field->accept(this);
             }
 
             for(NMethodFunction* method : classDeclaration->functions) {
@@ -148,18 +145,18 @@ if(type == NULL) { \
                 StapleType* returnType = getType(&method->returnType);
                 CheckType(returnType, method->returnType.location, method->returnType.name, )
 
-                StapleMethodFunction* functionType = currentClass->addMethod(method->name, returnType, args, method->isVarg);
+                sempass->ctx.typeTable[method] = currentClass->addMethod(method->name, returnType, args, method->isVarg);
             }
 
-            for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {
-                (*method)->accept(this);
+            for(NMethodFunction* method : classDeclaration->functions) {
+                method->accept(this);
             }
 
         }
 
         //second pass global functions
-        for(vector<NFunction *>::iterator it = compileUnit->functions.begin();it != compileUnit->functions.end();it++){
-            (*it)->accept(this);
+        for(NFunction* function : compileUnit->functions){
+            function->accept(this);
         }
 
         currentClass = NULL;
@@ -174,11 +171,11 @@ if(type == NULL) { \
         StapleType* retval = NULL;
         if(name.compare("void") == 0) {
             retval = StapleType::getVoidType();
-        } else if(name.compare("int") == 0 || name.compare("int32") == 0){
+        } else if(name.compare("uint") == 0 || name.compare("int") == 0 || name.compare("int32") == 0){
             retval = StapleType::getInt32Type();
-        } else if(name.compare("int8") == 0) {
+        } else if(name.compare("uint8") == 0 || name.compare("int8") == 0) {
             retval = StapleType::getInt8Type();
-        } else if(name.compare("int16") == 0) {
+        } else if(name.compare("uint16") == 0 || name.compare("int16") == 0) {
             retval = StapleType::getInt16Type();
         } else if(name.compare("float") == 0 || name.compare("float32") == 0) {
             retval = StapleType::getFloat32Type();
@@ -186,7 +183,7 @@ if(type == NULL) { \
             retval = StapleType::getBoolType();
         } else {
 
-            retval = scope->get(name);
+            retval = sempass->ctx.lookupClassName(name);
             if(retval == nullptr || !isa<StapleClass>(retval)) {
                 sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
                 sempass->ctx.typeTable[type] = NULL;
@@ -237,17 +234,26 @@ if(type == NULL) { \
         StapleType* returnType = getType(&methodFunction->returnType);
         CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
 
-        for(vector<NStatement*>::iterator it = methodFunction->block.statements.begin();it != methodFunction->block.statements.end();it++){
-            NStatement* statement = *it;
+        mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[methodFunction]);
+
+        for(NStatement* statement : methodFunction->block.statements){
             statement->accept(this);
         }
         pop();
     }
 
+    virtual void visit(NReturn* returnexp) {
+        StapleType* returnType = getType(returnexp->ret);
+        if(!returnType->isAssignable(mCurrentFunctionType->getReturnType())) {
+            sempass->logError(returnexp->location, "return type mismatch");
+        }
+
+        sempass->ctx.typeTable[returnexp] = StapleType::getVoidType();
+    }
+
     virtual void visit(NFunction* function) {
         push();
-        for(vector<NArgument*>::iterator it = function->arguments.begin();it != function->arguments.end();it++){
-            NArgument* arg = *it;
+        for(NArgument* arg : function->arguments){
             StapleType* type = getType(&arg->type);
 
             CheckType(type, arg->location, arg->type.name,
@@ -259,8 +265,9 @@ if(type == NULL) { \
         StapleType* returnType = getType(&function->returnType);
         CheckType(returnType, function->returnType.location, function->returnType.name, )
 
-        for(vector<NStatement*>::iterator it = function->block.statements.begin();it != function->block.statements.end();it++){
-            NStatement* statement = *it;
+        mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[function]);
+
+        for(NStatement* statement : function->block.statements){
             statement->accept(this);
         }
         pop();
@@ -478,7 +485,7 @@ if(type == NULL) { \
         if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
             sempass->ctx.typeTable[load] = ptrType->getElementType();
         }
-        sempass->ctx.typeTable[load] = getType(load->expr);
+        sempass->ctx.typeTable[load] = type;
     }
 
     virtual void visit(NBlock* block) {

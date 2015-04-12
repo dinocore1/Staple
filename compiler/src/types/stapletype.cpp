@@ -1,10 +1,3 @@
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/IR/DerivedTypes.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
-#include <llvm/IR/Function.h>
 
 #include "stapletype.h"
 
@@ -21,9 +14,6 @@ namespace staple {
             return T->getKind() == SK_Void;
         }
 
-        llvm::Type* getLLVMType() {
-            return llvm::Type::getVoidTy(getGlobalContext());
-        }
         bool isAssignable(StapleType* type) {
 
         }
@@ -103,14 +93,6 @@ namespace staple {
         mParent = parent == nullptr ? getBaseObject() : parent;
     }
 
-
-    llvm::Type* StapleClass::getLLVMType() {
-        if(mCachedType == nullptr) {
-            mCachedType = StructType::create(getGlobalContext());
-        }
-        return mCachedType;
-    }
-
     StapleMethodFunction* StapleClass::addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg) {
         StapleMethodFunction* retval = new StapleMethodFunction(this, name, returnType, argsType, isVarg);
         mMethods.push_back(retval);
@@ -163,28 +145,46 @@ namespace staple {
         return retval;
     }
 
-
-    llvm::Type* StapleField::getLLVMType() {
-        if(mCachedType == nullptr) {
-            mCachedType = mType->getLLVMType();
+    bool StapleClass::isAssignable(StapleType *type) {
+        bool retval = false;
+        if(StapleClass* stpClass = dyn_cast<StapleClass>(type)) {
+            retval = mName.compare(stpClass->mName) == 0;
         }
-        return mCachedType;
+
+        return retval;
     }
 
+    //// Staple Function ////
 
-    llvm::Type* StapleArray::getLLVMType() {
-        if(mCachedType == nullptr) {
-            mCachedType = ArrayType::get(mElementType->getLLVMType(), mSize);
+    bool StapleFunction::isAssignable(StapleType *type) {
+        bool retval = false;
+        if(StapleFunction* function = dyn_cast<StapleFunction>(type)) {
+            retval = mReturnType->isAssignable(function->mReturnType);
+            retval &= mArgumentTypes.size() == function->mArgumentTypes.size();
+
+            if(retval) {
+                for(int i=0;i<mArgumentTypes.size();i++){
+                    retval &= mArgumentTypes[i]->isAssignable(function->mArgumentTypes[i]);
+                }
+            }
         }
-        return mCachedType;
+
+        return retval;
     }
 
-    llvm::Type *StaplePointer::getLLVMType() {
-        if(mCachedType == nullptr) {
-            mCachedType = PointerType::getUnqual(mElementType->getLLVMType());
+    ///// Staple Array ////
+
+    bool StapleArray::isAssignable(StapleType *type) {
+        bool retval = false;
+        if(StapleArray* array = dyn_cast<StapleArray>(type)) {
+            retval = mElementType->isAssignable(array->mElementType);
+            retval &= mSize == array->mSize;
         }
-        return mCachedType;
+
+        return retval;
     }
+
+    //// Staple Pointer ////
 
     bool StaplePointer::isAssignable(StapleType *type) {
         if(StaplePointer* ptr = dyn_cast<StaplePointer>(type)) {
@@ -194,31 +194,48 @@ namespace staple {
         }
     }
 
-    llvm::Type* StapleInt::getLLVMType() {
-        if(mCachedType == nullptr) {
-            mCachedType = Type::getIntNTy(getGlobalContext(), mWidth);
-        }
-        return mCachedType;
-    }
 
-    llvm::Type* StapleFloat::getLLVMType() {
-        if(mCachedType == nullptr) {
-            switch(mType) {
-                case Type::f16:
-                    mCachedType = llvm::Type::getHalfTy(getGlobalContext());
-                    break;
+    //// Staple Method ////
 
-                case Type::f32:
-                    mCachedType = llvm::Type::getFloatTy(getGlobalContext());
-                    break;
+    bool StapleMethodFunction::isAssignable(StapleType *type) {
+        bool retval = false;
+        if(StapleMethodFunction* function = dyn_cast<StapleMethodFunction>(type)) {
 
-                case Type::f64:
-                    mCachedType = llvm::Type::getDoubleTy(getGlobalContext());
-                    break;
+            retval = mClass->isAssignable(function->mClass);
+            retval &= mReturnType->isAssignable(function->mReturnType);
+            retval &= mArgumentTypes.size() == function->mArgumentTypes.size();
+
+            if(retval) {
+                for(int i=0;i<mArgumentTypes.size();i++){
+                    retval &= mArgumentTypes[i]->isAssignable(function->mArgumentTypes[i]);
+                }
             }
         }
-        return mCachedType;
+
+        return retval;
     }
+
+
+    //// Staple Field ////
+
+    bool StapleField::isAssignable(StapleType *type) {
+        bool retval = mType->isAssignable(type);
+        return retval;
+    }
+
+    //// Staple Int ////
+
+    bool StapleInt::isAssignable(StapleType *type) {
+        bool retval = isa<StapleInt>(type) || isa<StapleFloat>(type);
+        return retval;
+
+    }
+
+    bool StapleFloat::isAssignable(StapleType *type) {
+        bool retval = isa<StapleInt>(type) || isa<StapleFloat>(type);
+        return retval;
+    }
+
 
 }
 

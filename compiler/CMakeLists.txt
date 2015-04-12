@@ -43,8 +43,6 @@ ENDIF()
 set(SOURCE_FILES
     src/compilercontext.cpp
     src/compilercontext.h
-    src/codegen.cpp
-    src/codegen.h
     src/main.cpp
     src/sempass.cpp
     src/node.h
@@ -52,10 +50,11 @@ set(SOURCE_FILES
     src/codegen/pointerscopepass.h
     src/types/stapletype.h
     src/types/stapletype.cpp
+    src/codegen/LLVMCodeGenerator.cpp
     )
 
 include_directories("/usr/lib/llvm-3.5/include")
-add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES})
+add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES} src/sempass/Pass1FunctionVisitor.hpp)
 
 
 # this doesnt work but it would be nice if it did
