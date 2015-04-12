@@ -1,8 +1,6 @@
 #include <cstdarg>
 
 #include "node.h"
-#include "codegen.h"
-#include "type.h"
 #include "types/stapletype.h"
 
 #include "sempass.h"
@@ -11,6 +9,7 @@
 namespace staple {
 
 using namespace std;
+using namespace llvm;
 
 
 class Scope {
@@ -42,6 +41,8 @@ public:
     TypeVisitor(SemPass* sempass)
     : scope(NULL)
     , sempass(sempass) {}
+
+    using ASTVisitor::visit;
 
     void push() {
         Scope* newScope = new Scope();
@@ -147,9 +148,7 @@ if(type == NULL) { \
                 StapleType* returnType = getType(&method->returnType);
                 CheckType(returnType, method->returnType.location, method->returnType.name, )
 
-
                 StapleMethodFunction* functionType = currentClass->addMethod(method->name, returnType, args, method->isVarg);
-                method->classType = currentClass;
             }
 
             for(auto method=classDeclaration->functions.begin();method != classDeclaration->functions.end();method++) {

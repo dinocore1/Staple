@@ -18,9 +18,8 @@ LOCAL_CXXFLAGS := -std=c++11 $(shell llvm-config-3.5 --cxxflags --system-libs --
 LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
-	src/codegen.cpp \
 	src/sempass.cpp \
-	src/type.cpp \
+	src/codegen.cpp \
 	src/compilercontext.cpp \
 	src/types/stapletype.cpp \
 	src/main.cpp 

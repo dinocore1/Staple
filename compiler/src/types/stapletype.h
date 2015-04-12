@@ -3,7 +3,6 @@
 #define _STAPLE_STAPLETYPE_H_
 
 #include <llvm/Support/Casting.h>
-#include <llvm/IR/Type.h>
 
 namespace staple {
 
@@ -28,15 +27,12 @@ namespace staple {
     private:
         const StapleKind mKind;
 
-    protected:
-        llvm::Type* mCachedType;
 
     public:
-        StapleType(StapleKind k) : mKind(k), mCachedType(nullptr) {}
+        StapleType(StapleKind k) : mKind(k) {}
 
         StapleKind getKind() const { return mKind; }
 
-        virtual llvm::Type* getLLVMType() = 0;
         virtual bool isAssignable(StapleType* type) = 0;
 
         static StapleType* getVoidType();
@@ -93,7 +89,6 @@ namespace staple {
             return T->getKind() == SK_Class;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -111,14 +106,13 @@ namespace staple {
         StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
         : StapleType(SK_Function), mReturnType(returnType), mIsVarg(isVarg) {}
 
-        const StapleType* getReturnType() const { return mReturnType; }
+        StapleType* getReturnType() const { return mReturnType; }
         const vector<StapleType*> getArguments() const { return mArgumentTypes; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -137,7 +131,6 @@ namespace staple {
             return T->getKind() == SK_Function || T->getKind() == SK_Method;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -157,7 +150,6 @@ namespace staple {
             return T->getKind() == SK_Field;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -182,7 +174,6 @@ namespace staple {
             return T->getKind() == SK_Array;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -194,13 +185,12 @@ namespace staple {
         StaplePointer(StapleType* elementType)
         : StapleType(SK_Pointer), mElementType(elementType) {}
 
-        const StapleType* getElementType() const { return mElementType; };
+        StapleType* getElementType() const { return mElementType; };
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Pointer;
         }
 
-        llvm::Type* getLLVMType();
 
         bool isAssignable(StapleType* type);
     };
@@ -217,7 +207,6 @@ namespace staple {
             return T->getKind() == SK_Integer;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
     };
 
@@ -236,7 +225,6 @@ namespace staple {
             return T->getKind() == SK_Float;
         }
 
-        llvm::Type* getLLVMType();
         bool isAssignable(StapleType* type);
 
     private:

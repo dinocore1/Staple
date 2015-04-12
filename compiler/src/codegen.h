@@ -19,6 +19,7 @@ using namespace llvm;
 class NCompileUnit;
 class NClassDeclaration;
 class SymbolLookup;
+class CodeGenContext;
 
 class ScopeCleanUp {
 public:
@@ -55,6 +56,8 @@ class ObjectHelper;
 
 class CodeGenContext {
     NCompileUnit* compileUnitRoot;
+
+    llvm::Type* getLLVMType(StapleType* stapleType);
 
 public:
     CodeGenBlock* top;

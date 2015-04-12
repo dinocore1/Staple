@@ -7,27 +7,35 @@
 #include "node.h"
 #include "types/stapletype.h"
 
-using namespace staple;
+#include <llvm/IR/Type.h>
 
-class CompilerContext {
-public:
-    std::string inputFilename;
-    std::string outputFilename;
+namespace staple {
 
-    std::string package;
-    std::vector<std::string> includes;
+    using namespace std;
 
-    //fully qualifed name class map
-    std::map<std::string, StapleClass*> classes;
+    class CompilerContext {
+    public:
+        string inputFilename;
+        string outputFilename;
 
-    void defineClass(StapleClass* localClass);
-    StapleClass* lookupClassName(const std::string& className);
+        string package;
+        vector<string> includes;
 
-    std::map<ASTNode*, StapleType*> typeTable;
+        //fully qualifed name class map
+        map<string, StapleClass*> classes;
 
-    CompilerContext();
+        void defineClass(StapleClass *localClass);
+
+        StapleClass *lookupClassName(const string &className);
+
+        map<ASTNode*, StapleType*> typeTable;
+        map<StapleType*, llvm::Type*> llvmType;
+
+        CompilerContext();
 
 
-};
+    };
+
+} // namespace staple
 
 #endif /* COMPILERCONTEXT_H_ */

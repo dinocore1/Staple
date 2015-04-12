@@ -1,13 +1,13 @@
 %{
 #include <cstdio>
 #include "node.h"
+using namespace staple;
+
 NCompileUnit *compileUnit; /* the top level root node of our final AST */
 
 extern int yylex();
 
-
 #define YYDEBUG 1
-
 
 extern int yylineno;
 extern char* yytext;
@@ -18,15 +18,11 @@ void yyerror(const char *s)
     exit(-1);
 }
 
-
-
 %}
 
 %code requires {
 
 extern char *filename; /* current filename here for the lexer */
-
-
 
 #if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
 typedef struct YYLTYPE
@@ -61,30 +57,62 @@ typedef struct YYLTYPE
           (Current).filename  = NULL;                        /* new */ \
         }                                                              \
     while (0)
+
+namespace staple {
+class ASTNode;
+class NStatement;
+class NExpression;
+class NVariableDeclaration;
+class NClassDeclaration;
+class NType;
+class NField;
+class NFunction;
+class NCompileUnit;
+class NAssignment;
+class NArrayElementPtr;
+class NIdentifier;
+class NIntLiteral;
+class NBlock;
+class NArgument;
+class NFunctionPrototype;
+class NMemberAccess;
+class NFunctionCall;
+class NExpressionStatement;
+class NStringLiteral;
+class NNew;
+class NSizeOf;
+class NLoad;
+class NMethodFunction;
+class NMethodCall;
+class NIfStatement;
+class NBinaryOperator;
+
 }
 
+
+}
 
 
 /* Represents the many different ways we can access our data */
 %union {
-    ASTNode *node;
-    NType *type;
-    NBlock *block;
-    NExpression *expr;
-    NStatement *stmt;
-    NVariableDeclaration *var_decl;
-    std::vector<NVariableDeclaration*> *varvec;
-    std::vector<NExpression*> *exprvec;
+    staple::ASTNode *node;
+    staple::NType *type;
+    staple::NBlock *block;
+    staple::NExpression *expr;
+    staple::NStatement *stmt;
+    staple::NVariableDeclaration *var_decl;
+    std::vector<staple::NVariableDeclaration*> *varvec;
+    std::vector<staple::NExpression*> *exprvec;
     std::string *string;
     int token;
-    ASTNode *nodelist;
-    NClassDeclaration *class_decl;
-    NField *field;
-    NFunctionPrototype *prototype;
-    std::vector<NArgument*> *func_args;
+    staple::ASTNode *nodelist;
+    staple::NClassDeclaration *class_decl;
+    staple::NField *field;
+    staple::NFunctionPrototype *prototype;
+    std::vector<staple::NArgument*> *func_args;
     bool boolean;
-    NFunction *function;
-    NMethodFunction* method_function;
+    staple::NFunction *function;
+    staple::NMethodFunction* method_function;
     int count;
 }
 

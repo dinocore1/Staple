@@ -1,21 +1,19 @@
 #ifndef SNODE_H_
 #define SNODE_H_
 
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Function.h"
+
 #include <iostream>
 #include <vector>
 
-class SClassType;
+#include "parser.hpp"
+
+namespace staple {
+
+class CodeGenContext;
 
 class ASTNode;
 class ASTVisitor;
 
-class CodeGenContext;
 class NStatement;
 class NExpression;
 class NVariableDeclaration;
@@ -43,13 +41,10 @@ class NMethodCall;
 class NIfStatement;
 class NBinaryOperator;
 
-#include "parser.hpp"
-
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
 typedef std::vector<NVariableDeclaration*> VariableList;
 
-using namespace llvm;
 
 class ASTNode {
 public:
@@ -131,19 +126,20 @@ public:
     std::vector<NField*>* fields;
     std::vector<NMethodFunction*>* functions;
 
-    virtual void visit(NField* field) {
+    using ASTVisitor::visit;
+
+    void visit(NField* field) {
         fields->push_back(field);
     }
 
-    virtual void visit(NMethodFunction* function) {
+    void visit(NMethodFunction* function) {
         functions->push_back(function);
     }
 
 };
 
 class NClassDeclaration : public ASTNode {
-private:
-    StructType* structType;
+
 public:
     ACCEPT
     const std::string name;
@@ -153,11 +149,11 @@ public:
     NClassDeclaration(const std::string& name,
             const std::vector<NField*>& fields,
             const std::vector<NMethodFunction*>& functions)
-    : structType(NULL), name(name), fields(fields), functions(functions)
+    : name(name), fields(fields), functions(functions)
     {}
 
     NClassDeclaration(const std::string& name, ASTNode* members)
-    : structType(NULL), name(name)
+    : name(name)
     {
         ClassMemberVisitor collector;
         collector.fields = &fields;
@@ -166,23 +162,10 @@ public:
         collector.visitChildren(members);
     }
 
-    Type* getLLVMType(const CodeGenContext &context) {
-        if(structType == NULL) {
-            std::vector<Type *> typeFields;
-            for (int i = 0; i < fields.size(); i++) {
-                typeFields.push_back(fields[i]->type.getLLVMType(context));
-            }
-            structType = StructType::create(typeFields, name);
-        }
-        return structType;
-    }
 };
 
 
-
 class NExpression : public ASTNode {
-public:
-    virtual llvm::Value* codeGen(CodeGenContext& context) = 0;
 };
 
 
@@ -205,7 +188,6 @@ public:
     : NLiteral(str), width(width) {
     }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NFloatLiteral : public NLiteral {
@@ -214,7 +196,6 @@ public:
     NFloatLiteral(std::string const &str) : NLiteral(str) {
     }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NStringLiteral : public NLiteral {
@@ -223,7 +204,6 @@ public:
     NStringLiteral(std::string const &str) : NLiteral(str) {
     }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NIdentifier : public NExpression {
@@ -231,7 +211,6 @@ public:
     ACCEPT
     std::string name;
     NIdentifier(const std::string& name) : name(name) { }
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NArgument : public ASTNode {
@@ -256,7 +235,7 @@ public:
     : name(name), arguments(arguments) { }
     NFunctionCall(const std::string& name)
     : name(name) { }
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NMethodCall : public NExpression {
@@ -267,12 +246,11 @@ public:
     NExpression* base;
 
     int methodIndex;
-    SClassType* classType;
+
 
     NMethodCall(NExpression* base, const std::string& name, const ExpressionList& arguments)
-    : base(base), name(name), arguments(arguments), methodIndex(-1), classType(NULL) {}
+    : base(base), name(name), arguments(arguments), methodIndex(-1) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NArrayElementPtr : public NExpression {
@@ -284,7 +262,7 @@ public:
     NArrayElementPtr(NExpression* id, NExpression* expr)
     : base(id), expr(expr) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NNew : public NExpression {
@@ -295,7 +273,7 @@ public:
     NNew(const std::string& id)
     : id(id) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NSizeOf : public NExpression {
@@ -306,7 +284,7 @@ public:
     NSizeOf(NType* type)
     : type(type) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NLoad : public NExpression {
@@ -316,7 +294,6 @@ public:
     NLoad(NExpression* expr)
     : expr(expr) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NMemberAccess : public NExpression {
@@ -327,7 +304,6 @@ public:
     NMemberAccess(NExpression* base, const std::string& field)
     : base(base), field(field) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 
     int fieldIndex;
 };
@@ -339,7 +315,6 @@ public:
     NNot(NExpression* base)
     : base(base) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NNegitive : public NExpression {
@@ -349,7 +324,6 @@ public:
     NNegitive(NExpression* base)
     : base(base) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
 };
 
 class NBinaryOperator : public NExpression {
@@ -360,7 +334,7 @@ public:
     NExpression* rhs;
     NBinaryOperator(NExpression* lhs, int op, NExpression* rhs) :
         lhs(lhs), rhs(rhs), op(op) {}
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NReturn : public NStatement {
@@ -369,7 +343,7 @@ public:
     NExpression* ret;
     NReturn(NExpression* ret)
     : ret(ret) {}
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NAssignment : public NStatement {
@@ -379,7 +353,7 @@ public:
     NExpression* rhs;
     NAssignment(NExpression* lhs, NExpression* rhs) :
         lhs(lhs), rhs(rhs) { }
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NBlock : public NStatement {
@@ -387,7 +361,7 @@ public:
     ACCEPT
     StatementList statements;
     NBlock() { }
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NIfStatement : public NStatement {
@@ -400,7 +374,7 @@ public:
     NIfStatement(NExpression* condition, NStatement* thenBlock, NStatement* elseBlock)
     : condition(condition), thenBlock(thenBlock), elseBlock(elseBlock) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NExpressionStatement : public NStatement {
@@ -409,7 +383,7 @@ public:
     NExpression* expression;
     NExpressionStatement(NExpression* expression) :
         expression(expression) { }
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NVariableDeclaration : public NStatement {
@@ -423,7 +397,7 @@ public:
     NVariableDeclaration(NType* type, const std::string& name, NExpression *assignmentExpr) :
         type(type), name(name), assignmentExpr(assignmentExpr) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NFunctionPrototype : public ASTNode {
@@ -438,42 +412,37 @@ public:
             const std::vector<NArgument*>& arguments, bool isVarg) :
             returnType(type), name(name), arguments(arguments), isVarg(isVarg) {}
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NFunction : public NFunctionPrototype {
 public:
     ACCEPT
     NBlock block;
-    llvm::Function::LinkageTypes linkage;
-    llvm::Function* llvmFunction;
+
 
     NFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
             const NBlock& block)
             : NFunctionPrototype(type, name, arguments, isVarg), block(block) {
-        linkage = GlobalValue::ExternalLinkage;
+
     }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NMethodFunction : public NFunctionPrototype {
 public:
     ACCEPT
     NBlock block;
-    llvm::Function::LinkageTypes linkage;
-    llvm::Function* llvmFunction;
-    StapleClass* classType;
+
 
     NMethodFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
             const NBlock& block)
-            : NFunctionPrototype(type, name, arguments, isVarg), block(block) {
-        linkage = GlobalValue::ExternalLinkage;
-    }
+            : NFunctionPrototype(type, name, arguments, isVarg), block(block) { }
 
-    virtual llvm::Value* codeGen(CodeGenContext& context);
+
 };
 
 class NCompileUnit : public ASTNode {
@@ -487,5 +456,7 @@ public:
     NCompileUnit() {}
 
 };
+
+} // namespace staple
 
 #endif /* SNODE_H_ */

@@ -3,6 +3,9 @@
 
 #include <string>
 #include "node.h"
+
+using namespace staple;
+
 #include "parser.hpp"
 
 

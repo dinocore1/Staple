@@ -18,6 +18,8 @@ namespace staple {
         Pass1ClassVisitor(CompilerContext* ctx)
         : mContext(ctx) {}
 
+        using ASTVisitor::visit;
+
         void visit(NClassDeclaration* classDeclaration) {
 
             string fqClassName = !mContext->package.empty() ? (mContext->package + "." + classDeclaration->name) : classDeclaration->name;

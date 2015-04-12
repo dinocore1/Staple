@@ -46,7 +46,6 @@ set(SOURCE_FILES
     src/codegen.cpp
     src/codegen.h
     src/main.cpp
-    src/type.cpp
     src/sempass.cpp
     src/node.h
     src/codegen/pointerscopepass.cpp
