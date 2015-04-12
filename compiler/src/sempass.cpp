@@ -349,27 +349,25 @@ if(type == NULL) { \
         StaplePointer* ptr = nullptr;
         StapleClass* classPtr = nullptr;
 
-        if(!(classPtr = dyn_cast<StapleClass>(baseType)) &&
-                !((ptr = dyn_cast<StaplePointer>(baseType))
-                 && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))
-                )) {
-
+        if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+            memberAccess->base = new NLoad(memberAccess->base);
+            memberAccess->base->accept(this);
+        } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
             sempass->logError(memberAccess->base->location, "not a class type");
-
-        } else {
-
-            int index = 0;
-            StapleField* field = classPtr->getField(memberAccess->field, index);
-            if(field != nullptr){
-                sempass->ctx.typeTable[memberAccess] = field;
-                memberAccess->fieldIndex = index;
-            } else {
-                sempass->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
-                                  classPtr->getClassName().c_str(),
-                                  memberAccess->field.c_str());
-            }
-
+            return;
         }
+
+        int index = 0;
+        StapleField* field = classPtr->getField(memberAccess->field, index);
+        if(field != nullptr){
+            sempass->ctx.typeTable[memberAccess] = field;
+            memberAccess->fieldIndex = index;
+        } else {
+            sempass->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
+                              classPtr->getClassName().c_str(),
+                              memberAccess->field.c_str());
+        }
+
     }
 
     virtual void visit(NIfStatement* ifStatement) {
@@ -419,35 +417,36 @@ if(type == NULL) { \
         StaplePointer* ptr = nullptr;
         StapleClass* classPtr = nullptr;
 
-        if(!(classPtr = dyn_cast<StapleClass>(baseType)) &&
-           !((ptr = dyn_cast<StaplePointer>(baseType))
-             && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))
-           )) {
-
+        if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+            methodCall->base = new NLoad(methodCall->base);
+            methodCall->base->accept(this);
+        } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
             sempass->logError(methodCall->base->location, "not a class type");
+            return;
+        }
 
-        } else {
-            int index = 0;
-            StapleMethodFunction* method = classPtr->getMethod(methodCall->name, index);
-            if(method != nullptr) {
-                methodCall->methodIndex = index;
+        int index = 0;
+        StapleMethodFunction* method = classPtr->getMethod(methodCall->name, index);
+        if(method != nullptr) {
+            methodCall->methodIndex = index;
 
-                int i = 0;
-                for(auto arg : methodCall->arguments) {
-                    StapleType* argType = getType(arg);
+            int i = 0;
+            for(auto arg : methodCall->arguments) {
+                StapleType* argType = getType(arg);
 
-                    if(i < method->getArguments().size()) {
-                        StapleType* definedArgType = method->getArguments()[i];
-                        if(!argType->isAssignable(definedArgType)) {
-                            sempass->logError(arg->location, "argument mismatch");
-                        }
+                if(i < method->getArguments().size()) {
+                    StapleType* definedArgType = method->getArguments()[i];
+                    if(!argType->isAssignable(definedArgType)) {
+                        sempass->logError(arg->location, "argument mismatch");
                     }
-                    i++;
                 }
-
-                sempass->ctx.typeTable[methodCall] = method->getReturnType();
-
+                i++;
             }
+
+            sempass->ctx.typeTable[methodCall] = method->getReturnType();
+        } else {
+            sempass->logError(methodCall->base->location, "class '%s' does not have method: '%s'",
+                              classPtr->getClassName().c_str(), methodCall->name.c_str());
         }
     }
 
@@ -475,6 +474,10 @@ if(type == NULL) { \
     }
 
     virtual void visit(NLoad* load) {
+        StapleType* type = getType(load->expr);
+        if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
+            sempass->ctx.typeTable[load] = ptrType->getElementType();
+        }
         sempass->ctx.typeTable[load] = getType(load->expr);
     }
 
