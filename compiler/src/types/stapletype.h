@@ -106,10 +106,11 @@ namespace staple {
 
     public:
         StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleType(SK_Function), mReturnType(returnType), mIsVarg(isVarg) {}
+        : StapleType(SK_Function), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg) {}
 
         StapleType* getReturnType() const { return mReturnType; }
         const vector<StapleType*> getArguments() const { return mArgumentTypes; }
+        bool getIsVarg() const { return mIsVarg; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Function || T->getKind() == SK_Method;
@@ -199,11 +200,13 @@ namespace staple {
 
     class StapleInt : public StapleType {
     private:
-        uint8_t mWidth;
+        const uint8_t mWidth;
 
     public:
         StapleInt(uint8_t width)
         : StapleType(SK_Integer), mWidth(width) {}
+
+        uint8_t getWidth() const { return mWidth; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Integer;

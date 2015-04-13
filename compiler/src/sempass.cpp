@@ -125,7 +125,7 @@ public:
             )
         }
 
-        //second pass class fields and methods
+        //class fields and methods
         for(vector<NClassDeclaration*>::iterator it = compileUnit->classes.begin();it != compileUnit->classes.end();it++){
             NClassDeclaration* classDeclaration = *it;
             currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
@@ -147,11 +147,13 @@ public:
 
                 sempass->ctx.typeTable[method] = currentClass->addMethod(method->name, returnType, args, method->isVarg);
             }
+        }
 
+        //second pass methods
+        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
             for(NMethodFunction* method : classDeclaration->functions) {
                 method->accept(this);
             }
-
         }
 
         //second pass global functions
@@ -209,7 +211,7 @@ public:
     }
 
     virtual void visit(NExpressionStatement* expressionStatement) {
-        expressionStatement->expression->accept(this);
+        sempass->ctx.typeTable[expressionStatement] = getType(expressionStatement->expression);
     }
 
     virtual void visit(NMethodFunction* methodFunction) {
@@ -319,7 +321,7 @@ public:
     }
 
     virtual void visit(NNew* newNode) {
-        StapleType* type = scope->get(newNode->id);
+        StapleType* type = sempass->ctx.lookupClassName(newNode->id);
 
         if(StapleClass* classType = dyn_cast<StapleClass>(type)) {
             sempass->ctx.typeTable[newNode] = new StaplePointer(classType);
@@ -378,7 +380,7 @@ public:
     }
 
     virtual void visit(NIfStatement* ifStatement) {
-        StapleType* conditionType = getType(ifStatement);
+        StapleType* conditionType = getType(ifStatement->condition);
 
         if(!isa<StapleInt>(conditionType)){
             sempass->logError(ifStatement->condition->location, "cannot evaluate condition");
@@ -490,7 +492,7 @@ public:
 
     virtual void visit(NBlock* block) {
         push();
-        for(NStatement* statement :block->statements){
+        for(NStatement* statement : block->statements){
             statement->accept(this);
         }
         pop();

@@ -54,7 +54,7 @@ set(SOURCE_FILES
     )
 
 include_directories("/usr/lib/llvm-3.5/include")
-add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES} src/sempass/Pass1FunctionVisitor.hpp)
+add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES})
 
 
 # this doesnt work but it would be nice if it did
