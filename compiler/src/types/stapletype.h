@@ -148,6 +148,7 @@ namespace staple {
         : StapleType(SK_Field), mClass(classType), mName(name), mType(type) {}
 
         const string& getName() const { return mName; }
+        StapleType* getElementType() const { return mType; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Field;

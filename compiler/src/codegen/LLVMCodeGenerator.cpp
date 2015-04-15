@@ -36,7 +36,7 @@ namespace staple {
     class CodeGenBlock {
     private:
         CodeGenBlock* mParent;
-        map<const string, SymbolLookup*> mSymbolTable;
+        map<const string, Value*> mSymbolTable;
 
     public:
         CodeGenBlock(CodeGenBlock* parent)
@@ -44,10 +44,20 @@ namespace staple {
 
         CodeGenBlock* getParent() const { return mParent; }
 
-        void defineSymbol(const string& name, SymbolLookup* symbolLookup) {
-            mSymbolTable[name] = symbolLookup;
+        void defineSymbol(const string& name, Value* llvmValue) {
+            mSymbolTable[name] = llvmValue;
         }
 
+        Value* lookupSymbol(const string& name) {
+            auto it = mSymbolTable.find(name);
+            if(it != mSymbolTable.end()) {
+                return it->second;
+            } else if(mParent != nullptr){
+                return mParent->lookupSymbol(name);
+            } else {
+                return nullptr;
+            }
+        }
 
         BasicBlock* mBasicBlock;
 
@@ -58,6 +68,15 @@ namespace staple {
         LLVMCodeGenerator* mCodeGen;
         map<ASTNode*, Value*> mValues;
         CodeGenBlock* mScope;
+        map<StapleClass*, StructType*> mClassStructCache;
+
+        StructType* createClassType(StapleClass* stapleClass, StructType* llvmStructType) {
+            vector<Type*> elements;
+            for(StapleType* stapleType : stapleClass->getFields()) {
+                elements.push_back(getLLVMType(stapleType));
+            }
+            llvmStructType->setBody(elements);
+        }
 
 
         void push() {
@@ -75,7 +94,19 @@ namespace staple {
             if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
                 retval = Type::getIntNTy(getGlobalContext(), intType->getWidth());
             } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(stapleType)) {
-                retval = getLLVMType(ptrType->getElementType());
+                retval = PointerType::getUnqual(getLLVMType(ptrType->getElementType()));
+            } else if(StapleClass* classType = dyn_cast<StapleClass>(stapleType)) {
+                auto it = mClassStructCache.find(classType);
+                if(it != mClassStructCache.end()) {
+                    retval = it->second;
+                } else {
+                    StructType* structType = StructType::create(getGlobalContext());
+                    mClassStructCache[classType] = structType;
+                    retval = structType;
+                    createClassType(classType, structType);
+                }
+            } else if(StapleField* field = dyn_cast<StapleField>(stapleType)) {
+                retval = getLLVMType(field->getElementType());
             }
 
             return retval;
@@ -94,7 +125,12 @@ namespace staple {
 
     public:
         LLVMCodeGenVisitor(LLVMCodeGenerator*codeGen)
-        : mCodeGen(codeGen) {}
+        : mCodeGen(codeGen), mScope(new CodeGenBlock(nullptr)) {}
+
+        Value* getValue(ASTNode* node) {
+            node->accept(this);
+            return mValues[node];
+        }
 
         void visit(NFunctionPrototype* functionPrototype) {
 
@@ -114,6 +150,7 @@ namespace staple {
                     functionPrototype->name.c_str(),
                     &mCodeGen->mModule);
 
+            mScope->defineSymbol(functionPrototype->name, function);
             mValues[functionPrototype] = function;
 
         }
@@ -137,6 +174,7 @@ namespace staple {
                     functionName.c_str(),
                     &mCodeGen->mModule);
 
+            mScope->defineSymbol(function->name, llvmFunction);
             mValues[function] = llvmFunction;
 
             push();
@@ -149,7 +187,7 @@ namespace staple {
                 NArgument* nodeArg = function->arguments[i];
 
                 AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(llvmArg, 0, nodeArg->name.c_str());
-                mScope->defineSymbol(nodeArg->name, LocalVarLookup::get(alloc));
+                mScope->defineSymbol(nodeArg->name, alloc);
                 mCodeGen->mIRBuilder.CreateStore(AI, alloc);
             }
 
@@ -158,6 +196,64 @@ namespace staple {
             }
 
             pop();
+        }
+
+        void visit(NVariableDeclaration* declaration) {
+            StapleType* type = mCodeGen->mCompilerContext->typeTable[declaration];
+
+            AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(getLLVMType(type), 0, declaration->name.c_str());
+
+            mScope->defineSymbol(declaration->name, alloc);
+
+            if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
+                mCodeGen->mIRBuilder.CreateStore(ConstantPointerNull::get(cast<PointerType>(getLLVMType(ptrType))), alloc);
+            }
+
+            if(declaration->assignmentExpr != nullptr) {
+                NAssignment assign(new NIdentifier(declaration->name), declaration->assignmentExpr);
+                assign.accept(this);
+            }
+
+            mValues[declaration] = alloc;
+        }
+
+        void visit(NIdentifier* identifier) {
+            Value* value = mScope->lookupSymbol(identifier->name);
+            mValues[identifier] = value;
+        }
+
+        void visit(NNew* newnode) {
+            StaplePointer* ptrType = cast<StaplePointer>(mCodeGen->mCompilerContext->typeTable[newnode]);
+
+            PointerType* llvmPtrType = cast<PointerType>(getLLVMType(ptrType));
+
+            Value* nullptrValue = ConstantPointerNull::get(llvmPtrType);
+            Value* size = mCodeGen->mIRBuilder.CreateGEP(nullptrValue, ConstantInt::get(mCodeGen->mIRBuilder.getInt32Ty(), 1));
+            size = mCodeGen->mIRBuilder.CreatePointerCast(size, mCodeGen->mIRBuilder.getInt32Ty());
+
+            Function* malloc = getMallocFunction();
+
+            Value* retval = mCodeGen->mIRBuilder.CreateCall(malloc, size);
+            retval = mCodeGen->mIRBuilder.CreatePointerCast(retval, llvmPtrType);
+
+            mValues[newnode] = retval;
+
+            //TODO: add init function call
+
+        }
+
+        void visit(NAssignment* assignment) {
+            Value* lhsValue = getValue(assignment->lhs);
+            Value* rhsValue = getValue(assignment->rhs);
+
+            mCodeGen->mIRBuilder.CreateStore(rhsValue, lhsValue);
+
+            StapleType* rhsType = mCodeGen->mCompilerContext->typeTable[assignment->rhs];
+            StaplePointer* ptrType;
+            if((ptrType = dyn_cast<StaplePointer>(rhsType)) && isa<StapleClass>(ptrType->getElementType())) {
+
+
+            }
         }
 
         void visit(NBlock* block) {
