@@ -51,6 +51,7 @@ set(SOURCE_FILES
     src/types/stapletype.h
     src/types/stapletype.cpp
     src/codegen/LLVMCodeGenerator.cpp
+    src/codegen/LLVMStapleObject.cpp
     )
 
 include_directories("/usr/lib/llvm-3.5/include")

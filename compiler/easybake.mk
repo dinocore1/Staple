@@ -19,9 +19,10 @@ LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
 	src/sempass.cpp \
-	src/codegen.cpp \
 	src/compilercontext.cpp \
 	src/types/stapletype.cpp \
+	src/codegen/LLVMCodeGenerator.cpp \
+	src/codegen/LLVMStapleObject.cpp \
 	src/main.cpp 
 
 LOCAL_CLEAN := \

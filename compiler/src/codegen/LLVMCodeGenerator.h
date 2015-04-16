@@ -3,26 +3,34 @@
 #ifndef STAPLE_LLVMCODEGENERATOR_H
 #define STAPLE_LLVMCODEGENERATOR_H
 
-
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/PassManager.h>
 #include "../node.h"
 
+#include <string>
+
 namespace staple {
 
+    using namespace std;
     using namespace llvm;
 
     class CompilerContext;
     class NCompileUnit;
+    class StapleType;
+    class StapleClass;
 
     class LLVMCodeGenerator {
     friend class LLVMCodeGenVisitor;
+    friend class LLVMStapleObject;
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;
         Module mModule;
         FunctionPassManager mFunctionPassManager;
+
+        Type* getLLVMType(StapleType* stapleType);
+        string createFunctionName(const string& name);
 
     public:
         LLVMCodeGenerator(CompilerContext* compilerContext);

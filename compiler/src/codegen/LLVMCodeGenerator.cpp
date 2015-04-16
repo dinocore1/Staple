@@ -3,6 +3,7 @@
 #include "LLVMCodeGenerator.h"
 #include "../compilercontext.h"
 #include "../types/stapletype.h"
+#include "LLVMStapleObject.h"
 
 #include <llvm/IR/GlobalValue.h>
 
@@ -68,14 +69,23 @@ namespace staple {
         LLVMCodeGenerator* mCodeGen;
         map<ASTNode*, Value*> mValues;
         CodeGenBlock* mScope;
-        map<StapleClass*, StructType*> mClassStructCache;
 
-        StructType* createClassType(StapleClass* stapleClass, StructType* llvmStructType) {
-            vector<Type*> elements;
-            for(StapleType* stapleType : stapleClass->getFields()) {
-                elements.push_back(getLLVMType(stapleType));
+
+
+
+        Function* getMallocFunction() {
+
+            Function* retval = mCodeGen->mModule.getFunction("malloc");
+            if(retval == NULL) {
+                std::vector<Type*> argTypes;
+                argTypes.push_back(IntegerType::getInt32Ty(getGlobalContext()));
+
+                Type* returnType = Type::getInt8PtrTy(getGlobalContext());
+                FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
+                retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "malloc", &mCodeGen->mModule);
             }
-            llvmStructType->setBody(elements);
+
+            return retval;
         }
 
 
@@ -89,39 +99,12 @@ namespace staple {
             mScope = parent;
         }
 
-        Type* getLLVMType(StapleType* stapleType) {
-            Type* retval = nullptr;
-            if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
-                retval = Type::getIntNTy(getGlobalContext(), intType->getWidth());
-            } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(stapleType)) {
-                retval = PointerType::getUnqual(getLLVMType(ptrType->getElementType()));
-            } else if(StapleClass* classType = dyn_cast<StapleClass>(stapleType)) {
-                auto it = mClassStructCache.find(classType);
-                if(it != mClassStructCache.end()) {
-                    retval = it->second;
-                } else {
-                    StructType* structType = StructType::create(getGlobalContext());
-                    mClassStructCache[classType] = structType;
-                    retval = structType;
-                    createClassType(classType, structType);
-                }
-            } else if(StapleField* field = dyn_cast<StapleField>(stapleType)) {
-                retval = getLLVMType(field->getElementType());
-            }
 
-            return retval;
-        }
 
         inline Type* getNodeType(ASTNode* node) {
-            return getLLVMType(mCodeGen->mCompilerContext->typeTable[node]);
+            return mCodeGen->getLLVMType(mCodeGen->mCompilerContext->typeTable[node]);
         }
 
-        inline string createFunctionName(string name) {
-            string retval = mCodeGen->mCompilerContext->package;
-            replace(retval.begin(), retval.end(), '.', '_');
-            retval += "_" + name;
-            return retval;
-        }
 
     public:
         LLVMCodeGenVisitor(LLVMCodeGenerator*codeGen)
@@ -136,7 +119,7 @@ namespace staple {
 
             StapleFunction* stapleFunction = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[functionPrototype]);
 
-            Type* returnType = getLLVMType(stapleFunction->getReturnType());
+            Type* returnType = mCodeGen->getLLVMType(stapleFunction->getReturnType());
 
             vector<Type*> argTypes;
             for(NArgument* arg : functionPrototype->arguments) {
@@ -158,14 +141,14 @@ namespace staple {
         void visit(NFunction* function) {
             StapleFunction* stapleFunction = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
 
-            Type* returnType = getLLVMType(stapleFunction->getReturnType());
+            Type* returnType = mCodeGen->getLLVMType(stapleFunction->getReturnType());
 
             vector<Type*> argTypes;
             for(NArgument* arg : function->arguments) {
                 argTypes.push_back(getNodeType(arg));
             }
 
-            string functionName = createFunctionName(function->name);
+            string functionName = mCodeGen->createFunctionName(function->name);
 
             FunctionType* functionType = FunctionType::get(returnType, argTypes, stapleFunction->getIsVarg());
             Function* llvmFunction = Function::Create(
@@ -201,12 +184,12 @@ namespace staple {
         void visit(NVariableDeclaration* declaration) {
             StapleType* type = mCodeGen->mCompilerContext->typeTable[declaration];
 
-            AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(getLLVMType(type), 0, declaration->name.c_str());
+            AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(mCodeGen->getLLVMType(type), 0, declaration->name.c_str());
 
             mScope->defineSymbol(declaration->name, alloc);
 
             if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
-                mCodeGen->mIRBuilder.CreateStore(ConstantPointerNull::get(cast<PointerType>(getLLVMType(ptrType))), alloc);
+                mCodeGen->mIRBuilder.CreateStore(ConstantPointerNull::get(cast<PointerType>(mCodeGen->getLLVMType(ptrType))), alloc);
             }
 
             if(declaration->assignmentExpr != nullptr) {
@@ -225,7 +208,7 @@ namespace staple {
         void visit(NNew* newnode) {
             StaplePointer* ptrType = cast<StaplePointer>(mCodeGen->mCompilerContext->typeTable[newnode]);
 
-            PointerType* llvmPtrType = cast<PointerType>(getLLVMType(ptrType));
+            PointerType* llvmPtrType = cast<PointerType>(mCodeGen->getLLVMType(ptrType));
 
             Value* nullptrValue = ConstantPointerNull::get(llvmPtrType);
             Value* size = mCodeGen->mIRBuilder.CreateGEP(nullptrValue, ConstantInt::get(mCodeGen->mIRBuilder.getInt32Ty(), 1));
@@ -238,7 +221,12 @@ namespace staple {
 
             mValues[newnode] = retval;
 
-            //TODO: add init function call
+            //call init function
+            StapleClass* stapleClass = cast<StapleClass>(ptrType->getElementType());
+            LLVMStapleObject* llvmStapleObject = LLVMStapleObject::get(stapleClass);
+
+            Function* initFunction = llvmStapleObject->getInitFunction(mCodeGen);
+            mCodeGen->mIRBuilder.CreateCall(initFunction, retval);
 
         }
 
@@ -267,6 +255,54 @@ namespace staple {
       mIRBuilder(getGlobalContext()),
       mModule(mCompilerContext->inputFilename.c_str(), getGlobalContext()),
       mFunctionPassManager(&mModule) {}
+
+    string LLVMCodeGenerator::createFunctionName(const string& name) {
+        string retval = mCompilerContext->package;
+        replace(retval.begin(), retval.end(), '.', '_');
+        retval += "_" + name;
+        return retval;
+    }
+
+    /*
+    std::map<StapleClass*, StructType*> mClassStructCache;
+
+    StructType* createClassType(StapleClass* stapleClass, StructType* llvmStructType) {
+        vector<Type*> elements;
+        for(StapleType* stapleType : stapleClass->getFields()) {
+            elements.push_back(LLVMCodeGenerator::getLLVMType(stapleType));
+        }
+        llvmStructType->setBody(elements);
+    }
+     */
+
+    Type* LLVMCodeGenerator::getLLVMType(StapleType* stapleType) {
+        Type* retval = nullptr;
+        if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
+            retval = Type::getIntNTy(getGlobalContext(), intType->getWidth());
+        } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(stapleType)) {
+            retval = PointerType::getUnqual(getLLVMType(ptrType->getElementType()));
+        } else if(StapleClass* classType = dyn_cast<StapleClass>(stapleType)) {
+            LLVMStapleObject* objHelper = LLVMStapleObject::get(classType);
+            retval = objHelper->getObjectType(this);
+
+            /*
+            auto it = mClassStructCache.find(classType);
+            if(it != mClassStructCache.end()) {
+                retval = it->second;
+            } else {
+                StructType* structType = StructType::create(getGlobalContext());
+                mClassStructCache[classType] = structType;
+                retval = structType;
+                createClassType(classType, structType);
+            }
+            */
+
+        } else if(StapleField* field = dyn_cast<StapleField>(stapleType)) {
+            retval = getLLVMType(field->getElementType());
+        }
+
+        return retval;
+    }
 
     void LLVMCodeGenerator::generateCode(NCompileUnit *compileUnit) {
 
