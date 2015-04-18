@@ -16,6 +16,7 @@ namespace staple {
 
     enum StapleKind {
         SK_Class,
+        SK_ClassDef,
         SK_Function,
         SK_Method,
         SK_Field,
@@ -48,6 +49,19 @@ namespace staple {
         static StapleType* getInt8PtrType();
     };
 
+    class StapleClassDef : public StapleType {
+    private:
+    public:
+        StapleClassDef() : StapleType(SK_ClassDef) {}
+
+        bool isAssignable(StapleType* type) {
+            return llvm::isa<StapleClassDef>(type);
+        }
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_ClassDef;
+        }
+    };
 
 
     class StapleClass : public StapleType {

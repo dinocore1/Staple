@@ -14,6 +14,10 @@ namespace staple {
     using namespace std;
 
     class CompilerContext {
+    private:
+        //fully qualifed name class map
+        map<string, StapleClass*> mClasses;
+
     public:
         string inputFilename;
         string outputFilename;
@@ -21,11 +25,10 @@ namespace staple {
         string package;
         vector<string> includes;
 
-        //fully qualifed name class map
-        map<string, StapleClass*> classes;
+        static StapleClass* getStpObjClass();
+        static StapleClassDef* getStpObjClassDef();
 
         void defineClass(StapleClass *localClass);
-
         StapleClass *lookupClassName(const string &className);
 
         map<ASTNode*, StapleType*> typeTable;
