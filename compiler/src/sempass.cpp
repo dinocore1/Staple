@@ -366,7 +366,7 @@ public:
             return;
         }
 
-        int index = 0;
+        uint index = 0;
         StapleField* field = classPtr->getField(memberAccess->field, index);
         if(field != nullptr){
             sempass->ctx.typeTable[memberAccess] = field;

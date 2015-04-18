@@ -234,13 +234,14 @@ namespace staple {
             Value* lhsValue = getValue(assignment->lhs);
             Value* rhsValue = getValue(assignment->rhs);
 
-            mCodeGen->mIRBuilder.CreateStore(rhsValue, lhsValue);
-
             StapleType* rhsType = mCodeGen->mCompilerContext->typeTable[assignment->rhs];
             StaplePointer* ptrType;
             if((ptrType = dyn_cast<StaplePointer>(rhsType)) && isa<StapleClass>(ptrType->getElementType())) {
 
+                //TODO: strongStore
 
+            } else {
+                mCodeGen->mIRBuilder.CreateStore(rhsValue, lhsValue);
             }
         }
 

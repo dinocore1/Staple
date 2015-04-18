@@ -13,6 +13,7 @@ namespace staple {
 
     class StapleMethodFunction;
     class StapleField;
+    class StapleClass;
 
     enum StapleKind {
         SK_Class,
@@ -49,6 +50,58 @@ namespace staple {
         static StapleType* getInt8PtrType();
     };
 
+    class StapleFunction : public StapleType {
+        friend class StapleClass;
+    protected:
+        StapleFunction(StapleKind kind, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+                : StapleType(kind), mReturnType(returnType), mIsVarg(isVarg){}
+
+        StapleType* mReturnType;
+        vector<StapleType*> mArgumentTypes;
+        bool mIsVarg;
+
+    public:
+        StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
+                : StapleType(SK_Function), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg) {}
+
+        StapleType* getReturnType() const { return mReturnType; }
+        const vector<StapleType*> getArguments() const { return mArgumentTypes; }
+        bool getIsVarg() const { return mIsVarg; }
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Function || T->getKind() == SK_Method;
+        }
+
+        bool isAssignable(StapleType* type);
+    };
+
+    class StapleMethodFunction : public StapleFunction {
+    public:
+        enum Type {
+            Static,
+            Virtual
+        };
+
+    protected:
+        StapleClass* mClass;
+        string mName;
+        Type mType;
+
+    public:
+        StapleMethodFunction(StapleClass* classType, const string& name,
+                             StapleType* returnType, vector<StapleType*> argsType, bool isVarg,
+                             Type type = Type::Virtual)
+                : StapleFunction(SK_Method, returnType, argsType, isVarg), mClass(classType), mName(name), mType(type) {}
+
+        const string& getName() const { return mName; }
+
+        static bool classof(const StapleType *T) {
+            return T->getKind() == SK_Method;
+        }
+
+        bool isAssignable(StapleType* type);
+    };
+
     class StapleClassDef : public StapleType {
     private:
     public:
@@ -68,7 +121,7 @@ namespace staple {
     private:
 
         const string mName;
-        const StapleClass* mParent;
+        StapleClass* mParent;
         vector<StapleField*> mFields;
         vector<StapleMethodFunction*> mMethods;
 
@@ -89,63 +142,21 @@ namespace staple {
             }
         }
 
-        const StapleClass* getParent() const { return mParent; }
+        StapleClass* getParent() const { return mParent; }
         void setParent(StapleClass* parent);
 
-        StapleMethodFunction* addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg);
+        StapleMethodFunction* addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType,
+                                        bool isVarg, StapleMethodFunction::Type type = StapleMethodFunction::Type::Virtual);
         const vector<StapleMethodFunction*> getMethods() const { return mMethods; }
         StapleMethodFunction* getMethod(const string& name, int& index) const;
 
         StapleField* addField(const string& name, StapleType* type);
         const vector<StapleField*> getFields() const { return mFields; }
-        StapleField* getField(const string& name, int& index) const;
+        StapleField* getField(const string& name, uint& index) const;
 
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Class;
-        }
-
-        bool isAssignable(StapleType* type);
-    };
-
-    class StapleFunction : public StapleType {
-    friend class StapleClass;
-    protected:
-        StapleFunction(StapleKind kind, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleType(kind), mReturnType(returnType), mIsVarg(isVarg){}
-
-        StapleType* mReturnType;
-        vector<StapleType*> mArgumentTypes;
-        bool mIsVarg;
-
-    public:
-        StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleType(SK_Function), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg) {}
-
-        StapleType* getReturnType() const { return mReturnType; }
-        const vector<StapleType*> getArguments() const { return mArgumentTypes; }
-        bool getIsVarg() const { return mIsVarg; }
-
-        static bool classof(const StapleType *T) {
-            return T->getKind() == SK_Function || T->getKind() == SK_Method;
-        }
-
-        bool isAssignable(StapleType* type);
-    };
-
-    class StapleMethodFunction : public StapleFunction {
-    protected:
-        StapleClass* mClass;
-        string mName;
-
-    public:
-        StapleMethodFunction(StapleClass* classType, const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-        : StapleFunction(SK_Method, returnType, argsType, isVarg), mClass(classType), mName(name) {}
-
-        const string& getName() const { return mName; }
-
-        static bool classof(const StapleType *T) {
-            return T->getKind() == SK_Method;
         }
 
         bool isAssignable(StapleType* type);

@@ -8,6 +8,7 @@
 #include <map>
 
 #include <llvm/IR/Function.h>
+#include <llvm/IR/IRBuilder.h>
 
 namespace staple {
 
@@ -31,9 +32,12 @@ namespace staple {
     public:
 
         static llvm::StructType* getStpObjInstanceType();
-        static llvm::StructType* getStpClassType();
+        static llvm::StructType* getStpRuntimeClassType();
+        static llvm::FunctionType* getKillFunctionType();
 
         static LLVMStapleObject* get(StapleClass* classType);
+
+        llvm::Value* getFieldPtr(const string& name, llvm::IRBuilder<>& irBuilder, llvm::Value* thisPtr);
 
         llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator);
 
@@ -42,7 +46,7 @@ namespace staple {
         llvm::Function* getInitFunction(LLVMCodeGenerator* codeGenerator);
         void emitInitFunction(LLVMCodeGenerator* codeGenerator);
 
-        llvm::Function* getDestroyFunction(LLVMCodeGenerator* codeGenerator);
+
         void emitDestroyFunction(LLVMCodeGenerator* codeGenerator);
 
 

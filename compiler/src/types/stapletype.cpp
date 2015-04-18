@@ -93,8 +93,10 @@ namespace staple {
         mParent = parent == nullptr ? getBaseObject() : parent;
     }
 
-    StapleMethodFunction* StapleClass::addMethod(const string& name, StapleType* returnType, vector<StapleType*> argsType, bool isVarg) {
-        StapleMethodFunction* retval = new StapleMethodFunction(this, name, returnType, argsType, isVarg);
+    StapleMethodFunction* StapleClass::addMethod(const string& name, StapleType* returnType,
+                                                 vector<StapleType*> argsType, bool isVarg,
+                                                StapleMethodFunction::Type type) {
+        StapleMethodFunction* retval = new StapleMethodFunction(this, name, returnType, argsType, isVarg, type);
         mMethods.push_back(retval);
         return retval;
     }
@@ -124,7 +126,7 @@ namespace staple {
         return retval;
     }
 
-    StapleField* StapleClass::getField(const string &name, int &index) const {
+    StapleField* StapleClass::getField(const string &name, uint &index) const {
         StapleField* retval = nullptr;
 
         if(mParent != nullptr) {
