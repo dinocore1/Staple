@@ -23,6 +23,7 @@ namespace staple {
         static llvm::StructType* StpObjInstanceStruct;
         static llvm::StructType* StpClassStruct;
 
+    protected:
         StapleClass* mClassType;
         llvm::StructType* mObjectStruct;
         llvm::Function* mInitFunction;
@@ -41,13 +42,8 @@ namespace staple {
 
         llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator);
 
-        llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator);
-
-        llvm::Function* getInitFunction(LLVMCodeGenerator* codeGenerator);
-        void emitInitFunction(LLVMCodeGenerator* codeGenerator);
-
-
-        void emitDestroyFunction(LLVMCodeGenerator* codeGenerator);
+        virtual llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator);
+        virtual llvm::Function* getInitFunction(LLVMCodeGenerator* codeGenerator);
 
 
     };

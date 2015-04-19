@@ -126,9 +126,12 @@ public:
         }
 
         //class fields and methods
-        for(vector<NClassDeclaration*>::iterator it = compileUnit->classes.begin();it != compileUnit->classes.end();it++){
-            NClassDeclaration* classDeclaration = *it;
+        for(NClassDeclaration* classDeclaration : compileUnit->classes){
+
+            StapleClass* parentClass = sempass->ctx.lookupClassName(classDeclaration->mExtends);
+
             currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
+            currentClass->setParent(parentClass);
 
             for(NField* field : classDeclaration->fields) {
                 field->accept(this);

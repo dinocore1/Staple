@@ -23,13 +23,14 @@ namespace staple {
     class LLVMCodeGenerator {
     friend class LLVMCodeGenVisitor;
     friend class LLVMStapleObject;
+    friend class LLVMBaseObject;
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;
         Module mModule;
         FunctionPassManager mFunctionPassManager;
 
-        Type* getLLVMType(StapleType* stapleType);
+
         string createFunctionName(const string& name);
 
     public:
@@ -40,6 +41,8 @@ namespace staple {
         Module* getModule() {
             return &mModule;
         }
+
+        Type* getLLVMType(StapleType* stapleType);
     };
 
 

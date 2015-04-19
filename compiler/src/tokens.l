@@ -46,6 +46,7 @@ extern "C" int yywrap() { }
 "new"                   return TOKEN(TNEW);
 "sizeof"                return TOKEN(TSIZEOF);
 "include"               return TOKEN(TINCLUDE);
+"extends"               return TOKEN(TEXTENDS);
 \"([^\\\"]|\\.)*\"      SAVE_TOKEN; return TSTRINGLIT;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
 [0-9]+\.[0-9]*          SAVE_TOKEN; return TDOUBLE;

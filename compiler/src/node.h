@@ -145,6 +145,7 @@ class NClassDeclaration : public ASTNode {
 public:
     ACCEPT
     const std::string name;
+    const std::string mExtends;
     std::vector<NField*> fields;
     std::vector<NMethodFunction*> functions;
 
@@ -154,8 +155,8 @@ public:
     : name(name), fields(fields), functions(functions)
     {}
 
-    NClassDeclaration(const std::string& name, ASTNode* members)
-    : name(name)
+    NClassDeclaration(const std::string& name, const std::string& extends, ASTNode* members)
+    : name(name), mExtends(extends)
     {
         ClassMemberVisitor collector;
         collector.fields = &fields;

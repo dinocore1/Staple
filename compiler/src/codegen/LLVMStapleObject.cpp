@@ -45,7 +45,43 @@ namespace staple {
         return STPOBJ_INSTANCE_TYPE;
     }
 
-    map<StapleClass*, LLVMStapleObject*> LLVMStapleObject::Cache;
+    class LLVMBaseObject : public LLVMStapleObject {
+
+    public:
+        LLVMBaseObject() : LLVMStapleObject(CompilerContext::getStpObjClass()) {
+
+        }
+
+        Function* getInitFunction(LLVMCodeGenerator *codeGenerator) {
+            if(mInitFunction == nullptr) {
+                FunctionType *functionType = FunctionType::get(
+                        Type::getVoidTy(getGlobalContext()),
+                        vector<Type *>{PointerType::getUnqual(STPOBJ_INSTANCE_TYPE)},
+                        false
+                );
+
+                mInitFunction = Function::Create(functionType,
+                                                 Function::LinkageTypes::ExternalLinkage,
+                                                 "obj_init",
+                                                 &codeGenerator->mModule);
+
+            }
+
+            return mInitFunction;
+        }
+
+        llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator) {
+            return STPOBJ_INSTANCE_TYPE;
+        }
+    };
+
+    map<StapleClass*, LLVMStapleObject*> createCache() {
+        map<StapleClass*, LLVMStapleObject*> retval;
+        retval[CompilerContext::getStpObjClass()] = new LLVMBaseObject();
+        return retval;
+    }
+
+    map<StapleClass*, LLVMStapleObject*> LLVMStapleObject::Cache = createCache();
 
     LLVMStapleObject::LLVMStapleObject(StapleClass *classType)
     : mClassType(classType), mObjectStruct(nullptr), mInitFunction(nullptr) {
@@ -69,7 +105,7 @@ namespace staple {
     Value* LLVMStapleObject::getFieldPtr(const string& name, llvm::IRBuilder<> &irBuilder, llvm::Value *thisPtr) {
         uint fieldIndex = 0;
         mClassType->getField(name, fieldIndex);
-        return irBuilder.CreateConstGEP2_32(thisPtr, 0, fieldIndex+1);
+        return irBuilder.CreateConstGEP2_32(thisPtr, 0, fieldIndex);
 
     }
 
@@ -78,7 +114,7 @@ namespace staple {
         if(mInitFunction == nullptr) {
             FunctionType* functionType = FunctionType::get(
                     Type::getVoidTy(getGlobalContext()),
-                    vector<Type*>{PointerType::getUnqual(codeGenerator->getLLVMType(mClassType))},
+                    vector<Type*>{PointerType::getUnqual(getObjectType(codeGenerator))},
                     false
             );
 
@@ -110,9 +146,20 @@ namespace staple {
 
                 }
             }
+
+            irBuilder.CreateRetVoid();
         }
 
         return mInitFunction;
+    }
+
+    void unrollFields(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
+        if(stapleClass->getParent() != nullptr) {
+            unrollFields(stapleClass->getParent(), elements, codeGenerator);
+        }
+        for(StapleType* stapleType : stapleClass->getFields()) {
+            elements.push_back(codeGenerator->getLLVMType(stapleType));
+        }
     }
 
     llvm::StructType* LLVMStapleObject::getObjectType(LLVMCodeGenerator *codeGenerator) {
@@ -120,9 +167,8 @@ namespace staple {
             mObjectStruct = StructType::create(getGlobalContext(), codeGenerator->createFunctionName(mClassType->getSimpleName()));
 
             vector<Type*> elements;
-            for(StapleType* stapleType : mClassType->getFields()) {
-                elements.push_back(codeGenerator->getLLVMType(stapleType));
-            }
+            unrollFields(mClassType, elements, codeGenerator);
+
             mObjectStruct->setBody(elements);
         }
 

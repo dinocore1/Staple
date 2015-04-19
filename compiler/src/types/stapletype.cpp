@@ -73,24 +73,14 @@ namespace staple {
         return &Int8PtrType;
     }
 
-    StapleClass* BaseObject = nullptr;
-
 
     //////// Staple Class ///////
-
-    StapleClass* StapleClass::getBaseObject() {
-        if(BaseObject == nullptr) {
-            BaseObject = new StapleClass("obj", nullptr);
-            BaseObject->addField("refCount", StapleType::getInt32Type());
-        }
-        return BaseObject;
-    }
 
     StapleClass::StapleClass(const string &name, StapleClass* parent)
     : StapleType(SK_Class), mName(name), mParent(parent) { }
 
     void StapleClass::setParent(StapleClass* parent) {
-        mParent = parent == nullptr ? getBaseObject() : parent;
+        mParent = parent;
     }
 
     StapleMethodFunction* StapleClass::addMethod(const string& name, StapleType* returnType,

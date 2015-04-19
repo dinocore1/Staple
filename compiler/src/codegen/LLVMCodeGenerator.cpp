@@ -82,7 +82,7 @@ namespace staple {
 
                 Type* returnType = Type::getInt8PtrTy(getGlobalContext());
                 FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
-                retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "malloc", &mCodeGen->mModule);
+                retval = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "malloc", &mCodeGen->mModule);
             }
 
             return retval;
@@ -285,21 +285,10 @@ namespace staple {
         } else if(StapleClass* classType = dyn_cast<StapleClass>(stapleType)) {
             LLVMStapleObject* objHelper = LLVMStapleObject::get(classType);
             retval = objHelper->getObjectType(this);
-
-            /*
-            auto it = mClassStructCache.find(classType);
-            if(it != mClassStructCache.end()) {
-                retval = it->second;
-            } else {
-                StructType* structType = StructType::create(getGlobalContext());
-                mClassStructCache[classType] = structType;
-                retval = structType;
-                createClassType(classType, structType);
-            }
-            */
-
         } else if(StapleField* field = dyn_cast<StapleField>(stapleType)) {
             retval = getLLVMType(field->getElementType());
+        } else if(StapleClassDef* classDef = dyn_cast<StapleClassDef>(stapleType)) {
+            retval = LLVMStapleObject::getStpRuntimeClassType();
         }
 
         return retval;

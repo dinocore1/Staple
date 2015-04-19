@@ -42,17 +42,21 @@ void CompilerContext::defineClass(StapleClass *localClass) {
 
 StapleClass* CompilerContext::lookupClassName(const std::string &className) {
 
-    StapleClass* retval = NULL;
-    //first try locally-defined classname
-    string fqClassName = !package.empty() ? (package + "." + className) : className;
-    auto it = mClasses.find(fqClassName);
+    auto it = mClasses.find(className);
     if(it != mClasses.end()) {
-        retval = (*it).second;
-    } else {
-        //TODO: loop though all the imports and try to find the class
+        return it->second;
     }
 
-    return retval;
+    string fqClassName = !package.empty() ? (package + "." + className) : className;
+    it = mClasses.find(fqClassName);
+    if(it != mClasses.end()) {
+        return it->second;
+    }
+
+    //TODO: loop though all the imports and try to find the class
+
+
+    return nullptr;
 }
 
 }

@@ -139,7 +139,7 @@ class NBinaryOperator;
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
-%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE
+%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE TEXTENDS
 %token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
@@ -165,7 +165,7 @@ class NBinaryOperator;
 %type <function> global_func
 %type <method_function> method
 %type <count> numPointers
-%type <string> package
+%type <string> package extends
 
 %right "then" TELSE
 %right "order" TMINUS
@@ -229,8 +229,13 @@ proto_args
 ////// Class Declaration /////
 
 class_decl
-        : TCLASS TIDENTIFIER TLBRACE class_members TRBRACE
-         { $$ = new NClassDeclaration(*$2, $4); delete $2; delete $4; }
+        : TCLASS TIDENTIFIER extends TLBRACE class_members TRBRACE
+         { $$ = new NClassDeclaration(*$2, *$3, $5); delete $2; delete $3; delete $5; }
+        ;
+
+extends
+        : { $$ = new std::string("obj"); }
+        | TEXTENDS TIDENTIFIER { $$ = $2; delete $2; }
         ;
 
 class_members

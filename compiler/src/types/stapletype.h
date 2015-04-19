@@ -127,7 +127,6 @@ namespace staple {
 
 
     public:
-        static StapleClass* getBaseObject();
 
         StapleClass(const string& name, StapleClass* parent = nullptr);
 
