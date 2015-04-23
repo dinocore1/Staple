@@ -3,6 +3,17 @@
 %stp_class = type { i8*, %stp_class*, %stp_obj_vtable }
 %stp_obj = type { %stp_class*, i32 }
 
+define void @stp_obj_init(%stp_obj* %obj) {
+  %intval = ptrtoint %stp_obj* %obj to i32
+  %1 = icmp eq i32 0, %intval
+  br i1 %1, label %finish, label %begin
+begin:
+  %2 = getelementptr %stp_obj* %value, i32 0, i32 1
+  store i32 0, i32* %2
+finish:
+  ret void
+}
+
 define void @stp_release(%stp_obj* %value) {
   %intval = ptrtoint %stp_obj* %value to i32
   %1 = icmp eq i32 0, %intval

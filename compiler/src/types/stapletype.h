@@ -93,7 +93,9 @@ namespace staple {
                              Type type = Type::Virtual)
                 : StapleFunction(SK_Method, returnType, argsType, isVarg), mClass(classType), mName(name), mType(type) {}
 
+        StapleClass* getClass() const { return mClass; }
         const string& getName() const { return mName; }
+        const Type getType() const { return mType; }
 
         static bool classof(const StapleType *T) {
             return T->getKind() == SK_Method;

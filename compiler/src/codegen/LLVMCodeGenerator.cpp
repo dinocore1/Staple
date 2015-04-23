@@ -278,7 +278,11 @@ namespace staple {
 
     Type* LLVMCodeGenerator::getLLVMType(StapleType* stapleType) {
         Type* retval = nullptr;
-        if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
+        if(stapleType == StapleType::getVoidType()) {
+            retval = Type::getVoidTy(getGlobalContext());
+        } else if(stapleType == StapleType::getBoolType()) {
+            retval = Type::getInt1Ty(getGlobalContext());
+        } else if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
             retval = Type::getIntNTy(getGlobalContext(), intType->getWidth());
         } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(stapleType)) {
             retval = PointerType::getUnqual(getLLVMType(ptrType->getElementType()));
@@ -289,6 +293,19 @@ namespace staple {
             retval = getLLVMType(field->getElementType());
         } else if(StapleClassDef* classDef = dyn_cast<StapleClassDef>(stapleType)) {
             retval = LLVMStapleObject::getStpRuntimeClassType();
+        } else if(StapleMethodFunction* method = dyn_cast<StapleMethodFunction>(stapleType)){
+            vector<Type*> argTypes;
+            argTypes.push_back(PointerType::getUnqual(getLLVMType(method->getClass())));
+            for(StapleType* argType : method->getArguments()) {
+                argTypes.push_back(getLLVMType(argType));
+            }
+            retval = FunctionType::get(getLLVMType(method->getReturnType()), argTypes, method->getIsVarg());
+        } else if(StapleFunction* function = dyn_cast<StapleFunction>(stapleType)) {
+            vector<Type*> argTypes;
+            for(StapleType* argType : function->getArguments()) {
+                argTypes.push_back(getLLVMType(argType));
+            }
+            retval = FunctionType::get(getLLVMType(function->getReturnType()), argTypes, function->getIsVarg());
         }
 
         return retval;

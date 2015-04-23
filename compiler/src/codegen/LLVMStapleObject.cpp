@@ -9,13 +9,25 @@ namespace staple {
     using namespace llvm;
 
     StructType* STPOBJ_CLASS_TYPE = StructType::create(getGlobalContext(), "stp_class");
+    StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "stp_obj_vtable");
     StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
+
+    StructType* LLVMStapleObject::getStpObjVtableType() {
+        if(STPOBJ_VTABLE_TYPE->isEmptyTy()) {
+            STPOBJ_VTABLE_TYPE->setBody(
+              PointerType::getUnqual(LLVMStapleObject::getKillFunctionType()),
+              NULL
+            );
+        }
+        return STPOBJ_VTABLE_TYPE;
+    }
 
     StructType* LLVMStapleObject::getStpRuntimeClassType() {
         if(STPOBJ_CLASS_TYPE->isEmptyTy()) {
             STPOBJ_CLASS_TYPE->setBody(
                     Type::getInt8PtrTy(getGlobalContext()), // FQ class name
-                    PointerType::getUnqual(LLVMStapleObject::getKillFunctionType()),
+                    PointerType::getUnqual(STPOBJ_CLASS_TYPE), // parent class
+                    LLVMStapleObject::getStpObjVtableType(), // vtable
                     NULL
             );
         }
@@ -37,7 +49,7 @@ namespace staple {
     StructType* LLVMStapleObject::getStpObjInstanceType() {
         if(STPOBJ_INSTANCE_TYPE->isEmptyTy()){
             STPOBJ_INSTANCE_TYPE->setBody(
-                    PointerType::getUnqual(LLVMStapleObject::getStpRuntimeClassType()),
+                    PointerType::getUnqual(LLVMStapleObject::getStpRuntimeClassType()), // runtime class ptr
                     Type::getInt32Ty(getGlobalContext()), //refCount
                     NULL
             );
@@ -62,7 +74,7 @@ namespace staple {
 
                 mInitFunction = Function::Create(functionType,
                                                  Function::LinkageTypes::ExternalLinkage,
-                                                 "obj_init",
+                                                 "stp_obj_init",
                                                  &codeGenerator->mModule);
 
             }
@@ -70,9 +82,36 @@ namespace staple {
             return mInitFunction;
         }
 
+        /*
+
+        llvm::StructType* getVtableType(LLVMCodeGenerator* codeGenerator) {
+            if(mVtableType == nullptr) {
+                mVtableType = StructType::create(getGlobalContext());
+            }
+
+            return mVtableType;
+        }
+
+
+        llvm::StructType* getFieldType(LLVMCodeGenerator* codeGenerator) {
+            if(mFieldsStruct == nullptr) {
+                mFieldsStruct = StructType::create(getGlobalContext());
+                mFieldsStruct->setBody(
+                        Type::getInt32Ty(getGlobalContext()),
+                        NULL);
+            }
+            return mFieldsStruct;
+        }
+
+        llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator) {
+            return STPOBJ_CLASS_TYPE;
+        }
+
+
         llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator) {
             return STPOBJ_INSTANCE_TYPE;
         }
+         */
     };
 
     map<StapleClass*, LLVMStapleObject*> createCache() {
@@ -84,7 +123,9 @@ namespace staple {
     map<StapleClass*, LLVMStapleObject*> LLVMStapleObject::Cache = createCache();
 
     LLVMStapleObject::LLVMStapleObject(StapleClass *classType)
-    : mClassType(classType), mObjectStruct(nullptr), mInitFunction(nullptr) {
+    : mClassType(classType), mClassDefType(nullptr), mVtableType(nullptr), mObjectStruct(nullptr),
+      mFieldsStruct(nullptr), mInitFunction(nullptr), mKillFunction(nullptr)
+    {
 
     }
 
@@ -153,12 +194,55 @@ namespace staple {
         return mInitFunction;
     }
 
+    StructType* LLVMStapleObject::getClassDefType(LLVMCodeGenerator* codeGenerator) {
+        if(mClassDefType == nullptr) {
+
+            string classDefName = codeGenerator->createFunctionName(mClassType->getSimpleName()) + "_class";
+            mClassDefType = StructType::create(getGlobalContext(), classDefName.c_str());
+
+            mClassDefType->setBody(
+                    Type::getInt8PtrTy(getGlobalContext()), // FQ class name
+                    PointerType::getUnqual(STPOBJ_CLASS_TYPE), // parent class ptr
+                    getVtableType(codeGenerator),
+                    NULL);
+
+        }
+        return mClassDefType;
+    }
+
+    StructType* LLVMStapleObject::getVtableType(LLVMCodeGenerator *codeGenerator) {
+        if(mVtableType == nullptr) {
+
+            string vtableName = codeGenerator->createFunctionName(mClassType->getSimpleName()) + "_vtable";
+
+            mVtableType = StructType::create(getGlobalContext(), vtableName.c_str());
+
+            vector<Type*> vtable;
+
+            for(StapleMethodFunction* methodFunction : mClassType->getMethods()) {
+                if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
+                    vtable.push_back(PointerType::getUnqual(codeGenerator->getLLVMType(methodFunction)));
+                }
+            }
+
+            mVtableType->setBody(vtable);
+
+        }
+
+        return mVtableType;
+    }
+
     void unrollFields(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
         if(stapleClass->getParent() != nullptr) {
             unrollFields(stapleClass->getParent(), elements, codeGenerator);
         }
-        for(StapleType* stapleType : stapleClass->getFields()) {
-            elements.push_back(codeGenerator->getLLVMType(stapleType));
+
+        LLVMStapleObject* stpObjHelper = LLVMStapleObject::get(stapleClass);
+
+        elements.push_back(PointerType::getUnqual(stpObjHelper->getClassDefType(codeGenerator)));
+        for(StapleField* fieldType : stapleClass->getFields()) {
+            elements.push_back(codeGenerator->getLLVMType(fieldType));
+
         }
     }
 
