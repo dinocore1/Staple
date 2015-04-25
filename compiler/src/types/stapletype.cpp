@@ -218,6 +218,9 @@ namespace staple {
     //// Staple Int ////
 
     bool StapleInt::isAssignable(StapleType *type) {
+        if(StapleField* field = dyn_cast<StapleField>(type)) {
+            type = field->getElementType();
+        }
         bool retval = isa<StapleInt>(type) || isa<StapleFloat>(type);
         return retval;
 

@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(DEFINE_MODULE)
 MODULE := stp_runtime
-LLC := llc-3.5
+LLC := llc
 LOCAL_SRCS := \
     src/runtime.ll
 

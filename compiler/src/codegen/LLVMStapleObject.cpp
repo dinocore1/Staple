@@ -179,7 +179,7 @@ namespace staple {
             for(StapleField* field : mClassType->getFields()) {
                 StapleType* fieldType = field->getElementType();
                 if(StapleInt* intType = dyn_cast<StapleInt>(fieldType)) {
-                    irBuilder.CreateStore(irBuilder.getIntN(intType->getWidth(), 0),
+                    irBuilder.CreateStore(irBuilder.getInt(APInt(intType->getWidth(), 0)),
                                           getFieldPtr(field->getName(), irBuilder, thisPtr));
                 } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(fieldType)) {
                     irBuilder.CreateStore(ConstantPointerNull::get(PointerType::getUnqual(codeGenerator->getLLVMType(ptrType->getElementType()))),

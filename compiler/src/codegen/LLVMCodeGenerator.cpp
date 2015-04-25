@@ -65,6 +65,7 @@ namespace staple {
     };
 
     class LLVMCodeGenVisitor : public ASTVisitor {
+    using ASTVisitor::visit;
     private:
         LLVMCodeGenerator* mCodeGen;
         map<ASTNode*, Value*> mValues;

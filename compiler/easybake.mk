@@ -11,10 +11,10 @@ $(LOCAL_PATH)src/tokens.cpp: $(LOCAL_PATH)src/tokens.l $(LOCAL_PATH)src/parser.h
 
 
 include $(DEFINE_MODULE)
-CC := gcc-4.8
-CXX := g++-4.8
+CC := gcc
+CXX := g++
 MODULE := stp
-LOCAL_CXXFLAGS := -std=c++11 $(shell llvm-config-3.5 --cxxflags --system-libs --libs all)
+LOCAL_CXXFLAGS := -std=c++11 $(shell llvm-config --cxxflags)
 LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
@@ -30,5 +30,5 @@ LOCAL_CLEAN := \
 	src/parser.hpp \
 	src/tokens.cpp
 	
-LOCAL_LIBS := $(shell llvm-config-3.5 --ldflags --system-libs --libs all)
+LOCAL_LIBS := $(shell llvm-config --ldflags --libs) -ltinfo -ldl
 include $(BUILD_EXE)

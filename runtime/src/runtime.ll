@@ -8,8 +8,9 @@ define void @stp_obj_init(%stp_obj* %obj) {
   %1 = icmp eq i32 0, %intval
   br i1 %1, label %finish, label %begin
 begin:
-  %2 = getelementptr %stp_obj* %value, i32 0, i32 1
+  %2 = getelementptr %stp_obj* %obj, i32 0, i32 1
   store i32 0, i32* %2
+  br label %finish
 finish:
   ret void
 }

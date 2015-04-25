@@ -63,9 +63,12 @@ would with a language like C or C++.
 
 ### Compile ###
 
-you need LLVM 3.6 to build Staple. On Ubuntu:
+Build Dependencies:
+* g++ or clang (support for C++ 11/14 or greater)
+* LLVM 3.6 (apt-get install llvm-dev)
+* Bison (apt-get install bison)
+* Flex (apt-get install flex)
 
-$ sudo apt-get install llvm-dev
 
 
 ### Test C Code ###
