@@ -24,6 +24,7 @@ namespace staple {
     friend class LLVMCodeGenVisitor;
     friend class LLVMStapleObject;
     friend class LLVMBaseObject;
+    friend class LLVMFunctionForwardDeclVisitor;
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;

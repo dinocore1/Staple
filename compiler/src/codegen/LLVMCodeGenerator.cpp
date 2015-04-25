@@ -64,15 +64,73 @@ namespace staple {
 
     };
 
+    class LLVMFunctionForwardDeclVisitor : public ASTVisitor {
+    using ASTVisitor::visit;
+    private:
+        LLVMCodeGenerator* mCodeGen;
+        CodeGenBlock* mScope;
+        map<ASTNode*, Value*>& mValues;
+
+    public:
+        LLVMFunctionForwardDeclVisitor(LLVMCodeGenerator* codeGen, CodeGenBlock* scope, map<ASTNode*, Value*>& values)
+        : mCodeGen(codeGen), mScope(scope), mValues(values) {}
+
+        void visit(NFunctionPrototype* functionPrototype) {
+
+            StapleFunction* stapleFunction = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[functionPrototype]);
+
+            Type* returnType = mCodeGen->getLLVMType(stapleFunction->getReturnType());
+
+            vector<Type*> argTypes;
+            for(StapleType* arg : stapleFunction->getArguments()) {
+                argTypes.push_back(mCodeGen->getLLVMType(arg));
+            }
+
+            FunctionType* functionType = FunctionType::get(returnType, argTypes, stapleFunction->getIsVarg());
+            Function* function = Function::Create(
+                    functionType,
+                    GlobalValue::LinkageTypes::ExternalLinkage,
+                    functionPrototype->name.c_str(),
+                    &mCodeGen->mModule);
+
+            mScope->defineSymbol(functionPrototype->name, function);
+            mValues[functionPrototype] = function;
+
+        }
+
+        void visit(NFunction* function) {
+
+            StapleFunction* stpFunctionType = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
+
+            Type* returnType = mCodeGen->getLLVMType(stpFunctionType->getReturnType());
+
+            vector<Type*> argTypes;
+            for(StapleType* arg : stpFunctionType->getArguments()) {
+                argTypes.push_back(mCodeGen->getLLVMType(arg));
+            }
+
+            FunctionType* functionType = FunctionType::get(returnType, argTypes, stpFunctionType->getIsVarg());
+
+            string functionName = mCodeGen->createFunctionName(function->name);
+
+            Function* llvmFunction = Function::Create(
+                    functionType,
+                    GlobalValue::LinkageTypes::ExternalLinkage,
+                    function->name.compare("main") == 0 ? function->name.c_str() : functionName.c_str(),
+                    &mCodeGen->mModule);
+
+            mScope->defineSymbol(function->name, llvmFunction);
+            mScope->defineSymbol(functionName, llvmFunction);
+            mValues[function] = llvmFunction;
+        }
+    };
+
     class LLVMCodeGenVisitor : public ASTVisitor {
     using ASTVisitor::visit;
     private:
         LLVMCodeGenerator* mCodeGen;
         map<ASTNode*, Value*> mValues;
         CodeGenBlock* mScope;
-
-
-
 
         Function* getMallocFunction() {
 
@@ -116,58 +174,43 @@ namespace staple {
             return mValues[node];
         }
 
-        void visit(NFunctionPrototype* functionPrototype) {
+        void visit(NCompileUnit* compileUnit) {
 
-            StapleFunction* stapleFunction = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[functionPrototype]);
+            {
+                LLVMFunctionForwardDeclVisitor visitor(mCodeGen, mScope, mValues);
 
-            Type* returnType = mCodeGen->getLLVMType(stapleFunction->getReturnType());
+                for (NFunctionPrototype *functionPrototype : compileUnit->externFunctions) {
+                    functionPrototype->accept(&visitor);
+                }
 
-            vector<Type*> argTypes;
-            for(NArgument* arg : functionPrototype->arguments) {
-                argTypes.push_back(getNodeType(arg));
+                for (NFunction *function : compileUnit->functions) {
+                    function->accept(&visitor);
+                }
             }
 
-            FunctionType* functionType = FunctionType::get(returnType, argTypes, stapleFunction->getIsVarg());
-            Function* function = Function::Create(
-                    functionType,
-                    GlobalValue::LinkageTypes::ExternalLinkage,
-                    functionPrototype->name.c_str(),
-                    &mCodeGen->mModule);
-
-            mScope->defineSymbol(functionPrototype->name, function);
-            mValues[functionPrototype] = function;
-
+            for(NFunction* function : compileUnit->functions) {
+                function->accept(this);
+            }
         }
 
+        void visit(NStringLiteral* strLiteral) {
+            Value* retval = mCodeGen->mIRBuilder.CreateGlobalStringPtr(strLiteral->str.c_str());
+            mValues[strLiteral] = retval;
+        }
+
+
         void visit(NFunction* function) {
-            StapleFunction* stapleFunction = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
 
-            Type* returnType = mCodeGen->getLLVMType(stapleFunction->getReturnType());
-
-            vector<Type*> argTypes;
-            for(NArgument* arg : function->arguments) {
-                argTypes.push_back(getNodeType(arg));
-            }
-
-            string functionName = mCodeGen->createFunctionName(function->name);
-
-            FunctionType* functionType = FunctionType::get(returnType, argTypes, stapleFunction->getIsVarg());
-            Function* llvmFunction = Function::Create(
-                    functionType,
-                    GlobalValue::LinkageTypes::ExternalLinkage,
-                    functionName.c_str(),
-                    &mCodeGen->mModule);
-
-            mScope->defineSymbol(function->name, llvmFunction);
-            mValues[function] = llvmFunction;
+            Function* llvmFunction = cast<Function>(mValues[function]);
 
             push();
             mScope->mBasicBlock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
             mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
 
+            const size_t numArgs = function->arguments.size();
             Function::arg_iterator AI = llvmFunction->arg_begin();
-            for(int i=0;i<argTypes.size();i++,++AI) {
-                Type* llvmArg = argTypes[i];
+            for(int i=0;i<numArgs;i++,++AI) {
+                Type* llvmArg = AI->getType();
                 NArgument* nodeArg = function->arguments[i];
 
                 AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(llvmArg, 0, nodeArg->name.c_str());
@@ -204,6 +247,11 @@ namespace staple {
         void visit(NIdentifier* identifier) {
             Value* value = mScope->lookupSymbol(identifier->name);
             mValues[identifier] = value;
+        }
+
+        void visit(NIntLiteral* intLiteral) {
+            int value = atoi(intLiteral->str.c_str());
+            mValues[intLiteral] = mCodeGen->mIRBuilder.getInt(APInt(intLiteral->width, value));
         }
 
         void visit(NNew* newnode) {
@@ -246,8 +294,133 @@ namespace staple {
             }
         }
 
+        void visit(NLoad* load) {
+            Value* ptr = getValue(load->expr);
+            mValues[load] = mCodeGen->mIRBuilder.CreateLoad(ptr);
+        }
+
+        void visit(NBinaryOperator* binaryOperator) {
+
+            Value* l = getValue(binaryOperator->lhs);
+            Value* r = getValue(binaryOperator->rhs);
+
+            Value* retval = nullptr;
+
+            switch (binaryOperator->op) {
+                case TPLUS: 	retval = mCodeGen->mIRBuilder.CreateAdd(l, r);
+                    break;
+                case TMINUS: 	retval = mCodeGen->mIRBuilder.CreateSub(l, r);
+                    break;
+                case TMUL: 		retval = mCodeGen->mIRBuilder.CreateMul(l, r);
+                    break;
+                case TDIV: 		retval = mCodeGen->mIRBuilder.CreateSDiv(l, r);
+                    break;
+                case TCEQ:		retval = mCodeGen->mIRBuilder.CreateICmpEQ(l, r);
+                    break;
+                case TCNE:		retval = mCodeGen->mIRBuilder.CreateICmpNE(l, r);
+                    break;
+                case TCGT:		retval = mCodeGen->mIRBuilder.CreateICmpSGT(l, r);
+                    break;
+                case TCLT:		retval = mCodeGen->mIRBuilder.CreateICmpSLT(l, r);
+                    break;
+                case TCGE:		retval = mCodeGen->mIRBuilder.CreateICmpSGE(l, r);
+                    break;
+                case TCLE:		retval = mCodeGen->mIRBuilder.CreateICmpSLE(l, r);
+                    break;
+
+            }
+
+            mValues[binaryOperator] = retval;
+        }
+
+        void visit(NIfStatement* ifStatement) {
+            Function* parent = mCodeGen->mIRBuilder.GetInsertBlock()->getParent();
+
+
+            BasicBlock* thenBB = dyn_cast<BasicBlock>(getValue(ifStatement->thenBlock));
+            BasicBlock* elseBB = ifStatement->elseBlock != nullptr
+                                 ? dyn_cast<BasicBlock>(getValue(ifStatement->elseBlock))
+                                 : nullptr;
+
+            BasicBlock* mergeBlock = BasicBlock::Create(getGlobalContext(), "", parent);
+
+            IRBuilder<> builder(thenBB);
+            builder.CreateBr(mergeBlock);
+
+            if(elseBB != nullptr) {
+                IRBuilder<> builder(elseBB);
+                builder.CreateBr(mergeBlock);
+            } else {
+                elseBB = mergeBlock;
+            }
+
+            Value* conditionValue = getValue(ifStatement->condition);
+            mCodeGen->mIRBuilder.CreateCondBr(conditionValue, thenBB, elseBB);
+
+
+            mScope->mBasicBlock = mergeBlock;
+            mCodeGen->mIRBuilder.SetInsertPoint(mergeBlock);
+
+        }
+
+        void visit(NMemberAccess* memberAccess) {
+
+            StapleType* baseType = mCodeGen->mCompilerContext->typeTable[memberAccess->base];
+
+            StaplePointer* ptr = nullptr;
+            StapleClass* classPtr = nullptr;
+            if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+                Value* basePtr = getValue(memberAccess->base);
+                LLVMStapleObject* stapleObject = LLVMStapleObject::get(classPtr);
+                Value* fieldPtr = stapleObject->getFieldPtr(memberAccess->field, mCodeGen->mIRBuilder, basePtr);
+
+                mValues[memberAccess] = fieldPtr;
+            }
+
+
+        }
+
+        void visit(NFunctionCall* functionCall) {
+
+            Function* function = cast<Function>(mScope->lookupSymbol(functionCall->name));
+
+            vector<Value*> argValues;
+            for(NExpression* argExp : functionCall->arguments) {
+                argValues.push_back(getValue(argExp));
+            }
+
+            mValues[functionCall] = mCodeGen->mIRBuilder.CreateCall(function, argValues);
+
+        }
+
+        void visit(NExpressionStatement* expressionStatement) {
+            expressionStatement->expression->accept(this);
+        }
+
         void visit(NBlock* block) {
 
+            Function* parent = mCodeGen->mIRBuilder.GetInsertBlock()->getParent();
+            BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", parent);
+            mValues[block] = basicBlock;
+
+            push();
+
+            mScope->mBasicBlock = basicBlock;
+            mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+
+            for(NStatement* statement : block->statements) {
+                statement->accept(this);
+            }
+
+            pop();
+
+            mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+
+        }
+
+        void visit(NReturn* ret) {
+            Value* retval = getValue(ret->ret);
+            mCodeGen->mIRBuilder.CreateRet(retval);
         }
 
     };
@@ -315,13 +488,9 @@ namespace staple {
     void LLVMCodeGenerator::generateCode(NCompileUnit *compileUnit) {
 
         LLVMCodeGenVisitor visitor(this);
-        for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
-            visitor.visit(functionPrototype);
-        }
+        compileUnit->accept(&visitor);
 
-        for(NFunction* function : compileUnit->functions) {
-            visitor.visit(function);
-        }
+
 
     }
 

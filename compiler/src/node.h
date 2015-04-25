@@ -92,6 +92,7 @@ public:
     VISIT(NIfStatement)
     VISIT(NBinaryOperator)
     VISIT(NBlock)
+    VISIT(NFunctionPrototype)
 };
 
 
