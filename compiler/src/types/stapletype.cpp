@@ -1,5 +1,6 @@
 
 #include "stapletype.h"
+#include "../compilercontext.h"
 
 namespace staple {
 
@@ -77,7 +78,9 @@ namespace staple {
     //////// Staple Class ///////
 
     StapleClass::StapleClass(const string &name, StapleClass* parent)
-    : StapleType(SK_Class), mName(name), mParent(parent) { }
+    : StapleType(SK_Class), mName(name), mParent(parent) {
+        addField("class", new StaplePointer(new StapleClassDef(this)));
+    }
 
     void StapleClass::setParent(StapleClass* parent) {
         mParent = parent;
@@ -119,20 +122,17 @@ namespace staple {
     StapleField* StapleClass::getField(const string &name, uint &index) const {
         StapleField* retval = nullptr;
 
-        if(mParent != nullptr) {
+        for(StapleField* field : mFields) {
+            if(field->getName().compare(name) == 0){
+                retval = field;
+                break;
+            }
+            index++;
+        }
+
+        if(retval == nullptr && mParent != nullptr) {
             retval = mParent->getField(name, index);
         }
-
-        if(retval == nullptr) {
-            for(StapleField* field : mFields) {
-                if(field->getName().compare(name) == 0){
-                    retval = field;
-                    break;
-                }
-                index++;
-            }
-        }
-
 
         return retval;
     }

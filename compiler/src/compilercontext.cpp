@@ -5,8 +5,9 @@ namespace staple {
 using namespace std;
 
 
-    StapleClassDef* STP_OBJ_CLASSDEF = new StapleClassDef();
     StapleClass* STP_OBJ_CLASS = new StapleClass("obj", nullptr);
+    StapleClassDef* STP_OBJ_CLASSDEF = new StapleClassDef(STP_OBJ_CLASS);
+
 
     StapleClass* CompilerContext::getStpObjClass() {
         return STP_OBJ_CLASS;
@@ -19,7 +20,6 @@ using namespace std;
 
 CompilerContext::CompilerContext() {
 
-    STP_OBJ_CLASS->addField("class", new StaplePointer(STP_OBJ_CLASSDEF));
     STP_OBJ_CLASS->addField("refCount", StapleType::getInt32Type());
 
     {

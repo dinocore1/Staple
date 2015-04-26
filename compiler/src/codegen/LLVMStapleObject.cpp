@@ -8,9 +8,9 @@ namespace staple {
 
     using namespace llvm;
 
+    StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
     StructType* STPOBJ_CLASS_TYPE = StructType::create(getGlobalContext(), "stp_class");
     StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "stp_obj_vtable");
-    StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
 
     StructType* LLVMStapleObject::getStpObjVtableType() {
         if(STPOBJ_VTABLE_TYPE->isEmptyTy()) {
@@ -82,6 +82,15 @@ namespace staple {
             return mInitFunction;
         }
 
+        llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator) {
+            return getStpRuntimeClassType();
+        }
+
+
+        llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator) {
+            return getStpObjInstanceType();
+        }
+
         /*
 
         llvm::StructType* getVtableType(LLVMCodeGenerator* codeGenerator) {
@@ -103,14 +112,7 @@ namespace staple {
             return mFieldsStruct;
         }
 
-        llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator) {
-            return STPOBJ_CLASS_TYPE;
-        }
 
-
-        llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator) {
-            return STPOBJ_INSTANCE_TYPE;
-        }
          */
     };
 
@@ -202,7 +204,9 @@ namespace staple {
 
             mClassDefType->setBody(
                     Type::getInt8PtrTy(getGlobalContext()), // FQ class name
-                    PointerType::getUnqual(STPOBJ_CLASS_TYPE), // parent class ptr
+                    mClassType->getParent() != nullptr
+                      ? PointerType::getUnqual(LLVMStapleObject::get(mClassType->getParent())->getClassDefType(codeGenerator))
+                      : PointerType::getUnqual(STPOBJ_CLASS_TYPE), // parent class ptr
                     getVtableType(codeGenerator),
                     NULL);
 
@@ -233,17 +237,16 @@ namespace staple {
     }
 
     void unrollFields(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
+
+        for(StapleField* fieldType : stapleClass->getFields()) {
+            elements.push_back(codeGenerator->getLLVMType(fieldType));
+        }
+
         if(stapleClass->getParent() != nullptr) {
             unrollFields(stapleClass->getParent(), elements, codeGenerator);
         }
 
-        LLVMStapleObject* stpObjHelper = LLVMStapleObject::get(stapleClass);
 
-        elements.push_back(PointerType::getUnqual(stpObjHelper->getClassDefType(codeGenerator)));
-        for(StapleField* fieldType : stapleClass->getFields()) {
-            elements.push_back(codeGenerator->getLLVMType(fieldType));
-
-        }
     }
 
     llvm::StructType* LLVMStapleObject::getObjectType(LLVMCodeGenerator *codeGenerator) {

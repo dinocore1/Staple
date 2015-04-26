@@ -106,8 +106,12 @@ namespace staple {
 
     class StapleClassDef : public StapleType {
     private:
+        StapleClass* mClass;
+
     public:
-        StapleClassDef() : StapleType(SK_ClassDef) {}
+        StapleClassDef(StapleClass* classType) : StapleType(SK_ClassDef), mClass(classType) {}
+
+        StapleClass* getClass() const { return mClass; }
 
         bool isAssignable(StapleType* type) {
             return llvm::isa<StapleClassDef>(type);
