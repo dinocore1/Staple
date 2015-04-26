@@ -8,13 +8,22 @@ Staple has a very simple representation of it's object instances in runtime.
 
 ```
 stp_obj = type {
-  stp_class* = class struct,
-  uint32 = reference count 
-  ...  other members
+  stp_obj_header = header,
+  uint32 = header offset, <-- heightest derived class
+  stp_class* = class,
+  ... Foo fields
+  uint32 = header offset, <-- derived class
+  stp_class* = class,
+  ...  more fields
+}
+
+
+stp_obj_header = type {
+  uint32 = reference counter
 }
 
 ```
- 
+
 ## Class Struct ##
 
 ```

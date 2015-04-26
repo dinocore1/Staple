@@ -122,6 +122,7 @@ namespace staple {
     StapleField* StapleClass::getField(const string &name, uint &index) const {
         StapleField* retval = nullptr;
 
+        index++; // plus 1 for header offset
         for(StapleField* field : mFields) {
             if(field->getName().compare(name) == 0){
                 retval = field;

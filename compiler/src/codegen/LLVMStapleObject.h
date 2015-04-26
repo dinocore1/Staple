@@ -24,6 +24,7 @@ namespace staple {
         static llvm::StructType* StpObjInstanceStruct;
         static llvm::StructType* getStpObjVtableType();
         static llvm::StructType* StpClassStruct;
+        static llvm::StructType* getStpInstanceHeaderType();
 
     protected:
         StapleClass* mClassType;

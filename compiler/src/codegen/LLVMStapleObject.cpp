@@ -11,6 +11,17 @@ namespace staple {
     StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
     StructType* STPOBJ_CLASS_TYPE = StructType::create(getGlobalContext(), "stp_class");
     StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "stp_obj_vtable");
+    StructType* STP_INSTANCE_HEADER_TYPE = StructType::create(getGlobalContext(), "stp_obj_header");
+
+    StructType* LLVMStapleObject::getStpInstanceHeaderType() {
+        if(STP_INSTANCE_HEADER_TYPE->isEmptyTy()) {
+            STP_INSTANCE_HEADER_TYPE->setBody(
+              Type::getInt32Ty(getGlobalContext()), // refcounter
+              NULL
+            );
+        }
+        return STP_INSTANCE_HEADER_TYPE;
+    }
 
     StructType* LLVMStapleObject::getStpObjVtableType() {
         if(STPOBJ_VTABLE_TYPE->isEmptyTy()) {
@@ -238,6 +249,7 @@ namespace staple {
 
     void unrollFields(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
 
+        elements.push_back(Type::getInt32Ty(getGlobalContext())); // header offset
         for(StapleField* fieldType : stapleClass->getFields()) {
             elements.push_back(codeGenerator->getLLVMType(fieldType));
         }
@@ -254,6 +266,7 @@ namespace staple {
             mObjectStruct = StructType::create(getGlobalContext(), codeGenerator->createFunctionName(mClassType->getSimpleName()));
 
             vector<Type*> elements;
+            elements.push_back(getStpInstanceHeaderType());
             unrollFields(mClassType, elements, codeGenerator);
 
             mObjectStruct->setBody(elements);
