@@ -6,6 +6,7 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/PassManager.h>
+#include <llvm/IR/DIBuilder.h>
 #include "../node.h"
 
 #include <string>
@@ -28,6 +29,7 @@ namespace staple {
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;
+        DIBuilder mDIBuider;
         Module mModule;
         FunctionPassManager mFunctionPassManager;
 
@@ -44,6 +46,8 @@ namespace staple {
         }
 
         Type* getLLVMType(StapleType* stapleType);
+
+
     };
 
 

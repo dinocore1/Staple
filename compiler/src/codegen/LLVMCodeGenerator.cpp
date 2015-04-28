@@ -34,6 +34,13 @@ namespace staple {
         }
     };
 
+    class LLVMDebugInfo {
+    public:
+        DICompileUnit mCompileUnit;
+        DIFile mFile;
+
+    };
+
     class CodeGenBlock {
     private:
         CodeGenBlock* mParent;
@@ -41,7 +48,7 @@ namespace staple {
 
     public:
         CodeGenBlock(CodeGenBlock* parent)
-        : mParent(parent){}
+        : mParent(parent), mDebugInfo(parent->mDebugInfo){}
 
         CodeGenBlock* getParent() const { return mParent; }
 
@@ -60,7 +67,9 @@ namespace staple {
             }
         }
 
+        LLVMDebugInfo* mDebugInfo;
         BasicBlock* mBasicBlock;
+        DIScope mDIScope;
 
     };
 
@@ -176,6 +185,14 @@ namespace staple {
 
         void visit(NCompileUnit* compileUnit) {
 
+            mScope->mDebugInfo = new LLVMDebugInfo();
+            mScope->mDebugInfo->mCompileUnit = mCodeGen->mDIBuider.createCompileUnit(
+                    dwarf::DW_LANG_C, mCodeGen->mCompilerContext->inputFilename.c_str(), ".",
+                    "Staple Compiler", false, "", 1);
+            mScope->mDebugInfo->mFile = mCodeGen->mDIBuider.createFile(mCodeGen->mCompilerContext->inputFilename.c_str(), ".");
+
+            mScope->mDIScope = mScope->mDebugInfo->mFile;
+
             {
                 LLVMFunctionForwardDeclVisitor visitor(mCodeGen, mScope, mValues);
 
@@ -198,6 +215,10 @@ namespace staple {
             mValues[strLiteral] = retval;
         }
 
+        DICompositeType createDebugFunctionType() {
+            mCodeGen->mDIBuider.createClassType()
+            mCodeGen->mDIBuider.createSubroutineType(mScope->mDebugInfo->mFile, )
+        }
 
         void visit(NFunction* function) {
 
@@ -206,6 +227,10 @@ namespace staple {
             push();
             mScope->mBasicBlock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
             mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+            mScope->mDIScope = mCodeGen->mDIBuider.createFunction(mScope->getParent()->mDIScope,
+                                                                  function->name.c_str(), StringRef(),
+                                                                  mScope->mDebugInfo->mFile,
+                                                                  function->location.first_line, createDebugFunctionType(), true, 0, DIDescriptor::FlagPrototyped, false, llvmFunction);
 
             const size_t numArgs = function->arguments.size();
             Function::arg_iterator AI = llvmFunction->arg_begin();
@@ -429,7 +454,11 @@ namespace staple {
     : mCompilerContext(compilerContext),
       mIRBuilder(getGlobalContext()),
       mModule(mCompilerContext->inputFilename.c_str(), getGlobalContext()),
-      mFunctionPassManager(&mModule) {}
+      mFunctionPassManager(&mModule),
+      mDIBuider(mModule)
+    {
+
+    }
 
     string LLVMCodeGenerator::createFunctionName(const string& name) {
         string retval = mCompilerContext->package;
@@ -491,6 +520,8 @@ namespace staple {
 
         LLVMCodeGenVisitor visitor(this);
         compileUnit->accept(&visitor);
+
+        mDIBuider.finalize();
 
 
 
