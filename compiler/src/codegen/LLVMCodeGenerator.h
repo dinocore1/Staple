@@ -29,7 +29,7 @@ namespace staple {
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;
-        DIBuilder mDIBuider;
+        DIBuilder* mDIBuider;
         Module mModule;
         FunctionPassManager mFunctionPassManager;
 
@@ -46,6 +46,7 @@ namespace staple {
         }
 
         Type* getLLVMType(StapleType* stapleType);
+        Value* getLLVMDebugType(StapleType* stapleType);
 
 
     };

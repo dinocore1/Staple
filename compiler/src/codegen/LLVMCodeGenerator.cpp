@@ -48,7 +48,7 @@ namespace staple {
 
     public:
         CodeGenBlock(CodeGenBlock* parent)
-        : mParent(parent), mDebugInfo(parent->mDebugInfo){}
+        : mParent(parent), mDebugInfo(parent == nullptr ? nullptr : parent->mDebugInfo){}
 
         CodeGenBlock* getParent() const { return mParent; }
 
@@ -186,10 +186,10 @@ namespace staple {
         void visit(NCompileUnit* compileUnit) {
 
             mScope->mDebugInfo = new LLVMDebugInfo();
-            mScope->mDebugInfo->mCompileUnit = mCodeGen->mDIBuider.createCompileUnit(
+            mScope->mDebugInfo->mCompileUnit = mCodeGen->mDIBuider->createCompileUnit(
                     dwarf::DW_LANG_C, mCodeGen->mCompilerContext->inputFilename.c_str(), ".",
-                    "Staple Compiler", false, "", 1);
-            mScope->mDebugInfo->mFile = mCodeGen->mDIBuider.createFile(mCodeGen->mCompilerContext->inputFilename.c_str(), ".");
+                    "Staple Compiler", false, "", 0);
+            mScope->mDebugInfo->mFile = mCodeGen->mDIBuider->createFile(mCodeGen->mCompilerContext->inputFilename.c_str(), ".");
 
             mScope->mDIScope = mScope->mDebugInfo->mFile;
 
@@ -215,9 +215,15 @@ namespace staple {
             mValues[strLiteral] = retval;
         }
 
-        DICompositeType createDebugFunctionType() {
-            mCodeGen->mDIBuider.createClassType()
-            mCodeGen->mDIBuider.createSubroutineType(mScope->mDebugInfo->mFile, )
+        DICompositeType createDebugFunctionType(StapleFunction* stpFunctionType) {
+            vector<Value*> elements;
+
+            elements.push_back(mCodeGen->getLLVMDebugType(stpFunctionType->getReturnType()));
+            for(StapleType* arg : stpFunctionType->getArguments()) {
+                elements.push_back(mCodeGen->getLLVMDebugType(arg));
+            }
+
+            return mCodeGen->mDIBuider->createSubroutineType(mScope->mDebugInfo->mFile, mCodeGen->mDIBuider->getOrCreateArray(elements));
         }
 
         void visit(NFunction* function) {
@@ -227,10 +233,19 @@ namespace staple {
             push();
             mScope->mBasicBlock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
             mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
-            mScope->mDIScope = mCodeGen->mDIBuider.createFunction(mScope->getParent()->mDIScope,
+
+            StapleFunction* stpFunctionType = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
+
+            /*
+            mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
                                                                   function->name.c_str(), StringRef(),
                                                                   mScope->mDebugInfo->mFile,
-                                                                  function->location.first_line, createDebugFunctionType(), true, 0, DIDescriptor::FlagPrototyped, false, llvmFunction);
+                                                                  function->location.first_line,
+                                                                   createDebugFunctionType(stpFunctionType), true,
+                                                                   0, DIDescriptor::FlagPrototyped, false, llvmFunction);
+
+            mCodeGen->mIRBuilder.SetCurrentDebugLocation(DebugLoc::get(function->location.first_line, function->location.first_column, mScope->mDIScope));
+             */
 
             const size_t numArgs = function->arguments.size();
             Function::arg_iterator AI = llvmFunction->arg_begin();
@@ -251,9 +266,24 @@ namespace staple {
         }
 
         void visit(NVariableDeclaration* declaration) {
+
             StapleType* type = mCodeGen->mCompilerContext->typeTable[declaration];
 
+            DITypeRef diType = mCodeGen->mDIBuider->createBasicType("int", 32, 0, dwarf::DW_ATE_signed);
+            DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_variable, 
+                                                                 mScope->mDIScope, 
+                                                                 declaration->name.c_str(), 
+                                                                 mScope->mDebugInfo->mFile, 
+                                                                 declaration->location.first_line,
+                                                                              diType);
+            
+            
+            
+
             AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(mCodeGen->getLLVMType(type), 0, declaration->name.c_str());
+
+            Instruction *call = mCodeGen->mDIBuider->insertDeclare(alloc, debugSymbol, mCodeGen->mIRBuilder.GetInsertBlock());
+            call->setDebugLoc(DebugLoc::get(declaration->location.first_line, declaration->location.first_column, mScope->mDIScope));
 
             mScope->defineSymbol(declaration->name, alloc);
 
@@ -454,10 +484,13 @@ namespace staple {
     : mCompilerContext(compilerContext),
       mIRBuilder(getGlobalContext()),
       mModule(mCompilerContext->inputFilename.c_str(), getGlobalContext()),
-      mFunctionPassManager(&mModule),
-      mDIBuider(mModule)
-    {
+      mFunctionPassManager(&mModule)
 
+    {
+        //mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 3);
+        mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+
+        mDIBuider = new DIBuilder(mModule);
     }
 
     string LLVMCodeGenerator::createFunctionName(const string& name) {
@@ -516,12 +549,26 @@ namespace staple {
         return retval;
     }
 
+    Value* LLVMCodeGenerator::getLLVMDebugType(StapleType* stapleType) {
+        Value* retval = nullptr;
+        if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
+            retval = mDIBuider->createBasicType("void", intType->getWidth(), 0, dwarf::DW_ATE_signed);
+        }
+
+        if(retval == nullptr) {
+            retval = mDIBuider->createUnspecifiedParameter();
+        }
+
+        return retval;
+
+    }
+
     void LLVMCodeGenerator::generateCode(NCompileUnit *compileUnit) {
 
         LLVMCodeGenVisitor visitor(this);
         compileUnit->accept(&visitor);
 
-        mDIBuider.finalize();
+        mDIBuider->finalize();
 
 
 
