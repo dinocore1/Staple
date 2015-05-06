@@ -55,7 +55,7 @@ namespace staple {
             retval = it->second;
         } else {
             if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
-                retval = mCodeGen->mDIBuider->createBasicType("int", 32, 0, dwarf::DW_ATE_signed);
+                retval = mCodeGen->mDIBuider->createBasicType("int", intType->getWidth(), 0, dwarf::DW_ATE_signed);
             } else {
                 retval = mCodeGen->mDIBuider->createUnspecifiedType("unknown");
             }
@@ -298,14 +298,19 @@ namespace staple {
 
         void visit(NVariableDeclaration* declaration) {
 
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                emitDebugLocation(declaration);
+            }
+
             StapleType* type = mCodeGen->mCompilerContext->typeTable[declaration];
 
             AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(mCodeGen->getLLVMType(type), 0, declaration->name.c_str());
             mScope->defineSymbol(declaration->name, alloc);
 
             if(mCodeGen->mCompilerContext->debugSymobols) {
+
                 DITypeRef diType = mScope->mDebugInfo->getLLVMDebugType(type);
-                DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_variable,
+                DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_auto_variable,
                                                                                   mScope->mDIScope,
                                                                                   declaration->name.c_str(),
                                                                                   mScope->mDebugInfo->mFile,
@@ -314,7 +319,7 @@ namespace staple {
 
                 Instruction *call = mCodeGen->mDIBuider->insertDeclare(alloc, debugSymbol, mCodeGen->mIRBuilder.GetInsertBlock());
                 call->setDebugLoc(DebugLoc::get(declaration->location.first_line, declaration->location.first_column, mScope->mDIScope));
-                emitDebugLocation(declaration);
+
 
             }
 
@@ -552,7 +557,7 @@ namespace staple {
 
     {
         if(mCompilerContext->debugSymobols) {
-            //mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 3);
+            mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
             mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
 
             mDIBuider = new DIBuilder(mModule);
