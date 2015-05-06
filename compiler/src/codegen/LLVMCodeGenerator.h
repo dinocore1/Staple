@@ -26,6 +26,7 @@ namespace staple {
     friend class LLVMStapleObject;
     friend class LLVMBaseObject;
     friend class LLVMFunctionForwardDeclVisitor;
+    friend class LLVMDebugInfo;
     private:
         CompilerContext* mCompilerContext;
         IRBuilder<> mIRBuilder;
@@ -46,7 +47,6 @@ namespace staple {
         }
 
         Type* getLLVMType(StapleType* stapleType);
-        Value* getLLVMDebugType(StapleType* stapleType);
 
 
     };

@@ -208,7 +208,7 @@ proto_func
 
 global_func
         : type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN block
-         { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
+         { $$ = new NFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; $$->location = @$; }
         ;
 
 
@@ -264,9 +264,9 @@ stmts
         ;
 
 stmt    : stmtexpr TSEMI { $$ = $1; }
-        | TRETURN expr TSEMI { $$ = new NReturn($2); }
-        | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); } %prec "then"
-        | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); }
+        | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
+        | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec "then"
+        | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
         | block { $$ = $1; }
         ;
 
@@ -297,7 +297,7 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
 
 stmtexpr
         : var_decl
-        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NExpressionStatement(new NFunctionCall(*$1, *$3)); delete $1; delete $3; $$->location = @$; }
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { NFunctionCall* fcall = new NFunctionCall(*$1, *$3); fcall->location = @1; $$ = new NExpressionStatement(fcall); delete $1; delete $3; $$->location = @$; }
         | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         ;
 
@@ -361,7 +361,7 @@ arrayindex
         ;
 
 base
-        : ident { $$ = $1; }
+        : ident { $$ = new NLoad($1); }
         | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
         | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; }
         | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }

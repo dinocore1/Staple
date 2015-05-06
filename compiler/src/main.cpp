@@ -38,12 +38,14 @@ struct Arg : public option::Arg
     }
 };
 
-enum optionIndex { UNKNOWN, PACKAGE, OUTPUT, INPUT };
+enum optionIndex { UNKNOWN, PACKAGE, OUTPUT, INPUT, DEBUG };
 const option::Descriptor usage[] =
 {
-    {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: stp [-o] output.ll input.stp"},
+    {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: stp [-o] output.ll input.stp\n\n"
+                                                    "Options:"},
     {PACKAGE, 0, "p", "package", Arg::Required, "-p <package name>, --package <package name> \tThe package name"},
     {OUTPUT, 0, "o", "output", Arg::Required, "-o <output.ll>, --output <output.ll> \tThe output LLVM file"},
+    {DEBUG, 0, "g", "debug", Arg::None, "-g\toutput debug symbols"},
     {UNKNOWN, 0, "", "", option::Arg::None, "<input.stp>\tThe input file"},
     { 0, 0, 0, 0, 0, 0 }
 };
@@ -79,6 +81,8 @@ int main(int argc, char **argv)
     } else {
         context.package = "";
     }
+
+    context.debugSymobols = options[DEBUG] ? true : false;
 
     //yydebug = 1;
 

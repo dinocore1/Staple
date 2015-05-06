@@ -21,6 +21,7 @@ namespace staple {
     public:
         string inputFilename;
         string outputFilename;
+        bool debugSymobols;
 
         string package;
         vector<string> includes;

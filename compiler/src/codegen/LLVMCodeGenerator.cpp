@@ -35,11 +35,35 @@ namespace staple {
     };
 
     class LLVMDebugInfo {
+    private:
+        map<StapleType*, DIType> mDebugTypeCache;
+        const LLVMCodeGenerator* mCodeGen;
     public:
+        LLVMDebugInfo(const LLVMCodeGenerator* codeGen) : mCodeGen(codeGen) {}
+
         DICompileUnit mCompileUnit;
         DIFile mFile;
 
+        DIType getLLVMDebugType(StapleType* stapleType);
+
     };
+
+    DIType LLVMDebugInfo::getLLVMDebugType(StapleType* stapleType) {
+        DIType retval;
+        auto it = mDebugTypeCache.find(stapleType);
+        if(it != mDebugTypeCache.end()) {
+            retval = it->second;
+        } else {
+            if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
+                retval = mCodeGen->mDIBuider->createBasicType("int", 32, 0, dwarf::DW_ATE_signed);
+            } else {
+                retval = mCodeGen->mDIBuider->createUnspecifiedType("unknown");
+            }
+            mDebugTypeCache[stapleType] = retval;
+        }
+        return retval;
+
+    }
 
     class CodeGenBlock {
     private:
@@ -167,6 +191,9 @@ namespace staple {
             mScope = parent;
         }
 
+        void emitDebugLocation(ASTNode* node) {
+            mCodeGen->mIRBuilder.SetCurrentDebugLocation(DebugLoc::get(node->location.first_line, node->location.first_column, mScope->mDIScope));
+        }
 
 
         inline Type* getNodeType(ASTNode* node) {
@@ -185,13 +212,16 @@ namespace staple {
 
         void visit(NCompileUnit* compileUnit) {
 
-            mScope->mDebugInfo = new LLVMDebugInfo();
-            mScope->mDebugInfo->mCompileUnit = mCodeGen->mDIBuider->createCompileUnit(
-                    dwarf::DW_LANG_C, mCodeGen->mCompilerContext->inputFilename.c_str(), ".",
-                    "Staple Compiler", false, "", 0);
-            mScope->mDebugInfo->mFile = mCodeGen->mDIBuider->createFile(mCodeGen->mCompilerContext->inputFilename.c_str(), ".");
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                mScope->mDebugInfo = new LLVMDebugInfo(mCodeGen);
+                mScope->mDebugInfo->mCompileUnit = mCodeGen->mDIBuider->createCompileUnit(
+                        dwarf::DW_LANG_C, mCodeGen->mCompilerContext->inputFilename.c_str(), ".",
+                        "Staple Compiler", false, "", 0);
+                mScope->mDebugInfo->mFile = mCodeGen->mDIBuider->createFile(
+                        mCodeGen->mCompilerContext->inputFilename.c_str(), ".");
 
-            mScope->mDIScope = mScope->mDebugInfo->mFile;
+                mScope->mDIScope = mScope->mDebugInfo->mFile;
+            }
 
             {
                 LLVMFunctionForwardDeclVisitor visitor(mCodeGen, mScope, mValues);
@@ -218,9 +248,9 @@ namespace staple {
         DICompositeType createDebugFunctionType(StapleFunction* stpFunctionType) {
             vector<Value*> elements;
 
-            elements.push_back(mCodeGen->getLLVMDebugType(stpFunctionType->getReturnType()));
+            elements.push_back(mScope->mDebugInfo->getLLVMDebugType(stpFunctionType->getReturnType()));
             for(StapleType* arg : stpFunctionType->getArguments()) {
-                elements.push_back(mCodeGen->getLLVMDebugType(arg));
+                elements.push_back(mScope->mDebugInfo->getLLVMDebugType(arg));
             }
 
             return mCodeGen->mDIBuider->createSubroutineType(mScope->mDebugInfo->mFile, mCodeGen->mDIBuider->getOrCreateArray(elements));
@@ -236,16 +266,17 @@ namespace staple {
 
             StapleFunction* stpFunctionType = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
 
-            /*
-            mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
-                                                                  function->name.c_str(), StringRef(),
-                                                                  mScope->mDebugInfo->mFile,
-                                                                  function->location.first_line,
-                                                                   createDebugFunctionType(stpFunctionType), true,
-                                                                   0, DIDescriptor::FlagPrototyped, false, llvmFunction);
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
+                                                                       function->name.c_str(), StringRef(),
+                                                                       mScope->mDebugInfo->mFile,
+                                                                       function->location.first_line,
+                                                                       createDebugFunctionType(stpFunctionType), false,
+                                                                       true, 0);
 
-            mCodeGen->mIRBuilder.SetCurrentDebugLocation(DebugLoc::get(function->location.first_line, function->location.first_column, mScope->mDIScope));
-             */
+                emitDebugLocation(function);
+
+            }
 
             const size_t numArgs = function->arguments.size();
             Function::arg_iterator AI = llvmFunction->arg_begin();
@@ -269,23 +300,23 @@ namespace staple {
 
             StapleType* type = mCodeGen->mCompilerContext->typeTable[declaration];
 
-            DITypeRef diType = mCodeGen->mDIBuider->createBasicType("int", 32, 0, dwarf::DW_ATE_signed);
-            DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_variable, 
-                                                                 mScope->mDIScope, 
-                                                                 declaration->name.c_str(), 
-                                                                 mScope->mDebugInfo->mFile, 
-                                                                 declaration->location.first_line,
-                                                                              diType);
-            
-            
-            
-
             AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(mCodeGen->getLLVMType(type), 0, declaration->name.c_str());
-
-            Instruction *call = mCodeGen->mDIBuider->insertDeclare(alloc, debugSymbol, mCodeGen->mIRBuilder.GetInsertBlock());
-            call->setDebugLoc(DebugLoc::get(declaration->location.first_line, declaration->location.first_column, mScope->mDIScope));
-
             mScope->defineSymbol(declaration->name, alloc);
+
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                DITypeRef diType = mScope->mDebugInfo->getLLVMDebugType(type);
+                DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_variable,
+                                                                                  mScope->mDIScope,
+                                                                                  declaration->name.c_str(),
+                                                                                  mScope->mDebugInfo->mFile,
+                                                                                  declaration->location.first_line,
+                                                                                  diType);
+
+                Instruction *call = mCodeGen->mDIBuider->insertDeclare(alloc, debugSymbol, mCodeGen->mIRBuilder.GetInsertBlock());
+                call->setDebugLoc(DebugLoc::get(declaration->location.first_line, declaration->location.first_column, mScope->mDIScope));
+                emitDebugLocation(declaration);
+
+            }
 
             if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
                 mCodeGen->mIRBuilder.CreateStore(ConstantPointerNull::get(cast<PointerType>(mCodeGen->getLLVMType(ptrType))), alloc);
@@ -293,6 +324,7 @@ namespace staple {
 
             if(declaration->assignmentExpr != nullptr) {
                 NAssignment assign(new NIdentifier(declaration->name), declaration->assignmentExpr);
+                assign.location = declaration->location;
                 assign.accept(this);
             }
 
@@ -310,6 +342,9 @@ namespace staple {
         }
 
         void visit(NNew* newnode) {
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(newnode);
+            }
             StaplePointer* ptrType = cast<StaplePointer>(mCodeGen->mCompilerContext->typeTable[newnode]);
 
             PointerType* llvmPtrType = cast<PointerType>(mCodeGen->getLLVMType(ptrType));
@@ -335,6 +370,9 @@ namespace staple {
         }
 
         void visit(NAssignment* assignment) {
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(assignment);
+            }
             Value* lhsValue = getValue(assignment->lhs);
             Value* rhsValue = getValue(assignment->rhs);
 
@@ -355,6 +393,10 @@ namespace staple {
         }
 
         void visit(NBinaryOperator* binaryOperator) {
+
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(binaryOperator);
+            }
 
             Value* l = getValue(binaryOperator->lhs);
             Value* r = getValue(binaryOperator->rhs);
@@ -389,6 +431,11 @@ namespace staple {
         }
 
         void visit(NIfStatement* ifStatement) {
+
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(ifStatement);
+            }
+
             Function* parent = mCodeGen->mIRBuilder.GetInsertBlock()->getParent();
 
 
@@ -420,6 +467,10 @@ namespace staple {
 
         void visit(NMemberAccess* memberAccess) {
 
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(memberAccess);
+            }
+
             StapleType* baseType = mCodeGen->mCompilerContext->typeTable[memberAccess->base];
 
             StaplePointer* ptr = nullptr;
@@ -436,6 +487,10 @@ namespace staple {
         }
 
         void visit(NFunctionCall* functionCall) {
+
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(functionCall);
+            }
 
             Function* function = cast<Function>(mScope->lookupSymbol(functionCall->name));
 
@@ -474,6 +529,11 @@ namespace staple {
         }
 
         void visit(NReturn* ret) {
+
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(ret);
+            }
+
             Value* retval = getValue(ret->ret);
             mCodeGen->mIRBuilder.CreateRet(retval);
         }
@@ -487,10 +547,12 @@ namespace staple {
       mFunctionPassManager(&mModule)
 
     {
-        //mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 3);
-        mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+        if(mCompilerContext->debugSymobols) {
+            //mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 3);
+            mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
 
-        mDIBuider = new DIBuilder(mModule);
+            mDIBuider = new DIBuilder(mModule);
+        }
     }
 
     string LLVMCodeGenerator::createFunctionName(const string& name) {
@@ -549,26 +611,14 @@ namespace staple {
         return retval;
     }
 
-    Value* LLVMCodeGenerator::getLLVMDebugType(StapleType* stapleType) {
-        Value* retval = nullptr;
-        if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
-            retval = mDIBuider->createBasicType("void", intType->getWidth(), 0, dwarf::DW_ATE_signed);
-        }
-
-        if(retval == nullptr) {
-            retval = mDIBuider->createUnspecifiedParameter();
-        }
-
-        return retval;
-
-    }
-
     void LLVMCodeGenerator::generateCode(NCompileUnit *compileUnit) {
 
         LLVMCodeGenVisitor visitor(this);
         compileUnit->accept(&visitor);
 
-        mDIBuider->finalize();
+        if(mCompilerContext->debugSymobols) {
+            mDIBuider->finalize();
+        }
 
 
 
