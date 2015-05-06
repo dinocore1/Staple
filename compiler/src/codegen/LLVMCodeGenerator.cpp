@@ -515,6 +515,10 @@ namespace staple {
 
             push();
 
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                mScope->mDIScope = mCodeGen->mDIBuider->createLexicalBlock(mScope->getParent()->mDIScope, mScope->mDebugInfo->mFile, block->location.first_line, block->location.first_column, 0);
+            }
+
             mScope->mBasicBlock = basicBlock;
             mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
 
