@@ -79,7 +79,7 @@ namespace staple {
 
     StapleClass::StapleClass(const string &name, StapleClass* parent)
     : StapleType(SK_Class), mName(name), mParent(parent) {
-        addField("class", new StaplePointer(new StapleClassDef(this)));
+        //addField("class", new StaplePointer(new StapleClassDef(this)));
     }
 
     void StapleClass::setParent(StapleClass* parent) {
@@ -122,16 +122,18 @@ namespace staple {
     StapleField* StapleClass::getField(const string &name, uint &index) const {
         StapleField* retval = nullptr;
 
-        for(StapleField* field : mFields) {
-            if(field->getName().compare(name) == 0){
-                retval = field;
-                break;
-            }
-            index++;
+        if(mParent != nullptr) {
+            retval = mParent->getField(name, index);
         }
 
-        if(retval == nullptr && mParent != nullptr) {
-            retval = mParent->getField(name, index);
+        if(retval == nullptr) {
+            for (StapleField *field : mFields) {
+                if (field->getName().compare(name) == 0) {
+                    retval = field;
+                    break;
+                }
+                index++;
+            }
         }
 
         return retval;

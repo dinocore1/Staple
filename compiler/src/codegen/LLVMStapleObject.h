@@ -41,6 +41,7 @@ namespace staple {
         static llvm::StructType* getStpObjInstanceType();
         static llvm::StructType* getStpRuntimeClassType();
         static llvm::FunctionType* getKillFunctionType();
+        static llvm::Function* getStoreStrongFunction(Module* module);
 
         static LLVMStapleObject* get(StapleClass* classType);
 

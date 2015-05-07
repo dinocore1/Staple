@@ -45,6 +45,21 @@ namespace staple {
         return retval;
     }
 
+    Function* LLVMStapleObject::getStoreStrongFunction(Module *module) {
+        Function* retval = module->getFunction("stp_storeStrong");
+        if(retval == NULL) {
+            FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()),
+                                                    std::vector<Type*>{
+                                                            PointerType::getUnqual(PointerType::getUnqual(getStpObjInstanceType())),
+                                                            PointerType::getUnqual(getStpObjInstanceType())
+                                                    },
+                                                    false);
+            retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_storeStrong", module);
+        }
+
+        return retval;
+    }
+
 
     StructType* LLVMStapleObject::getStpObjInstanceType() {
         if(STPOBJ_INSTANCE_TYPE->isEmptyTy()){
@@ -214,6 +229,19 @@ namespace staple {
         return mClassDefType;
     }
 
+    void unrollVtable(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
+
+        if(stapleClass->getParent() != nullptr) {
+            unrollVtable(stapleClass->getParent(), elements, codeGenerator);
+        }
+
+        for(StapleMethodFunction* methodFunction : stapleClass->getMethods()) {
+            if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
+                elements.push_back(PointerType::getUnqual(codeGenerator->getLLVMType(methodFunction)));
+            }
+        }
+    }
+
     StructType* LLVMStapleObject::getVtableType(LLVMCodeGenerator *codeGenerator) {
         if(mVtableType == nullptr) {
 
@@ -222,15 +250,9 @@ namespace staple {
             mVtableType = StructType::create(getGlobalContext(), vtableName.c_str());
 
             vector<Type*> vtable;
-
-            for(StapleMethodFunction* methodFunction : mClassType->getMethods()) {
-                if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
-                    vtable.push_back(PointerType::getUnqual(codeGenerator->getLLVMType(methodFunction)));
-                }
-            }
+            unrollVtable(mClassType, vtable, codeGenerator);
 
             mVtableType->setBody(vtable);
-
         }
 
         return mVtableType;
@@ -238,15 +260,15 @@ namespace staple {
 
     void unrollFields(StapleClass* stapleClass, vector<Type*>& elements, LLVMCodeGenerator *codeGenerator) {
 
-        for(StapleField* fieldType : stapleClass->getFields()) {
-            elements.push_back(codeGenerator->getLLVMType(fieldType));
-        }
-
         if(stapleClass->getParent() != nullptr) {
             unrollFields(stapleClass->getParent(), elements, codeGenerator);
         }
 
-
+        for(StapleField* fieldType : stapleClass->getFields()) {
+            if(fieldType->getName().compare("class") != 0) {
+                elements.push_back(codeGenerator->getLLVMType(fieldType));
+            }
+        }
     }
 
     llvm::StructType* LLVMStapleObject::getObjectType(LLVMCodeGenerator *codeGenerator) {
@@ -254,6 +276,7 @@ namespace staple {
             mObjectStruct = StructType::create(getGlobalContext(), codeGenerator->createFunctionName(mClassType->getSimpleName()));
 
             vector<Type*> elements;
+            elements.push_back(PointerType::getUnqual(getClassDefType(codeGenerator)));
             unrollFields(mClassType, elements, codeGenerator);
 
             mObjectStruct->setBody(elements);

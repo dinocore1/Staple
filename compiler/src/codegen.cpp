@@ -478,8 +478,8 @@ Value* NAssignment::codeGen(CodeGenContext& context)
 
         Function* strongStore = getStaple_StrongStore(context);
         context.Builder.CreateCall(strongStore, std::vector<Value*>{
-                context.Builder.CreatePointerCast(lhsValue, PointerType::getUnqual(PointerType::getUnqual(ObjectHelper::getGenericObjType()))),
-                context.Builder.CreatePointerCast(rhsValue, PointerType::getUnqual(ObjectHelper::getGenericObjType()))
+                context.Builder.CreatePointerCast(lhsValue, PointerType::getUnqual(PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()))),
+                context.Builder.CreatePointerCast(rhsValue, PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()))
         });
     } else {
         return context.Builder.CreateStore(rhsValue, lhsValue);

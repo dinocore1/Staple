@@ -56,6 +56,8 @@ namespace staple {
         } else {
             if(StapleInt* intType = dyn_cast<StapleInt>(stapleType)) {
                 retval = mCodeGen->mDIBuider->createBasicType("int", intType->getWidth(), 0, dwarf::DW_ATE_signed);
+            } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(stapleType)){
+                retval = mCodeGen->mDIBuider->createPointerType(getLLVMDebugType(ptrType->getElementType()), 64);
             } else {
                 retval = mCodeGen->mDIBuider->createUnspecifiedType("unknown");
             }
@@ -385,7 +387,11 @@ namespace staple {
             StaplePointer* ptrType;
             if((ptrType = dyn_cast<StaplePointer>(rhsType)) && isa<StapleClass>(ptrType->getElementType())) {
 
-                //TODO: strongStore
+                Function* strongStore = LLVMStapleObject::getStoreStrongFunction(&mCodeGen->mModule);
+                mCodeGen->mIRBuilder.CreateCall(strongStore, std::vector<Value*>{
+                        mCodeGen->mIRBuilder.CreatePointerCast(lhsValue, PointerType::getUnqual(PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()))),
+                        mCodeGen->mIRBuilder.CreatePointerCast(rhsValue, PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()))
+                });
 
             } else {
                 mCodeGen->mIRBuilder.CreateStore(rhsValue, lhsValue);
