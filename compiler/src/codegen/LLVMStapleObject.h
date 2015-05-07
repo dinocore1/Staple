@@ -28,6 +28,9 @@ namespace staple {
     protected:
         StapleClass* mClassType;
         llvm::StructType* mClassDefType;
+        llvm::GlobalVariable* mClassNameValue;
+        llvm::GlobalVariable* mClassDefValue;
+        llvm::GlobalVariable* mClassVTableValue;
         llvm::StructType* mVtableType;
         llvm::StructType* mObjectStruct;
         llvm::StructType* mFieldsStruct;
@@ -48,6 +51,8 @@ namespace staple {
         llvm::Value* getFieldPtr(const string& name, llvm::IRBuilder<>& irBuilder, llvm::Value* thisPtr);
 
         llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator);
+        llvm::GlobalVariable* getClassNameValue(LLVMCodeGenerator* codeGenerator);
+        llvm::GlobalVariable* getClassVTableValue(LLVMCodeGenerator* codeGenerator);
 
         virtual llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator);
         virtual llvm::StructType* getVtableType(LLVMCodeGenerator* codeGenerator);

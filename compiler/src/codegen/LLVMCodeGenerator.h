@@ -34,9 +34,6 @@ namespace staple {
         Module mModule;
         FunctionPassManager mFunctionPassManager;
 
-
-        string createFunctionName(const string& name);
-
     public:
         LLVMCodeGenerator(CompilerContext* compilerContext);
 
@@ -48,6 +45,7 @@ namespace staple {
 
         Type* getLLVMType(StapleType* stapleType);
 
+        string createFunctionName(const string& name);
 
     };
 

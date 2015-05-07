@@ -10,6 +10,8 @@ namespace staple {
 
     StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
     StructType* STPOBJ_CLASS_TYPE = StructType::create(getGlobalContext(), "stp_class");
+
+    /*
     StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "stp_obj_vtable");
 
     StructType* LLVMStapleObject::getStpObjVtableType() {
@@ -21,6 +23,7 @@ namespace staple {
         }
         return STPOBJ_VTABLE_TYPE;
     }
+     */
 
     StructType* LLVMStapleObject::getStpRuntimeClassType() {
         if(STPOBJ_CLASS_TYPE->isEmptyTy()) {
@@ -184,6 +187,10 @@ namespace staple {
 
             Value* thisPtr = mInitFunction->arg_begin();
 
+            Value* value = irBuilder.CreateConstGEP2_32(thisPtr, 0, 0);
+            irBuilder.CreateStore(getClassDefinition(codeGenerator), value);
+
+
             if(mClassType->getParent() != nullptr) {
                 LLVMStapleObject* parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
 
@@ -209,6 +216,67 @@ namespace staple {
         }
 
         return mInitFunction;
+    }
+
+    GlobalVariable* LLVMStapleObject::getClassNameValue(LLVMCodeGenerator *codeGenerator) {
+        if(mClassNameValue == nullptr) {
+            string className = codeGenerator->createFunctionName(mClassType->getSimpleName());
+            Constant* classNameValue = ConstantDataArray::getString(getGlobalContext(), className.c_str());
+            mClassNameValue = new GlobalVariable(codeGenerator->mModule, classNameValue->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, classNameValue);
+        }
+        return mClassNameValue;
+    }
+
+    GlobalVariable* LLVMStapleObject::getClassDefinition(LLVMCodeGenerator *codeGenerator) {
+        if(mClassDefValue == nullptr) {
+
+            Value* parentPtr;
+            if(mClassType->getParent() == nullptr) {
+                parentPtr = ConstantPointerNull::get(PointerType::getUnqual(getStpRuntimeClassType()));
+            } else {
+                LLVMStapleObject* parent = LLVMStapleObject::get(mClassType->getParent());
+                parentPtr = parent->getClassDefinition(codeGenerator);
+            }
+
+            Constant* classDef = ConstantStruct::get(getClassDefType(codeGenerator),
+                                  ConstantExpr::getBitCast(getClassNameValue(codeGenerator), Type::getInt8PtrTy(getGlobalContext())),
+                                  parentPtr,
+                                  getClassVTableValue(codeGenerator),
+                                  NULL);
+
+            mClassDefValue = new GlobalVariable(codeGenerator->mModule, classDef->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, classDef);
+
+        }
+        return mClassDefValue;
+    }
+
+    void unrollVtableValues(StapleClass* stapleClass, vector<Constant*>& elements, LLVMCodeGenerator *codeGenerator) {
+
+        if(stapleClass->getParent() != nullptr) {
+            unrollVtableValues(stapleClass->getParent(), elements, codeGenerator);
+        }
+
+        for(StapleMethodFunction* methodFunction : stapleClass->getMethods()) {
+            if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
+                string methodName = codeGenerator->createFunctionName(stapleClass->getSimpleName()) + "_" + methodFunction->getName();
+                FunctionType* functionType = cast<FunctionType>(codeGenerator->getLLVMType(methodFunction));
+
+                elements.push_back(codeGenerator->getModule()->getOrInsertFunction(methodName.c_str(), functionType));
+            }
+        }
+    }
+
+    GlobalVariable* LLVMStapleObject::getClassVTableValue(LLVMCodeGenerator *codeGenerator) {
+        if(mClassVTableValue == nullptr) {
+
+            vector<Constant*> methods;
+            unrollVtableValues(mClassType, methods, codeGenerator);
+            Constant* classVTable = ConstantStruct::get(getVtableType(codeGenerator),
+                                                        methods);
+
+            mClassVTableValue = new GlobalVariable(codeGenerator->mModule, classVTable->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, classVTable);
+        }
+        return mClassVTableValue;
     }
 
     StructType* LLVMStapleObject::getClassDefType(LLVMCodeGenerator* codeGenerator) {
