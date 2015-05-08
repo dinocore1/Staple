@@ -21,7 +21,7 @@ using namespace std;
 CompilerContext::CompilerContext() {
 
     STP_OBJ_CLASS->addField("class", new StaplePointer(new StapleClassDef(STP_OBJ_CLASS)));
-    STP_OBJ_CLASS->addField("refCount", StapleType::getInt32Type());
+    //STP_OBJ_CLASS->addField("refCount", StapleType::getInt32Type());
 
     {
         vector<StapleType *> args{};
@@ -33,15 +33,6 @@ CompilerContext::CompilerContext() {
         STP_OBJ_CLASS->addMethod("kill", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
     }
 
-    {
-        vector<StapleType *> args{};
-        STP_OBJ_CLASS->addMethod("retain", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
-    }
-
-    {
-        vector<StapleType *> args{};
-        STP_OBJ_CLASS->addMethod("release", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
-    }
 
     defineClass(STP_OBJ_CLASS);
 };

@@ -3,6 +3,14 @@
 %stp_class = type { i8*, %stp_class*, %stp_obj_vtable }
 %stp_obj = type { %stp_class*, i32 }
 
+
+@stp_obj_className = private constant [8 x i8] c"stp_obj\00"
+@stp_class_def = constant %stp_class {
+  i8* getelementptr inbounds ([8 x i8]* @stp_obj_className, i32 0, i32 0),
+  %stp_class* null,
+  %stp_obj_vtable { void (%stp_obj*)* @stp_obj_kill }
+}
+
 define void @stp_obj_init(%stp_obj* %obj) {
   %intval = ptrtoint %stp_obj* %obj to i32
   %1 = icmp eq i32 0, %intval
@@ -12,6 +20,10 @@ begin:
   store i32 0, i32* %2
   br label %finish
 finish:
+  ret void
+}
+
+define void @stp_obj_kill(%stp_obj* %obj) {
   ret void
 }
 

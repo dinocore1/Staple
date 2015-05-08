@@ -21,16 +21,13 @@ namespace staple {
 
     private:
         static map<StapleClass*, LLVMStapleObject*> Cache;
-        static llvm::StructType* StpObjInstanceStruct;
-        static llvm::StructType* getStpObjVtableType();
-        static llvm::StructType* StpClassStruct;
 
     protected:
         StapleClass* mClassType;
         llvm::StructType* mClassDefType;
         llvm::GlobalVariable* mClassNameValue;
         llvm::GlobalVariable* mClassDefValue;
-        llvm::GlobalVariable* mClassVTableValue;
+        llvm::Constant* mClassVTableValue;
         llvm::StructType* mVtableType;
         llvm::StructType* mObjectStruct;
         llvm::StructType* mFieldsStruct;
@@ -42,17 +39,20 @@ namespace staple {
     public:
 
         static llvm::StructType* getStpObjInstanceType();
-        static llvm::StructType* getStpRuntimeClassType();
+        static llvm::StructType* getStpClassDefType();
+        static llvm::StructType* getStpObjVtableType();
         static llvm::FunctionType* getKillFunctionType();
+        static llvm::GlobalVariable* getStpClassValue();
+
         static llvm::Function* getStoreStrongFunction(Module* module);
 
         static LLVMStapleObject* get(StapleClass* classType);
 
         llvm::Value* getFieldPtr(const string& name, llvm::IRBuilder<>& irBuilder, llvm::Value* thisPtr);
 
-        llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator);
+        virtual llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator);
         llvm::GlobalVariable* getClassNameValue(LLVMCodeGenerator* codeGenerator);
-        llvm::GlobalVariable* getClassVTableValue(LLVMCodeGenerator* codeGenerator);
+        llvm::Constant* getClassVTableValue(LLVMCodeGenerator* codeGenerator);
 
         virtual llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator);
         virtual llvm::StructType* getVtableType(LLVMCodeGenerator* codeGenerator);

@@ -607,7 +607,6 @@ namespace staple {
         } else if(StapleClassDef* classDef = dyn_cast<StapleClassDef>(stapleType)) {
             LLVMStapleObject* llvmStapleObject = LLVMStapleObject::get(classDef->getClass());
             retval = llvmStapleObject->getClassDefType(this);
-            //retval = LLVMStapleObject::getStpRuntimeClassType();
         } else if(StapleMethodFunction* method = dyn_cast<StapleMethodFunction>(stapleType)){
             vector<Type*> argTypes;
             argTypes.push_back(PointerType::getUnqual(getLLVMType(method->getClass())));
