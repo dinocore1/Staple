@@ -18,7 +18,14 @@ LOCAL_EXE := $(MODULE)
 define exec_template
 $(LOCAL_EXE): $(LOCAL_OBJS) $(LOCAL_SHARED_LIBS)
 	g++ -o $(LOCAL_EXE) $(LOCAL_OBJS) $(LOCAL_LIBS)
+
+$(MODULE)_clean:
+	$(foreach file,$(LOCAL_CLEAN),rm -rf $(LOCAL_PATH)$(file))
 endef
 
 
 $(eval $(call exec_template))
+
+$(eval ALL_CLEAN += $(MODULE)_clean)
+
+.PHONY: $(MODULE)_clean

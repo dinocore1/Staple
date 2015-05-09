@@ -83,12 +83,12 @@ endef
 
 .PHONY: all clean
 
-all: 
-
-clean:
-	rm -rf $(BUILDDIR)
+all:
 
 include easybake.mk
+
+clean: $(ALL_CLEAN)
+	rm -rf $(BUILDDIR)
 
 all: $(ALL_MODULES)
 

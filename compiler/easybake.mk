@@ -32,3 +32,5 @@ LOCAL_CLEAN := \
 	
 LOCAL_LIBS := $(shell llvm-config --ldflags --libs) -ltinfo -ldl
 include $(BUILD_EXE)
+
+$(LOCAL_CPP_SOURCES): $(LOCAL_PATH)src/tokens.cpp $(LOCAL_PATH)src/parser.hpp $(LOCAL_PATH)src/parser.cpp
