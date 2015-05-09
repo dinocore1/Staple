@@ -21,6 +21,7 @@ namespace staple {
 
     private:
         static map<StapleClass*, LLVMStapleObject*> Cache;
+        map<StapleMethodFunction*, llvm::Function*> mMethodMap;
 
     protected:
         StapleClass* mClassType;

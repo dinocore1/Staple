@@ -166,6 +166,7 @@ namespace staple {
         LLVMCodeGenerator* mCodeGen;
         map<ASTNode*, Value*> mValues;
         CodeGenBlock* mScope;
+        StapleClass* mCurrentClass;
 
         Function* getMallocFunction() {
 
@@ -240,6 +241,10 @@ namespace staple {
             for(NFunction* function : compileUnit->functions) {
                 function->accept(this);
             }
+
+            for(NClassDeclaration* classDeclaration : compileUnit->classes) {
+                classDeclaration->accept(this);
+            }
         }
 
         void visit(NStringLiteral* strLiteral) {
@@ -296,6 +301,102 @@ namespace staple {
             }
 
             pop();
+        }
+
+        void visit(NMethodFunction* methodFunction) {
+
+            LLVMStapleObject* stapleObject = LLVMStapleObject::get(mCurrentClass);
+
+            StapleMethodFunction* stpFunctionType = cast<StapleMethodFunction>(mCodeGen->mCompilerContext->typeTable[methodFunction]);
+
+            FunctionType* functionType = cast<FunctionType>(mCodeGen->getLLVMType(stpFunctionType));
+
+            /*
+            Type* returnType = mCodeGen->getLLVMType(stpFunctionType->getReturnType());
+
+            vector<Type*> argTypes;
+            argTypes.push_back(PointerType::getUnqual(stapleObject->getObjectType(mCodeGen)));
+            for(StapleType* arg : stpFunctionType->getArguments()) {
+                argTypes.push_back(mCodeGen->getLLVMType(arg));
+            }
+
+            FunctionType* functionType = FunctionType::get(returnType, argTypes, stpFunctionType->getIsVarg());
+             */
+
+            string functionName = mCodeGen->createClassSymbolName(mCurrentClass) + "_" + methodFunction->name;
+
+            Function* llvmFunction = cast<Function>(mCodeGen->mModule.getOrInsertFunction(functionName.c_str(), functionType));
+
+            /*
+            Function* llvmFunction = Function::Create(
+                    functionType,
+                    GlobalValue::LinkageTypes::PrivateLinkage,
+                    functionName.c_str(),
+                    &mCodeGen->mModule);
+            */
+
+
+            mScope->defineSymbol(functionName, llvmFunction);
+            mValues[methodFunction] = llvmFunction;
+
+            push();
+            mScope->defineSymbol(methodFunction->name, llvmFunction);
+            mScope->mBasicBlock = BasicBlock::Create(getGlobalContext(), "entry", llvmFunction);
+            mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+
+            if(mCodeGen->mCompilerContext->debugSymobols) {
+                mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
+                                                                       methodFunction->name.c_str(), StringRef(),
+                                                                       mScope->mDebugInfo->mFile,
+                                                                       methodFunction->location.first_line,
+                                                                       createDebugFunctionType(stpFunctionType), false,
+                                                                       true, 0);
+
+                emitDebugLocation(methodFunction);
+
+            }
+
+
+            Function::arg_iterator AI = llvmFunction->arg_begin();
+            Value* thisPtr = AI;
+            mScope->defineSymbol("this", thisPtr);
+
+            //define all the fields in scope
+            for(StapleField* field : mCurrentClass->getFields()) {
+                uint fieldIndex = 1; // start at index 1 to account for the ref counter
+                mCurrentClass->getField(field->getName(), fieldIndex);
+                Value *fieldPtr = mCodeGen->mIRBuilder.CreateConstGEP2_32(thisPtr, 0, fieldIndex);
+                mScope->defineSymbol(field->getName(), fieldPtr);
+            }
+
+            AI++;
+
+            int i = 0;
+            while(AI != llvmFunction->arg_end()) {
+                string argName = methodFunction->arguments[i++]->name;
+                AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(AI->getType(), 0, argName.c_str());
+                mScope->defineSymbol(argName.c_str(), alloc);
+                mCodeGen->mIRBuilder.CreateStore(AI, alloc);
+                AI++;
+            }
+
+            for(NStatement* statement : methodFunction->block.statements) {
+                statement->accept(this);
+            }
+
+
+            pop();
+
+        }
+
+        void visit(NClassDeclaration* classDeclaration) {
+
+            mCurrentClass = cast<StapleClass>(mCodeGen->mCompilerContext->typeTable[classDeclaration]);
+
+            for(NMethodFunction* method : classDeclaration->functions) {
+                method->accept(this);
+            }
+
         }
 
         void visit(NVariableDeclaration* declaration) {

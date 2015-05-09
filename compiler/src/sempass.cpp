@@ -132,6 +132,7 @@ public:
 
             currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
             currentClass->setParent(parentClass);
+            sempass->ctx.typeTable[classDeclaration] = currentClass;
 
             for(NField* field : classDeclaration->fields) {
                 field->accept(this);

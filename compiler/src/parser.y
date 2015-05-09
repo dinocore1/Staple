@@ -230,7 +230,7 @@ proto_args
 
 class_decl
         : TCLASS TIDENTIFIER extends TLBRACE class_members TRBRACE
-         { $$ = new NClassDeclaration(*$2, *$3, $5); delete $2; delete $3; delete $5; }
+         { $$ = new NClassDeclaration(*$2, *$3, $5); delete $2; delete $3; delete $5; $$->location = @$; }
         ;
 
 extends
@@ -244,12 +244,12 @@ class_members
         | { $$ = new ASTNode(); }
 
 field
-        : type TIDENTIFIER TSEMI { $$ = new NField(*$1, *$2); delete $1; delete $2; }
+        : type TIDENTIFIER TSEMI { $$ = new NField(*$1, *$2); delete $1; delete $2; $$->location = @$; }
         ;
 
 method
         : type TIDENTIFIER TLPAREN proto_args ellipse_arg TRPAREN block
-         { $$ = new NMethodFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; }
+         { $$ = new NMethodFunction(*$1, *$2, *$4, $5, *$7); delete $2; delete $4; $$->location = @$; }
         ;
 
 ///// Statements //////
@@ -303,14 +303,14 @@ stmtexpr
 
 lhs
         : ident
-        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; }
+        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
         | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN
-        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); } /* array access */
+        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; } /* array access */
         ;
 
 expr
-        : TSIZEOF type { $$ = new NSizeOf($2); }
-        | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; }
+        : TSIZEOF type { $$ = new NSizeOf($2); $$->location = @$; }
+        | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; $$->location = @$; }
         | compexpr { $$ = $1; }
         ;
 
@@ -334,8 +334,8 @@ multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->
          ;
 
 unaryexpr
-        : TNOT primary { $$ = new NNot($2); }
-        | TMINUS primary { $$ = new NNegitive($2); }
+        : TNOT primary { $$ = new NNot($2); $$->location = @$; }
+        | TMINUS primary { $$ = new NNegitive($2); $$->location = @$; }
         | primary
         ;
 
@@ -343,7 +343,7 @@ primary
         : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; } } %prec "order"
         | literal { $$ = $1; }
         | base { $$ = $1; }
-        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; }
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; $$->location = @$; }
         | TLPAREN expr_list TRPAREN TMINUS TCGT stmt /* anonymous function */
         ;
 
@@ -356,15 +356,15 @@ expr_list
 
 arrayindex
         : ident { $$ = $1; }
-        | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; }
+        | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
         | TLPAREN expr TRPAREN { $$ = $2; }
         ;
 
 base
-        : ident { $$ = new NLoad($1); }
-        | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); }
-        | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; }
-        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; }
+        : ident { $$ = new NLoad($1); $$->location = @$; }
+        | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); $$->location = @$; }
+        | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; $$->location = @$; }
+        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
 
