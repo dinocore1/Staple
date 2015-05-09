@@ -146,7 +146,7 @@ namespace staple {
 
             FunctionType* functionType = FunctionType::get(returnType, argTypes, stpFunctionType->getIsVarg());
 
-            string functionName = mCodeGen->createFunctionName(function->name);
+            string functionName = mCodeGen->createNamespaceSymbolName(function->name);
 
             Function* llvmFunction = Function::Create(
                     functionType,
@@ -570,10 +570,16 @@ namespace staple {
         }
     }
 
-    string LLVMCodeGenerator::createFunctionName(const string& name) {
+    string LLVMCodeGenerator::createNamespaceSymbolName(const string &name) {
         string retval = mCompilerContext->package;
         replace(retval.begin(), retval.end(), '.', '_');
         retval += "_" + name;
+        return retval;
+    }
+
+    string LLVMCodeGenerator::createClassSymbolName(const StapleClass *stapleClass) {
+        string retval = stapleClass->getClassName();
+        replace(retval.begin(), retval.end(), '.', '_');
         return retval;
     }
 

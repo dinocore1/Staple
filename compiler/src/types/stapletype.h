@@ -134,10 +134,20 @@ namespace staple {
 
     public:
 
+        /**
+         * name - FQ class name (i.e. org.staple.MyClass)
+         */
         StapleClass(const string& name, StapleClass* parent = nullptr);
 
 
+        /**
+         * return - FQ classname
+         */
         const string getClassName() const { return mName; }
+
+        /**
+         * return - class name (i.e. MyClass)
+         */
         const string getSimpleName() const {
             size_t pos = mName.find_last_of('.');
             if(pos == string::npos) {

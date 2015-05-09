@@ -8,9 +8,9 @@ namespace staple {
 
     using namespace llvm;
 
-    StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "stp_obj");
-    StructType* STPOBJ_CLASSDEF_TYPE = StructType::create(getGlobalContext(), "stp_class");
-    StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "stp_obj_vtable");
+    StructType* STPOBJ_INSTANCE_TYPE = StructType::create(getGlobalContext(), "obj");
+    StructType* STPOBJ_CLASSDEF_TYPE = StructType::create(getGlobalContext(), "obj_class");
+    StructType* STPOBJ_VTABLE_TYPE = StructType::create(getGlobalContext(), "obj_vtable");
 
     GlobalVariable* STPOBJ_CLASS_VALUE = nullptr;
 
@@ -93,7 +93,7 @@ namespace staple {
 
                 mInitFunction = Function::Create(functionType,
                                                  Function::LinkageTypes::ExternalLinkage,
-                                                 "stp_obj_init",
+                                                 "obj_init",
                                                  &codeGenerator->mModule);
 
             }
@@ -117,7 +117,7 @@ namespace staple {
 
         llvm::GlobalVariable* getClassDefinition(LLVMCodeGenerator* codeGenerator) {
             if(STPOBJ_CLASS_VALUE == nullptr) {
-                STPOBJ_CLASS_VALUE = new GlobalVariable(codeGenerator->mModule, getStpClassDefType(), true, GlobalValue::LinkageTypes::ExternalLinkage, nullptr, "stp_class_def");
+                STPOBJ_CLASS_VALUE = new GlobalVariable(codeGenerator->mModule, getStpClassDefType(), true, GlobalValue::LinkageTypes::ExternalLinkage, nullptr, "obj_class_def");
             }
             return STPOBJ_CLASS_VALUE;
         }
@@ -182,7 +182,7 @@ namespace staple {
                     false
             );
 
-            string functionName = codeGenerator->createFunctionName(mClassType->getSimpleName() + "_init");
+            string functionName = codeGenerator->createClassSymbolName(mClassType) + "_init";
             mInitFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
 
             BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
@@ -223,8 +223,7 @@ namespace staple {
 
     GlobalVariable* LLVMStapleObject::getClassNameValue(LLVMCodeGenerator *codeGenerator) {
         if(mClassNameValue == nullptr) {
-            string className = codeGenerator->createFunctionName(mClassType->getSimpleName());
-            Constant* classNameValue = ConstantDataArray::getString(getGlobalContext(), className.c_str());
+            Constant* classNameValue = ConstantDataArray::getString(getGlobalContext(), mClassType->getClassName().c_str());
             mClassNameValue = new GlobalVariable(codeGenerator->mModule, classNameValue->getType(), true, GlobalValue::LinkageTypes::PrivateLinkage, classNameValue);
         }
         return mClassNameValue;
@@ -261,7 +260,8 @@ namespace staple {
 
         for(StapleMethodFunction* methodFunction : stapleClass->getMethods()) {
             if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
-                string methodName = codeGenerator->createFunctionName(stapleClass->getSimpleName()) + "_" + methodFunction->getName();
+                string methodName =
+                        codeGenerator->createClassSymbolName(stapleClass) + "_" + methodFunction->getName();
                 FunctionType* functionType = cast<FunctionType>(codeGenerator->getLLVMType(methodFunction));
 
                 elements.push_back(codeGenerator->getModule()->getOrInsertFunction(methodName.c_str(), functionType));
@@ -285,7 +285,7 @@ namespace staple {
     StructType* LLVMStapleObject::getClassDefType(LLVMCodeGenerator* codeGenerator) {
         if(mClassDefType == nullptr) {
 
-            string classDefName = codeGenerator->createFunctionName(mClassType->getSimpleName()) + "_class";
+            string classDefName = codeGenerator->createClassSymbolName(mClassType) + "_class";
             mClassDefType = StructType::create(getGlobalContext(), classDefName.c_str());
 
             mClassDefType->setBody(
@@ -316,7 +316,7 @@ namespace staple {
     StructType* LLVMStapleObject::getVtableType(LLVMCodeGenerator *codeGenerator) {
         if(mVtableType == nullptr) {
 
-            string vtableName = codeGenerator->createFunctionName(mClassType->getSimpleName()) + "_vtable";
+            string vtableName = codeGenerator->createClassSymbolName(mClassType) + "_vtable";
 
             mVtableType = StructType::create(getGlobalContext(), vtableName.c_str());
 
@@ -344,7 +344,8 @@ namespace staple {
 
     llvm::StructType* LLVMStapleObject::getObjectType(LLVMCodeGenerator *codeGenerator) {
         if(mObjectStruct == nullptr) {
-            mObjectStruct = StructType::create(getGlobalContext(), codeGenerator->createFunctionName(mClassType->getSimpleName()));
+            mObjectStruct = StructType::create(getGlobalContext(),
+                                               codeGenerator->createClassSymbolName(mClassType));
 
             vector<Type*> elements;
             elements.push_back(PointerType::getUnqual(getClassDefType(codeGenerator))); // class def pointer

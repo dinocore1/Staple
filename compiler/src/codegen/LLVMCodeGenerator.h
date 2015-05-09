@@ -8,6 +8,7 @@
 #include <llvm/PassManager.h>
 #include <llvm/IR/DIBuilder.h>
 #include "../node.h"
+#include "../types/stapletype.h"
 
 #include <string>
 
@@ -45,7 +46,8 @@ namespace staple {
 
         Type* getLLVMType(StapleType* stapleType);
 
-        string createFunctionName(const string& name);
+        string createNamespaceSymbolName(const string &name);
+        static string createClassSymbolName(const StapleClass* stapleClass);
 
     };
 
