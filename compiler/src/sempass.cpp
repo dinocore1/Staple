@@ -431,8 +431,8 @@ public:
         StapleClass* classPtr = nullptr;
 
         if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
-            methodCall->base = new NLoad(methodCall->base);
-            methodCall->base->accept(this);
+            //methodCall->base = new NLoad(methodCall->base);
+            //methodCall->base->accept(this);
         } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
             sempass->logError(methodCall->base->location, "not a class type");
             return;

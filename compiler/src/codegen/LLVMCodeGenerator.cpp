@@ -273,9 +273,11 @@ namespace staple {
 
             StapleFunction* stpFunctionType = cast<StapleFunction>(mCodeGen->mCompilerContext->typeTable[function]);
 
+            string functionName = mCodeGen->createNamespaceSymbolName(function->name);
+
             if(mCodeGen->mCompilerContext->debugSymobols) {
                 mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
-                                                                       function->name.c_str(), StringRef(),
+                                                                       function->name.compare("main") == 0 ? function->name.c_str() : functionName.c_str(), StringRef(),
                                                                        mScope->mDebugInfo->mFile,
                                                                        function->location.first_line,
                                                                        createDebugFunctionType(stpFunctionType), false,
@@ -311,29 +313,9 @@ namespace staple {
 
             FunctionType* functionType = cast<FunctionType>(mCodeGen->getLLVMType(stpFunctionType));
 
-            /*
-            Type* returnType = mCodeGen->getLLVMType(stpFunctionType->getReturnType());
-
-            vector<Type*> argTypes;
-            argTypes.push_back(PointerType::getUnqual(stapleObject->getObjectType(mCodeGen)));
-            for(StapleType* arg : stpFunctionType->getArguments()) {
-                argTypes.push_back(mCodeGen->getLLVMType(arg));
-            }
-
-            FunctionType* functionType = FunctionType::get(returnType, argTypes, stpFunctionType->getIsVarg());
-             */
-
             string functionName = mCodeGen->createClassSymbolName(mCurrentClass) + "_" + methodFunction->name;
 
             Function* llvmFunction = cast<Function>(mCodeGen->mModule.getOrInsertFunction(functionName.c_str(), functionType));
-
-            /*
-            Function* llvmFunction = Function::Create(
-                    functionType,
-                    GlobalValue::LinkageTypes::PrivateLinkage,
-                    functionName.c_str(),
-                    &mCodeGen->mModule);
-            */
 
 
             mScope->defineSymbol(functionName, llvmFunction);
@@ -346,7 +328,7 @@ namespace staple {
 
             if(mCodeGen->mCompilerContext->debugSymobols) {
                 mScope->mDIScope = mCodeGen->mDIBuider->createFunction(mScope->getParent()->mDIScope,
-                                                                       methodFunction->name.c_str(), StringRef(),
+                                                                       functionName.c_str(), StringRef(),
                                                                        mScope->mDebugInfo->mFile,
                                                                        methodFunction->location.first_line,
                                                                        createDebugFunctionType(stpFunctionType), false,
@@ -612,6 +594,33 @@ namespace staple {
             }
 
             mValues[functionCall] = mCodeGen->mIRBuilder.CreateCall(function, argValues);
+
+        }
+
+        void visit(NMethodCall* methodCall) {
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(methodCall);
+            }
+
+            StapleType* baseType = mCodeGen->mCompilerContext->typeTable[methodCall->base];
+
+            StaplePointer* ptr = nullptr;
+            StapleClass* classPtr = nullptr;
+            if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
+                Value* basePtr = getValue(methodCall->base);
+                LLVMStapleObject* stapleObject = LLVMStapleObject::get(classPtr);
+
+                string functionName = mCodeGen->createClassSymbolName(classPtr) + "_" + methodCall->name;
+                Function* function = mCodeGen->mModule.getFunction(functionName.c_str());
+
+                vector<Value*> argValues;
+                argValues.push_back(basePtr);
+                for(NExpression* argExp : methodCall->arguments) {
+                    argValues.push_back(getValue(argExp));
+                }
+
+                mValues[methodCall] = mCodeGen->mIRBuilder.CreateCall(function, argValues);
+            }
 
         }
 
