@@ -28,7 +28,7 @@ define void @stp_release(%obj* %value) {
 begin:
   %2 = getelementptr %obj* %value, i32 0, i32 1
   %old = atomicrmw sub i32* %2, i32 1 acq_rel
-  %cond = icmp eq i32 1, %old
+  %cond = icmp eq i32 0, %old
   br i1 %cond, label %destroy, label %finish
 destroy:
   %3 = getelementptr %obj* %value, i32 0, i32 0

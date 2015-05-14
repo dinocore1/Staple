@@ -45,6 +45,7 @@ namespace staple {
         static llvm::FunctionType* getKillFunctionType();
         static llvm::GlobalVariable* getStpClassValue();
 
+        static llvm::Function* getReleaseFunction(Module* module);
         static llvm::Function* getStoreStrongFunction(Module* module);
 
         static LLVMStapleObject* get(StapleClass* classType);
@@ -59,6 +60,7 @@ namespace staple {
         virtual llvm::StructType* getVtableType(LLVMCodeGenerator* codeGenerator);
         virtual llvm::StructType* getObjectType(LLVMCodeGenerator* codeGenerator);
         virtual llvm::Function* getInitFunction(LLVMCodeGenerator* codeGenerator);
+        virtual llvm::Function* getKillFunction(LLVMCodeGenerator *codeGenerator);
 
 
     };

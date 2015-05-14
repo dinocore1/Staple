@@ -67,10 +67,77 @@ namespace staple {
 
     }
 
+    class ScopeCleanup {
+    public:
+        virtual void scopeOut() = 0;
+    };
+
+    class ReleaseObj : public ScopeCleanup {
+    private:
+
+        Value* mPtrValue;
+        LLVMCodeGenerator* mCodeGen;
+
+        User* getLastUsage(Value* value) {
+            User* lastUser = value->user_back();
+            if(BitCastInst* inst = dyn_cast<BitCastInst>(lastUser)) {
+                return getLastUsage(inst);
+            }
+            return lastUser;
+        }
+
+    public:
+        ReleaseObj(Value* ptrValue, LLVMCodeGenerator* codeGen) : mPtrValue(ptrValue), mCodeGen(codeGen) {
+
+        }
+
+        void scopeOut() {
+
+            Function* releaseFunction = LLVMStapleObject::getReleaseFunction(mCodeGen->getModule());
+
+            Value* ptr = mPtrValue;
+            User* lastUser = getLastUsage(mPtrValue);
+            if(Instruction* inst = dyn_cast<Instruction>(lastUser)){
+                IRBuilder<> Builder(inst->getNextNode());
+
+                ptr = Builder.CreatePointerCast(ptr, PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()));
+                Builder.CreateCall(releaseFunction,
+                                   std::vector<Value *>{ptr}
+                );
+            }
+
+        }
+    };
+
+    class ScopeVarRelease : public ScopeCleanup {
+    private:
+        Value* mPtrValue;
+        LLVMCodeGenerator* mCodeGen;
+        BasicBlock* mBasicBlock;
+
+    public:
+        ScopeVarRelease(Value* ptrValue, LLVMCodeGenerator* codeGen, BasicBlock* bb) : mPtrValue(ptrValue), mCodeGen(codeGen), mBasicBlock(bb) {
+
+        }
+
+        void scopeOut() {
+            Function* releaseFunction = LLVMStapleObject::getReleaseFunction(mCodeGen->getModule());
+
+            IRBuilder<> builder(--mBasicBlock->end());
+
+            Value* ptr = mPtrValue;
+            ptr = builder.CreateLoad(ptr);
+
+            ptr = builder.CreatePointerCast(ptr, PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()));
+            builder.CreateCall(releaseFunction, std::vector<Value *>{ptr});
+        }
+    };
+
     class CodeGenBlock {
     private:
         CodeGenBlock* mParent;
         map<const string, Value*> mSymbolTable;
+        vector<unique_ptr<ScopeCleanup>> mScopeCleanup;
 
     public:
         CodeGenBlock(CodeGenBlock* parent)
@@ -90,6 +157,16 @@ namespace staple {
                 return mParent->lookupSymbol(name);
             } else {
                 return nullptr;
+            }
+        }
+
+        void addCleanup(ScopeCleanup* cleanup) {
+            mScopeCleanup.push_back(unique_ptr<ScopeCleanup>( cleanup ));
+        }
+
+        void doCleanup() {
+            for(unique_ptr<ScopeCleanup>& cleanup : mScopeCleanup) {
+                cleanup->scopeOut();
             }
         }
 
@@ -168,27 +245,12 @@ namespace staple {
         CodeGenBlock* mScope;
         StapleClass* mCurrentClass;
 
-        Function* getMallocFunction() {
-
-            Function* retval = mCodeGen->mModule.getFunction("malloc");
-            if(retval == NULL) {
-                std::vector<Type*> argTypes;
-                argTypes.push_back(IntegerType::getInt32Ty(getGlobalContext()));
-
-                Type* returnType = Type::getInt8PtrTy(getGlobalContext());
-                FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
-                retval = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "malloc", &mCodeGen->mModule);
-            }
-
-            return retval;
-        }
-
-
         void push() {
             mScope = new CodeGenBlock(mScope);
         }
 
         void pop() {
+            mScope->doCleanup();
             CodeGenBlock* parent = mScope->getParent();
             delete mScope;
             mScope = parent;
@@ -410,6 +472,10 @@ namespace staple {
 
             if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
                 mCodeGen->mIRBuilder.CreateStore(ConstantPointerNull::get(cast<PointerType>(mCodeGen->getLLVMType(ptrType))), alloc);
+
+                if(isa<StapleClass>(ptrType->getElementType())) {
+                    mScope->addCleanup(new ScopeVarRelease(alloc, mCodeGen, mScope->mBasicBlock));
+                }
             }
 
             if(declaration->assignmentExpr != nullptr) {
@@ -443,12 +509,13 @@ namespace staple {
             Value* size = mCodeGen->mIRBuilder.CreateGEP(nullptrValue, ConstantInt::get(mCodeGen->mIRBuilder.getInt32Ty(), 1));
             size = mCodeGen->mIRBuilder.CreatePointerCast(size, mCodeGen->mIRBuilder.getInt32Ty());
 
-            Function* malloc = getMallocFunction();
+            Function* malloc = mCodeGen->getMallocFunction();
 
             Value* retval = mCodeGen->mIRBuilder.CreateCall(malloc, size);
             retval = mCodeGen->mIRBuilder.CreatePointerCast(retval, llvmPtrType);
 
             mValues[newnode] = retval;
+            mScope->addCleanup(new ReleaseObj(retval, mCodeGen));
 
             //call init function
             StapleClass* stapleClass = cast<StapleClass>(ptrType->getElementType());
@@ -456,6 +523,8 @@ namespace staple {
 
             Function* initFunction = llvmStapleObject->getInitFunction(mCodeGen);
             mCodeGen->mIRBuilder.CreateCall(initFunction, retval);
+
+
 
         }
 
@@ -736,6 +805,34 @@ namespace staple {
                 argTypes.push_back(getLLVMType(argType));
             }
             retval = FunctionType::get(getLLVMType(function->getReturnType()), argTypes, function->getIsVarg());
+        }
+
+        return retval;
+    }
+
+    Function* LLVMCodeGenerator::getMallocFunction() {
+
+        Function* retval = mModule.getFunction("malloc");
+        if(retval == NULL) {
+            std::vector<Type*> argTypes;
+            argTypes.push_back(IntegerType::getInt32Ty(getGlobalContext()));
+
+            Type* returnType = Type::getInt8PtrTy(getGlobalContext());
+            FunctionType *ftype = FunctionType::get(returnType, argTypes, false);
+            retval = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "malloc", &mModule);
+        }
+
+        return retval;
+    }
+
+    Function* LLVMCodeGenerator::getFreeFunction() {
+        Function* retval = mModule.getFunction("free");
+        if(retval == NULL) {
+            std::vector<Type*> argTypes;
+            argTypes.push_back(Type::getInt8PtrTy(getGlobalContext()));
+
+            FunctionType *ftype = FunctionType::get(Type::getVoidTy(getGlobalContext()), argTypes, false);
+            retval = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "free", &mModule);
         }
 
         return retval;

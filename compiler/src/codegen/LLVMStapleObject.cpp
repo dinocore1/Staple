@@ -39,7 +39,7 @@ namespace staple {
     }
 
     FunctionType* LLVMStapleObject::getKillFunctionType() {
-        vector<Type*> args {STPOBJ_INSTANCE_TYPE};
+        vector<Type*> args {PointerType::getUnqual(STPOBJ_INSTANCE_TYPE)};
         FunctionType* retval = FunctionType::get(
                 Type::getVoidTy(getGlobalContext()),
                 args,
@@ -61,6 +61,18 @@ namespace staple {
             retval = Function::Create(ftype, GlobalValue::ExternalLinkage, "stp_storeStrong", module);
         }
 
+        return retval;
+    }
+
+    Function* LLVMStapleObject::getReleaseFunction(Module *module) {
+        Function* retval = module->getFunction("stp_release");
+        if(retval == NULL) {
+            FunctionType* fType = FunctionType::get(
+                    Type::getVoidTy(getGlobalContext()),
+                    vector<Type*>{PointerType::getUnqual(getStpObjInstanceType())}, false);
+            retval = Function::Create(fType, GlobalValue::ExternalLinkage, "stp_release", module);
+
+        }
         return retval;
     }
 
@@ -99,6 +111,18 @@ namespace staple {
             }
 
             return mInitFunction;
+        }
+
+        Function* getKillFunction(LLVMCodeGenerator* codeGenerator) {
+            if(mKillFunction == nullptr) {
+                FunctionType* functionType = getKillFunctionType();
+
+                mKillFunction = Function::Create(functionType,
+                                                Function::LinkageTypes::ExternalLinkage,
+                                                "obj_kill",
+                                                &codeGenerator->mModule);
+            }
+            return mKillFunction;
         }
 
         llvm::StructType* getClassDefType(LLVMCodeGenerator* codeGenerator) {
@@ -171,6 +195,37 @@ namespace staple {
         mClassType->getField(name, fieldIndex);
         return irBuilder.CreateConstGEP2_32(thisPtr, 0, fieldIndex);
 
+    }
+
+    Function* LLVMStapleObject::getKillFunction(LLVMCodeGenerator *codeGenerator) {
+        if(mKillFunction == nullptr) {
+            FunctionType* functionType = getKillFunctionType();
+
+            string functionName = codeGenerator->createClassSymbolName(mClassType) + "_kill";
+            mKillFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
+
+            BasicBlock* bblock = BasicBlock::Create(getGlobalContext(), "entry", mKillFunction);
+            IRBuilder<> irBuilder(bblock);
+
+            Value* thisPtr = mKillFunction->arg_begin();
+
+            if(mClassType->getParent() != nullptr) {
+                LLVMStapleObject* parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
+
+                Type* destType = PointerType::getUnqual(parentStapleObj->getObjectType(codeGenerator));
+                Value* superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
+
+                irBuilder.CreateCall(parentStapleObj->getKillFunction(codeGenerator), superPtr);
+            }
+
+            Function* freeFunction = codeGenerator->getFreeFunction();
+            Value* value = irBuilder.CreatePointerCast(thisPtr, freeFunction->arg_begin()->getType());
+            irBuilder.CreateCall(freeFunction, value);
+
+            irBuilder.CreateRetVoid();
+
+        }
+        return mKillFunction;
     }
 
 
@@ -259,7 +314,7 @@ namespace staple {
         }
 
         for(StapleMethodFunction* methodFunction : stapleClass->getMethods()) {
-            if(methodFunction->getType() == StapleMethodFunction::Type::Virtual) {
+            if(methodFunction->getType() == StapleMethodFunction::Type::Virtual && methodFunction->getName().compare("kill") != 0) {
                 string methodName =
                         codeGenerator->createClassSymbolName(stapleClass) + "_" + methodFunction->getName();
                 FunctionType* functionType = cast<FunctionType>(codeGenerator->getLLVMType(methodFunction));
@@ -273,6 +328,7 @@ namespace staple {
         if(mClassVTableValue == nullptr) {
 
             vector<Constant*> methods;
+            methods.push_back(getKillFunction(codeGenerator));
             unrollVtableValues(mClassType, methods, codeGenerator);
             Constant* classVTable = ConstantStruct::get(getVtableType(codeGenerator),
                                                         methods);

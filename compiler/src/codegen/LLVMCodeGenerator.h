@@ -45,6 +45,8 @@ namespace staple {
         }
 
         Type* getLLVMType(StapleType* stapleType);
+        Function* getMallocFunction();
+        Function* getFreeFunction();
 
         string createNamespaceSymbolName(const string &name);
         static string createClassSymbolName(const StapleClass* stapleClass);
