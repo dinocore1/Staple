@@ -9,8 +9,7 @@
 
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/raw_ostream.h>
-
-#include "optionparser.h"
+#include <llvm/Support/CommandLine.h>
 
 extern "C" int yylex();
 int yyparse();
@@ -25,64 +24,22 @@ using namespace staple;
 extern NCompileUnit* compileUnit;
 
 
-struct Arg : public option::Arg
-{
-    static option::ArgStatus Required(const option::Option& option, bool msg)
-    {
-        if(option.arg > 0){
-            return option::ARG_OK;
-        } else {
-            fprintf(stderr, "Option: %s requires an argument\n", option.name);
-            return option::ARG_ILLEGAL;
-        }
-    }
-};
 
-enum optionIndex { UNKNOWN, PACKAGE, OUTPUT, INPUT, DEBUG };
-const option::Descriptor usage[] =
-{
-    {UNKNOWN, 0, "", "", option::Arg::None, "USAGE: stp [-o] output.ll input.stp\n\n"
-                                                    "Options:"},
-    {PACKAGE, 0, "p", "package", Arg::Required, "-p <package name>, --package <package name> \tThe package name"},
-    {OUTPUT, 0, "o", "output", Arg::Required, "-o <output.ll>, --output <output.ll> \tThe output LLVM file"},
-    {DEBUG, 0, "g", "debug", Arg::None, "-g\toutput debug symbols"},
-    {UNKNOWN, 0, "", "", option::Arg::None, "<input.stp>\tThe input file"},
-    { 0, 0, 0, 0, 0, 0 }
-};
+
+cl::opt<string> OutputFilename("o", cl::desc("output filename"), cl::value_desc("filename"), cl::init("output.ll"));
+cl::opt<string> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
+cl::opt<bool> DebugSymbols("g", cl::desc("output debug symbols"));
 
 int main(int argc, char **argv)
 {
+    cl::ParseCommandLineOptions(argc, argv);
 
-    argc-=(argc>0); argv+=(argc>0); // skip program name argv[0] if present
-    option::Stats stats(usage, argc, argv);
-    option::Option options[stats.options_max], buffer[stats.buffer_max];
-    option::Parser parse(usage, argc, argv, options, buffer);
-
-    if (parse.error())
-        return 1;
-
-    if(argc == 0){
-        int columns = getenv("COLUMNS")? atoi(getenv("COLUMNS")) : 80;
-        option::printUsage(fwrite, stdout, usage, columns);
-        return 0;
-    }
 
     CompilerContext context;
-    context.inputFilename = parse.nonOption(0);
-
-    if(options[OUTPUT]) {
-        context.outputFilename = options[OUTPUT].arg;
-    } else {
-        context.outputFilename = "output.ll";
-    }
-
-    if(options[PACKAGE]) {
-        context.package = options[PACKAGE].arg;
-    } else {
-        context.package = "";
-    }
-
-    context.debugSymobols = options[DEBUG] ? true : false;
+    context.inputFilename = InputFilename;
+    context.outputFilename = OutputFilename;
+    context.package = "";
+    context.debugSymobols = DebugSymbols;
 
     //yydebug = 1;
 
