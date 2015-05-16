@@ -363,8 +363,8 @@ public:
         StapleClass* classPtr = nullptr;
 
         if((ptr = dyn_cast<StaplePointer>(baseType)) && (classPtr = dyn_cast<StapleClass>(ptr->getElementType()))) {
-            memberAccess->base = new NLoad(memberAccess->base);
-            memberAccess->base->accept(this);
+            //memberAccess->base = new NLoad(memberAccess->base);
+            //memberAccess->base->accept(this);
         } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
             sempass->logError(memberAccess->base->location, "not a class type");
             return;
@@ -373,7 +373,7 @@ public:
         uint index = 0;
         StapleField* field = classPtr->getField(memberAccess->field, index);
         if(field != nullptr){
-            sempass->ctx.typeTable[memberAccess] = field;
+            sempass->ctx.typeTable[memberAccess] = field->getElementType();
             memberAccess->fieldIndex = index;
         } else {
             sempass->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
@@ -488,9 +488,6 @@ public:
 
     virtual void visit(NLoad* load) {
         StapleType* type = getType(load->expr);
-        if(StaplePointer* ptrType = dyn_cast<StaplePointer>(type)) {
-            sempass->ctx.typeTable[load] = ptrType->getElementType();
-        }
         sempass->ctx.typeTable[load] = type;
     }
 

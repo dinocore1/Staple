@@ -208,6 +208,7 @@ namespace staple {
             IRBuilder<> irBuilder(bblock);
 
             Value* thisPtr = mKillFunction->arg_begin();
+            thisPtr = irBuilder.CreatePointerCast(thisPtr, PointerType::getUnqual(getObjectType(codeGenerator)));
 
             if(mClassType->getParent() != nullptr) {
                 LLVMStapleObject* parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
@@ -216,6 +217,18 @@ namespace staple {
                 Value* superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
 
                 irBuilder.CreateCall(parentStapleObj->getKillFunction(codeGenerator), superPtr);
+            }
+
+            for(StapleField* field : mClassType->getFields()) {
+                if(StaplePointer* ptrType = dyn_cast<StaplePointer>(field->getElementType())) {
+                    if(StapleClass* elementType = dyn_cast<StapleClass>(ptrType->getElementType())) {
+                        Value* value = getFieldPtr(field->getName(), irBuilder, thisPtr);
+                        value = irBuilder.CreateLoad(value);
+                        Function* releaseFunction = getReleaseFunction(&codeGenerator->mModule);
+                        value = irBuilder.CreatePointerCast(value, PointerType::getUnqual(getStpObjInstanceType()));
+                        irBuilder.CreateCall(releaseFunction, value);
+                    }
+                }
             }
 
             Function* freeFunction = codeGenerator->getFreeFunction();

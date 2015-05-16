@@ -183,6 +183,8 @@ namespace staple {
     bool StaplePointer::isAssignable(StapleType *type) {
         if(StaplePointer* ptr = dyn_cast<StaplePointer>(type)) {
             return mElementType->isAssignable(ptr->mElementType);
+        } else if(StapleField* field = dyn_cast<StapleField>(type)){
+            return isAssignable(field->getElementType());
         } else {
             return false;
         }

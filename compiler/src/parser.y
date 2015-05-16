@@ -152,7 +152,7 @@ class NBinaryOperator;
  */
 %type <type> type
 %type <block> block stmts
-%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr primary base arrayindex
+%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr primary rhs arrayindex
 %type <exprvec> expr_list
 %type <stmt> stmt stmtexpr var_decl
 %type <token> comparison
@@ -302,10 +302,9 @@ stmtexpr
         ;
 
 lhs
-        : ident
-        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
-        | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN
-        | lhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; } /* array access */
+        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
+        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; $$->location = @$; }
+        | lhs TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); $$->location = @$; }
         ;
 
 expr
@@ -342,7 +341,7 @@ unaryexpr
 primary
         : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; } } %prec "order"
         | literal { $$ = $1; }
-        | base { $$ = $1; }
+        | rhs { $$ = $1; }
         | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; $$->location = @$; }
         | TLPAREN expr_list TRPAREN TMINUS TCGT stmt /* anonymous function */
         ;
@@ -360,13 +359,10 @@ arrayindex
         | TLPAREN expr TRPAREN { $$ = $2; }
         ;
 
-base
-        : ident { $$ = new NLoad($1); $$->location = @$; }
-        | base TAT arrayindex { $$ = new NLoad(new NArrayElementPtr($1, $3)); $$->location = @$; }
-        | base TDOT TIDENTIFIER { $$ = new NLoad(new NMemberAccess($1, *$3)); delete $3; $$->location = @$; }
-        | base TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
+rhs
+        : lhs { $$ = new NLoad($1); $$->location = @$; }
+        | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
-
 
 
 %%

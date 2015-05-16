@@ -12,28 +12,6 @@ namespace staple {
 
     using namespace std;
 
-    class SymbolLookup {
-    public:
-        virtual Value* getValue(CodeGenContext& context) = 0;
-    };
-
-    class LocalVarLookup : public SymbolLookup {
-    private:
-        Value* value;
-
-    public:
-
-        static LocalVarLookup* get(Value* value) {
-            LocalVarLookup* retval = new LocalVarLookup();
-            retval->value = value;
-            return retval;
-        }
-
-        virtual Value* getValue(CodeGenContext& context) {
-            return value;
-        }
-    };
-
     class LLVMDebugInfo {
     private:
         map<StapleType*, DIType> mDebugTypeCache;
@@ -131,6 +109,33 @@ namespace staple {
             ptr = builder.CreatePointerCast(ptr, PointerType::getUnqual(LLVMStapleObject::getStpObjInstanceType()));
             builder.CreateCall(releaseFunction, std::vector<Value *>{ptr});
         }
+    };
+
+    class SymbolNameGeneratorVisitor : public ASTVisitor {
+    using ASTVisitor::visit;
+    private:
+        string mSymbolName;
+
+    public:
+        SymbolNameGeneratorVisitor() {}
+
+        string getSymbolName() {
+            return mSymbolName;
+        }
+
+        void visit(NIdentifier* identifier) {
+            mSymbolName = identifier->name;
+        }
+
+        void visit(NLoad* load) {
+            load->expr->accept(this);
+        }
+
+        void visit(NMemberAccess* memberAccess) {
+            memberAccess->base->accept(this);
+            mSymbolName += "." + memberAccess->field;
+        }
+
     };
 
     class CodeGenBlock {
@@ -633,6 +638,12 @@ namespace staple {
             if(mCodeGen->mCompilerContext->debugSymobols){
                 emitDebugLocation(memberAccess);
             }
+
+            SymbolNameGeneratorVisitor nameGen;
+            nameGen.visit(memberAccess);
+            const string symbolName = nameGen.getSymbolName();
+
+
 
             StapleType* baseType = mCodeGen->mCompilerContext->typeTable[memberAccess->base];
 
