@@ -303,8 +303,13 @@ stmtexpr
 
 lhs
         : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
-        | lhs TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; $$->location = @$; }
-        | lhs TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); $$->location = @$; }
+        | rhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
+        | rhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; }
+        ;
+
+rhs
+        : lhs { $$ = new NLoad($1); $$->location = @$; }
+        | rhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
 expr
@@ -357,11 +362,6 @@ arrayindex
         : ident { $$ = $1; }
         | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
         | TLPAREN expr TRPAREN { $$ = $2; }
-        ;
-
-rhs
-        : lhs { $$ = new NLoad($1); $$->location = @$; }
-        | lhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
 
