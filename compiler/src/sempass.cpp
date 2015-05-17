@@ -155,6 +155,7 @@ public:
 
         //second pass methods
         for(NClassDeclaration* classDeclaration : compileUnit->classes) {
+            currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
             for(NMethodFunction* method : classDeclaration->functions) {
                 method->accept(this);
             }
@@ -187,6 +188,9 @@ public:
             retval = StapleType::getFloat32Type();
         } else if(name.compare("bool") == 0) {
             retval = StapleType::getBoolType();
+        } else if(name.compare("obj") == 0){
+            retval = CompilerContext::getStpObjClass();
+
         } else {
 
             retval = sempass->ctx.lookupClassName(name);
@@ -342,15 +346,28 @@ public:
     virtual void visit(NArrayElementPtr* arrayElementPtr) {
 
         StapleType* baseType = getType(arrayElementPtr->base);
+        if(StapleField* fieldType = dyn_cast<StapleField>(baseType)) {
+            baseType = fieldType->getElementType();
+        }
 
-        if(StapleArray* arrayType = dyn_cast<StapleArray>(baseType)) {
+        if(StaplePointer* ptrType = dyn_cast<StaplePointer>(baseType)) {
             StapleType* exprType = getType(arrayElementPtr->expr);
 
             if(isa<StapleInt>(exprType)) {
-                sempass->ctx.typeTable[arrayElementPtr] = new StaplePointer(baseType);
+                sempass->ctx.typeTable[arrayElementPtr] = ptrType->getElementType();
             } else {
                 sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
             }
+        } else if(StapleArray* arrayType = dyn_cast<StapleArray>(baseType)) {
+            StapleType* exprType = getType(arrayElementPtr->expr);
+
+            if(isa<StapleInt>(exprType)) {
+                sempass->ctx.typeTable[arrayElementPtr] = baseType;
+            } else {
+                sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
+            }
+        } else {
+            sempass->logError(arrayElementPtr->base->location, "not an array or pointer type");
         }
 
     }
@@ -358,6 +375,9 @@ public:
     virtual void visit(NMemberAccess* memberAccess) {
 
         StapleType* baseType = getType(memberAccess->base);
+        if(StapleField* fieldType = dyn_cast<StapleField>(baseType)) {
+            baseType = fieldType->getElementType();
+        }
 
         StaplePointer* ptr = nullptr;
         StapleClass* classPtr = nullptr;

@@ -54,7 +54,7 @@ namespace staple {
         friend class StapleClass;
     protected:
         StapleFunction(StapleKind kind, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
-                : StapleType(kind), mReturnType(returnType), mIsVarg(isVarg){}
+                : StapleType(kind), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg){}
 
         StapleType* mReturnType;
         vector<StapleType*> mArgumentTypes;

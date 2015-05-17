@@ -679,6 +679,24 @@ namespace staple {
 
         }
 
+        void visit(NArrayElementPtr* arrayelement) {
+
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(arrayelement);
+            }
+
+            StapleType* baseType = mCodeGen->mCompilerContext->typeTable[arrayelement->base];
+            if(StapleField* fieldType = dyn_cast<StapleField>(baseType)) {
+                baseType = fieldType->getElementType();
+            }
+
+            Value* basePtr = getValue(arrayelement->base);
+            Value* idxValue = getValue(arrayelement->expr);
+
+            mValues[arrayelement] = mCodeGen->mIRBuilder.CreateGEP(basePtr, idxValue);
+
+        }
+
         void visit(NMemberAccess* memberAccess) {
 
             if(mCodeGen->mCompilerContext->debugSymobols){
@@ -692,6 +710,9 @@ namespace staple {
 
 
             StapleType* baseType = mCodeGen->mCompilerContext->typeTable[memberAccess->base];
+            if(StapleField* fieldType = dyn_cast<StapleField>(baseType)) {
+                baseType = fieldType->getElementType();
+            }
 
             StaplePointer* ptr = nullptr;
             StapleClass* classPtr = nullptr;
