@@ -64,10 +64,11 @@ the programmer from worrying about managing memory explicitly.
 
 ### Compile a Staple Program ###
 
-$ ./stp -g test.stp
-$ llc -O0 -filetype=obj -o output.o output.ll
-$ gcc -o test output.o build/stp_runtime/stp_runtime.a
-$ ./test
+
+    $ ./stp -g test.stp
+    $ llc -O0 -filetype=obj -o output.o output.ll
+    $ gcc -o test output.o build/stp_runtime/stp_runtime.a
+    $ ./test
 
 
 ### Build the Staple Compiler ###
