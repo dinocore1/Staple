@@ -607,19 +607,65 @@ namespace staple {
             Function* parent = mCodeGen->mIRBuilder.GetInsertBlock()->getParent();
 
 
-            BasicBlock* thenBB = dyn_cast<BasicBlock>(getValue(ifStatement->thenBlock));
-            BasicBlock* elseBB = ifStatement->elseBlock != nullptr
-                                 ? dyn_cast<BasicBlock>(getValue(ifStatement->elseBlock))
-                                 : nullptr;
+            BasicBlock* thenBB = nullptr;
+            BasicBlock* elseBB = nullptr;
+
+            if(isa<NBlock>(ifStatement->thenBlock)) {
+                thenBB = cast<BasicBlock>(getValue(ifStatement->thenBlock));
+            } else {
+                thenBB = BasicBlock::Create(getGlobalContext(), "", parent);
+
+                push();
+                if(mCodeGen->mCompilerContext->debugSymobols) {
+                    mScope->mDIScope = mCodeGen->mDIBuider->createLexicalBlock(mScope->getParent()->mDIScope, mScope->mDebugInfo->mFile, ifStatement->thenBlock->location.first_line, ifStatement->thenBlock->location.first_column, 0);
+                }
+
+                mScope->mBasicBlock = thenBB;
+                mCodeGen->mIRBuilder.SetInsertPoint(thenBB);
+
+                ifStatement->thenBlock->accept(this);
+
+                pop();
+                mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+
+            }
+
+            if(ifStatement->elseBlock != nullptr) {
+                if(isa<NBlock>(ifStatement->elseBlock)){
+                    elseBB = cast<BasicBlock>(getValue(ifStatement->elseBlock));
+                } else {
+                    elseBB = BasicBlock::Create(getGlobalContext(), "", parent);
+
+                    push();
+                    if(mCodeGen->mCompilerContext->debugSymobols) {
+                        mScope->mDIScope = mCodeGen->mDIBuider->createLexicalBlock(mScope->getParent()->mDIScope, mScope->mDebugInfo->mFile, ifStatement->elseBlock->location.first_line, ifStatement->elseBlock->location.first_column, 0);
+                    }
+
+                    mScope->mBasicBlock = elseBB;
+                    mCodeGen->mIRBuilder.SetInsertPoint(elseBB);
+
+                    ifStatement->elseBlock->accept(this);
+
+                    pop();
+                    mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+
+                }
+            }
 
             BasicBlock* mergeBlock = BasicBlock::Create(getGlobalContext(), "", parent);
 
-            IRBuilder<> builder(thenBB);
-            builder.CreateBr(mergeBlock);
+
+            if(!isa<ReturnInst>(--thenBB->end()) && !isa<BranchInst>(--thenBB->end())) {
+                IRBuilder<> builder(thenBB);
+                builder.CreateBr(mergeBlock);
+            }
 
             if(elseBB != nullptr) {
-                IRBuilder<> builder(elseBB);
-                builder.CreateBr(mergeBlock);
+                if(!isa<ReturnInst>(--elseBB->end()) && !isa<BranchInst>(--elseBB->end())) {
+                    IRBuilder<> builder(elseBB);
+                    builder.CreateBr(mergeBlock);
+                }
+
             } else {
                 elseBB = mergeBlock;
             }

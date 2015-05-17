@@ -366,6 +366,10 @@ public:
     StatementList statements;
     NBlock() { }
 
+    static bool classof(const ASTNode *T) {
+        return dynamic_cast<const NBlock*>(T);
+    }
+
 };
 
 class NIfStatement : public NStatement {
