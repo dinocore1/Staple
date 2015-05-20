@@ -1,9 +1,7 @@
 %{
 
-
 #include <string>
 #include "node.h"
-
 using namespace staple;
 
 #include "parser.hpp"
@@ -42,6 +40,7 @@ extern "C" int yywrap() { }
 "if"                    return TOKEN(TIF);
 "else"                  return TOKEN(TELSE);
 "return"                return TOKEN(TRETURN);
+"for"                   return TOKEN(TFOR);
 "@"                     return TOKEN(TAT);
 "new"                   return TOKEN(TNEW);
 "sizeof"                return TOKEN(TSIZEOF);

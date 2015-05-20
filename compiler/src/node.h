@@ -5,8 +5,6 @@
 #include <iostream>
 #include <vector>
 
-#include "parser.hpp"
-
 namespace staple {
 
 class CodeGenContext;
@@ -16,6 +14,7 @@ class ASTVisitor;
 
 class NStatement;
 class NExpression;
+class NExpressionStatement;
 class NVariableDeclaration;
 class NClassDeclaration;
 class NType;
@@ -32,7 +31,6 @@ class NArgument;
 class NFunctionPrototype;
 class NMemberAccess;
 class NFunctionCall;
-class NExpressionStatement;
 class NStringLiteral;
 class NNew;
 class NSizeOf;
@@ -41,11 +39,16 @@ class NMethodFunction;
 class NMethodCall;
 class NIfStatement;
 class NBinaryOperator;
+class NForLoop;
 
 typedef std::vector<NStatement*> StatementList;
 typedef std::vector<NExpression*> ExpressionList;
 typedef std::vector<NVariableDeclaration*> VariableList;
 
+}
+
+#include "parser.hpp"
+namespace staple {
 
 class ASTNode {
 public:
@@ -93,6 +96,7 @@ public:
     VISIT(NBinaryOperator)
     VISIT(NBlock)
     VISIT(NFunctionPrototype)
+    VISIT(NForLoop)
 };
 
 
@@ -364,7 +368,7 @@ class NBlock : public NStatement {
 public:
     ACCEPT
     StatementList statements;
-    NBlock() { }
+    NBlock(const StatementList& list) : statements(list) { }
 
     static bool classof(const ASTNode *T) {
         return dynamic_cast<const NBlock*>(T);
@@ -384,6 +388,20 @@ public:
 
 
 };
+
+
+class NForLoop : public NStatement {
+public:
+    ACCEPT
+    NExpression* init;
+    NExpression* condition;
+    NExpression* increment;
+    NStatement* loop;
+
+    NForLoop(NExpression* init, NExpression* condition, NExpression* increment, NStatement* loop)
+            : init(init), condition(condition), increment(increment), loop(loop) {}
+};
+
 
 class NExpressionStatement : public NStatement {
 public:

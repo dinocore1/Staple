@@ -352,6 +352,8 @@ namespace staple {
 
                 emitDebugLocation(function);
 
+
+
             }
 
             const size_t numArgs = function->arguments.size();
@@ -363,6 +365,24 @@ namespace staple {
                 AllocaInst* alloc = mCodeGen->mIRBuilder.CreateAlloca(llvmArg, 0, nodeArg->name.c_str());
                 mScope->defineSymbol(nodeArg->name, alloc);
                 mCodeGen->mIRBuilder.CreateStore(AI, alloc);
+
+
+                if(mCodeGen->mCompilerContext->debugSymobols) {
+
+                    DITypeRef diType = mScope->mDebugInfo->getLLVMDebugType(mCodeGen->mCompilerContext->typeTable[nodeArg]);
+                    DIVariable debugSymbol = mCodeGen->mDIBuider->createLocalVariable(dwarf::DW_TAG_arg_variable,
+                                                                                      mScope->mDIScope,
+                                                                                      nodeArg->name.c_str(),
+                                                                                      mScope->mDebugInfo->mFile,
+                                                                                      nodeArg->location.first_line,
+                                                                                      diType);
+
+                    Instruction *call = mCodeGen->mDIBuider->insertDeclare(alloc, debugSymbol, mCodeGen->mIRBuilder.GetInsertBlock());
+                    call->setDebugLoc(DebugLoc::get(nodeArg->location.first_line, nodeArg->location.first_column, mScope->mDIScope));
+
+
+                }
+
             }
 
             for(NStatement* statement : function->block.statements) {
@@ -598,6 +618,71 @@ namespace staple {
             mValues[binaryOperator] = retval;
         }
 
+        void visit(NForLoop* forLoop) {
+            if(mCodeGen->mCompilerContext->debugSymobols){
+                emitDebugLocation(forLoop);
+            }
+
+            Function* parent = mCodeGen->mIRBuilder.GetInsertBlock()->getParent();
+            BasicBlock* startBlock = BasicBlock::Create(getGlobalContext(), "", parent);
+
+
+            push();
+
+            mScope->mBasicBlock = mScope->getParent()->mBasicBlock;
+            forLoop->init->accept(this);
+            mCodeGen->mIRBuilder.CreateBr(startBlock);
+
+            mScope->mBasicBlock = startBlock;
+            mCodeGen->mIRBuilder.SetInsertPoint(startBlock);
+
+
+            BasicBlock* loopBB;
+            if(isa<NBlock>(forLoop->loop)) {
+                loopBB = cast<BasicBlock>(getValue(forLoop->loop));
+            } else {
+                loopBB = BasicBlock::Create(getGlobalContext(), "", parent);
+                push();
+                if(mCodeGen->mCompilerContext->debugSymobols) {
+                    mScope->mDIScope = mCodeGen->mDIBuider->createLexicalBlock(mScope->getParent()->mDIScope, mScope->mDebugInfo->mFile, forLoop->location.first_line, forLoop->location.first_column, 0);
+                }
+
+                mScope->mBasicBlock = loopBB;
+                mCodeGen->mIRBuilder.SetInsertPoint(loopBB);
+
+                forLoop->loop->accept(this);
+
+
+                pop();
+                mCodeGen->mIRBuilder.SetInsertPoint(mScope->mBasicBlock);
+            }
+
+
+
+            BasicBlock* endBlock = BasicBlock::Create(getGlobalContext(), "", parent);
+
+
+
+            Value* value = getValue(forLoop->condition);
+            mCodeGen->mIRBuilder.CreateCondBr(value, loopBB, endBlock);
+
+            mScope->mBasicBlock = loopBB;
+            mCodeGen->mIRBuilder.SetInsertPoint(loopBB);
+            forLoop->increment->accept(this);
+
+            if(!isa<ReturnInst>(--loopBB->end()) && !isa<BranchInst>(--loopBB->end())) {
+                IRBuilder<> builder(loopBB);
+                builder.CreateBr(startBlock);
+            }
+
+
+            pop();
+
+            mScope->mBasicBlock = endBlock;
+            mCodeGen->mIRBuilder.SetInsertPoint(endBlock);
+
+        }
+
         void visit(NIfStatement* ifStatement) {
 
             if(mCodeGen->mCompilerContext->debugSymobols){
@@ -773,6 +858,7 @@ namespace staple {
 
         void visit(NExpressionStatement* expressionStatement) {
             expressionStatement->expression->accept(this);
+            mValues[expressionStatement] = mValues[expressionStatement->expression];
         }
 
         void visit(NBlock* block) {

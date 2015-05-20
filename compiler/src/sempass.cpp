@@ -340,6 +340,9 @@ public:
 
     virtual void visit(NIdentifier* identifier) {
         StapleType* type = scope->get(identifier->name);
+        if(type == nullptr) {
+            sempass->logError(identifier->location, "undeclaired identifier: '%s'", identifier->name.c_str());
+        }
         sempass->ctx.typeTable[identifier] = type;
     }
 
@@ -414,6 +417,16 @@ public:
         if(ifStatement->elseBlock != NULL) {
             ifStatement->elseBlock->accept(this);
         }
+    }
+
+    void visit(NForLoop* forLoop) {
+        forLoop->init->accept(this);
+        StapleType* conditionType = getType(forLoop->condition);
+        if(!isa<StapleInt>(conditionType)){
+            sempass->logError(forLoop->condition->location, "cannot evaluate condition");
+        }
+        forLoop->increment->accept(this);
+        forLoop->loop->accept(this);
     }
 
     virtual void visit(NBinaryOperator* binaryOperator) {

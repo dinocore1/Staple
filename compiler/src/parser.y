@@ -76,37 +76,6 @@ typedef struct YYLTYPE
         }                                                              \
     while (0)
 
-namespace staple {
-class ASTNode;
-class NStatement;
-class NExpression;
-class NVariableDeclaration;
-class NClassDeclaration;
-class NType;
-class NField;
-class NFunction;
-class NCompileUnit;
-class NAssignment;
-class NArrayElementPtr;
-class NIdentifier;
-class NIntLiteral;
-class NBlock;
-class NArgument;
-class NFunctionPrototype;
-class NMemberAccess;
-class NFunctionCall;
-class NExpressionStatement;
-class NStringLiteral;
-class NNew;
-class NSizeOf;
-class NLoad;
-class NMethodFunction;
-class NMethodCall;
-class NIfStatement;
-class NBinaryOperator;
-
-}
-
 
 }
 
@@ -131,6 +100,7 @@ class NBinaryOperator;
     bool boolean;
     staple::NFunction *function;
     staple::NMethodFunction* method_function;
+    staple::StatementList* stmtlist;
     int count;
 }
 
@@ -143,7 +113,7 @@ class NBinaryOperator;
 %token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
-%token <token> TPLUS TMINUS TMUL TDIV
+%token <token> TPLUS TMINUS TMUL TDIV TFOR
 
 /* Define the type of node our nonterminal symbols represent.
    The types refer to the %union declaration above. Ex: when
@@ -151,10 +121,11 @@ class NBinaryOperator;
    calling an (NIdentifier*). It makes the compiler happy.
  */
 %type <type> type
-%type <block> block stmts
+%type <stmtlist> stmts
+%type <block> block
 %type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr primary rhs arrayindex
 %type <exprvec> expr_list
-%type <stmt> stmt stmtexpr var_decl
+%type <stmt> stmt var_decl
 %type <token> comparison
 %type <nodelist> class_members
 %type <class_decl> class_decl
@@ -255,21 +226,21 @@ method
 ///// Statements //////
 
 block
-        : TLBRACE stmts TRBRACE { $$ = $2; }
+        : TLBRACE stmts TRBRACE { $$ = new NBlock(*$2); delete $2; $$->location = @$; }
         ;
 
 stmts
-        : stmts stmt { $1->statements.push_back($2); }
-        | { $$ = new NBlock(); }
+        : stmts stmt { $1->push_back($2); }
+        | { $$ = new StatementList(); }
         ;
 
-stmt    : stmtexpr TSEMI { $$ = $1; }
+stmt    : expr TSEMI { $$ = new NExpressionStatement($1); }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec "then"
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
+        | TFOR TLPAREN expr TSEMI expr TSEMI expr TRPAREN stmt { $$ = new NForLoop($3, $5, $7, $9); $$->location = @$; }
         | block { $$ = $1; }
         ;
-
 
 var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; $$->location = @2; }
          | type TIDENTIFIER TEQUAL expr { $$ = new NVariableDeclaration($1, *$2, $4); delete $2; $$->location = @2; }
@@ -295,12 +266,6 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
         ;
 
 
-stmtexpr
-        : var_decl
-        | TIDENTIFIER TLPAREN expr_list TRPAREN { NFunctionCall* fcall = new NFunctionCall(*$1, *$3); fcall->location = @1; $$ = new NExpressionStatement(fcall); delete $1; delete $3; $$->location = @$; }
-        | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
-        ;
-
 lhs
         : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
         | rhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
@@ -314,6 +279,9 @@ rhs
 
 expr
         : TSIZEOF type { $$ = new NSizeOf($2); $$->location = @$; }
+        | var_decl
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { NFunctionCall* fcall = new NFunctionCall(*$1, *$3); fcall->location = @1; $$ = new NExpressionStatement(fcall); delete $1; delete $3; $$->location = @$; }
+        | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; $$->location = @$; }
         | compexpr { $$ = $1; }
         ;
