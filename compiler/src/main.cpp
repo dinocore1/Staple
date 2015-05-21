@@ -29,6 +29,7 @@ extern NCompileUnit* compileUnit;
 cl::opt<string> OutputFilename("o", cl::desc("output filename"), cl::value_desc("filename"), cl::init("output.ll"));
 cl::opt<string> InputFilename(cl::Positional, cl::desc("<input file>"), cl::Required);
 cl::opt<bool> DebugSymbols("g", cl::desc("output debug symbols"));
+cl::list<std::string> IncludePaths("I", cl::Prefix, cl::desc("include filepath root"), cl::ZeroOrMore);
 
 int main(int argc, char **argv)
 {
@@ -39,6 +40,7 @@ int main(int argc, char **argv)
     context.inputFilename = InputFilename;
     context.outputFilename = OutputFilename;
     context.debugSymobols = DebugSymbols;
+    context.searchPaths = IncludePaths;
 
     //yydebug = 1;
 
@@ -54,6 +56,9 @@ int main(int argc, char **argv)
     do {
         yyparse();
     } while (!feof(yyin));
+
+    context.package = compileUnit->package;
+    context.includes = compileUnit->includes;
 
     staple::SemPass semPass(context);
     semPass.doSemPass(*compileUnit);

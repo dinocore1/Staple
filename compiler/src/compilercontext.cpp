@@ -1,7 +1,10 @@
 #include "compilercontext.h"
 
+#include <llvm/Support/FileSystem.h>
+
 namespace staple {
 
+using namespace llvm;
 using namespace std;
 
 
@@ -49,13 +52,25 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
         return it->second;
     }
 
-    string fqClassName = !package.empty() ? (package + "." + className) : className;
-    it = mClasses.find(fqClassName);
-    if(it != mClasses.end()) {
-        return it->second;
+    for(string package : includes) {
+        string fqClassName = package + "." + className;
+        it = mClasses.find(fqClassName);
+        if(it != mClasses.end()) {
+            return it->second;
+        }
     }
 
+
     //TODO: loop though all the imports and try to find the class
+    for(string path : searchPaths) {
+        if(sys::fs::is_directory(path)) {
+            error_code ec;
+            for(sys::fs::directory_iterator it(path, ec); !ec; it = it .increment(ec)) {
+
+            }
+
+        }
+    }
 
 
     return nullptr;

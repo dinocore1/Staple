@@ -76,8 +76,6 @@ public:
 
     virtual void visit(NCompileUnit* compileUnit) {
 
-        sempass->ctx.package = compileUnit->package;
-
         currentClass = NULL;
         push();
 

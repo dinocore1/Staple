@@ -24,6 +24,7 @@ namespace staple {
         bool debugSymobols;
         string package;
         vector<string> includes;
+        vector<string> searchPaths;
 
         static StapleClass* getStpObjClass();
         static StapleClassDef* getStpObjClassDef();

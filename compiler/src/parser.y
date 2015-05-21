@@ -157,7 +157,7 @@ header
         ;
 
 includes
-        : includes TINCLUDE package { compileUnit->mIncludes.push_back(*$3); delete $3; }
+        : includes TINCLUDE package { compileUnit->includes.push_back(*$3); delete $3; }
         |
         ;
 
