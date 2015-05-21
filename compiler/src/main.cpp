@@ -38,7 +38,6 @@ int main(int argc, char **argv)
     CompilerContext context;
     context.inputFilename = InputFilename;
     context.outputFilename = OutputFilename;
-    context.package = "";
     context.debugSymobols = DebugSymbols;
 
     //yydebug = 1;

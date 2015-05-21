@@ -35,6 +35,7 @@ extern "C" int yywrap() { }
 
 [ \t]                   ;
 \n                      { yycolumn = 1; }
+"package"               return TOKEN(TPACKAGE);
 "extern"                return TOKEN(TEXTERN);
 "class"                 return TOKEN(TCLASS);
 "if"                    return TOKEN(TIF);

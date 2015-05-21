@@ -17,10 +17,8 @@ namespace staple {
 
     StructType* LLVMStapleObject::getStpObjVtableType() {
         if(STPOBJ_VTABLE_TYPE->isEmptyTy()) {
-            STPOBJ_VTABLE_TYPE->setBody(
-              PointerType::getUnqual(LLVMStapleObject::getKillFunctionType()),
-              NULL
-            );
+            ArrayRef<Type*> body(PointerType::getUnqual(LLVMStapleObject::getKillFunctionType()));
+            STPOBJ_VTABLE_TYPE->setBody(body);
         }
         return STPOBJ_VTABLE_TYPE;
     }

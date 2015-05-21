@@ -13,16 +13,17 @@ namespace staple {
 
     private:
         CompilerContext* mContext;
+        const string mCompileUnitPackage;
 
     public:
-        Pass1ClassVisitor(CompilerContext* ctx)
-        : mContext(ctx) {}
+        Pass1ClassVisitor(CompilerContext* ctx, const string& compileUnitPackage)
+        : mContext(ctx), mCompileUnitPackage(compileUnitPackage) {}
 
         using ASTVisitor::visit;
 
         void visit(NClassDeclaration* classDeclaration) {
 
-            string fqClassName = !mContext->package.empty() ? (mContext->package + "." + classDeclaration->name) : classDeclaration->name;
+            string fqClassName = !mCompileUnitPackage.empty() ? (mCompileUnitPackage + "." + classDeclaration->name) : classDeclaration->name;
             StapleClass* stpClass = new StapleClass(fqClassName);
             mContext->typeTable[classDeclaration] = stpClass;
             mContext->defineClass(stpClass);

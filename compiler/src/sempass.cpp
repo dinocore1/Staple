@@ -76,12 +76,14 @@ public:
 
     virtual void visit(NCompileUnit* compileUnit) {
 
+        sempass->ctx.package = compileUnit->package;
+
         currentClass = NULL;
         push();
 
         //first pass class declaration
         for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            Pass1ClassVisitor visitor(&sempass->ctx);
+            Pass1ClassVisitor visitor(&sempass->ctx, compileUnit->package);
             classDeclaration->accept(&visitor);
         }
 
@@ -129,6 +131,9 @@ public:
         for(NClassDeclaration* classDeclaration : compileUnit->classes){
 
             StapleClass* parentClass = sempass->ctx.lookupClassName(classDeclaration->mExtends);
+            if(parentClass == nullptr) {
+                sempass->logError(classDeclaration->location, "cannot find class '%s'", classDeclaration->mExtends.c_str());
+            }
 
             currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
             currentClass->setParent(parentClass);

@@ -109,7 +109,7 @@ typedef struct YYLTYPE
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
-%token <token> TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE TEXTENDS
+%token <token> TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE TEXTENDS
 %token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
@@ -148,7 +148,12 @@ typedef struct YYLTYPE
 
 compileUnit
         : { compileUnit = new NCompileUnit(); }
-          includes program
+          header program
+        ;
+
+header
+        : TPACKAGE package { compileUnit->package = *$2; delete $2; }
+          includes
         ;
 
 includes

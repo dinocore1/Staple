@@ -474,6 +474,7 @@ public:
 class NCompileUnit : public ASTNode {
 public:
     ACCEPT
+    std::string package;
     std::vector<std::string> mIncludes;
     std::vector<NClassDeclaration*> classes;
     std::vector<NFunction*> functions;
