@@ -123,7 +123,7 @@ typedef struct YYLTYPE
 %type <type> type
 %type <stmtlist> stmts
 %type <block> block
-%type <expr> expr lhs compexpr multexpr addexpr ident literal unaryexpr primary rhs arrayindex
+%type <expr> expr lhs lhs_p compexpr multexpr addexpr ident literal unaryexpr primary arrayindex
 %type <exprvec> expr_list
 %type <stmt> stmt var_decl
 %type <token> comparison
@@ -239,7 +239,11 @@ stmts
         | { $$ = new StatementList(); }
         ;
 
-stmt    : expr TSEMI { $$ = new NExpressionStatement($1); }
+
+/// a statement is something that does not return a value. For example, var decalaration, if, for, while, etc...
+
+stmt    : var_decl TSEMI { $$ = $1; }
+        | lhs TEQUAL expr TSEMI { $$ = new NAssignment($1, $3); $$->location = @$; }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec "then"
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
@@ -261,10 +265,6 @@ numPointers
         | { $$ = 0; }
         ;
 
-ident
-        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
-        ;
-
 literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
         | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; $$->location = @$; }
         | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; $$->location = @$; }
@@ -273,20 +273,21 @@ literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
 
 lhs
         : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
-        | rhs TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
-        | rhs TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; }
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { NFunctionCall* fcall = new NFunctionCall(*$1, *$3); fcall->location = @1; $$ = new NExpressionStatement(fcall); delete $1; delete $3; $$->location = @$; }
+        | lhs_p TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
+        | lhs_p TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; }
+        | lhs_p TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
-rhs
+lhs_p
         : lhs { $$ = new NLoad($1); $$->location = @$; }
-        | rhs TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
+
+// expr is something that always returns a value
 
 expr
         : TSIZEOF type { $$ = new NSizeOf($2); $$->location = @$; }
-        | var_decl
         | TIDENTIFIER TLPAREN expr_list TRPAREN { NFunctionCall* fcall = new NFunctionCall(*$1, *$3); fcall->location = @1; $$ = new NExpressionStatement(fcall); delete $1; delete $3; $$->location = @$; }
-        | lhs TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; $$->location = @$; }
         | compexpr { $$ = $1; }
         ;
@@ -317,15 +318,17 @@ unaryexpr
         ;
 
 primary
-        : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; } } %prec "order"
+        : TLPAREN expr_list TRPAREN { if($2->size() == 1) { $$ = (*$2)[0]; delete $2; } else { $$ = $2; } } %prec "order"
         | literal { $$ = $1; }
-        | rhs { $$ = $1; }
-        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); delete $1; delete $3; $$->location = @$; }
-        | TLPAREN expr_list TRPAREN TMINUS TCGT stmt /* anonymous function */
+        | ident { $$ = new NLoad($1); $$->location = @$; }
+        ;
+
+ident
+        : TIDENTIFIER { $$ = new NIdentifier(*$1); delete $1; $$->location = @$; }
         ;
 
 expr_list
-        : expr { $$ = new ExpressionList(); $$->push_back($1); }
+        : expr { $$->push_back($1); }
         | expr_list TCOMMA expr { $$->push_back($3); }
         | { $$ = new ExpressionList(); }
         ;
