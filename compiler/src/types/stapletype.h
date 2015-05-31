@@ -7,6 +7,8 @@
 
 #include <llvm/Support/Casting.h>
 
+typedef unsigned int uint;
+
 namespace staple {
 
     using namespace std;

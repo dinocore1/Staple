@@ -392,11 +392,11 @@ class NForLoop : public NStatement {
 public:
     ACCEPT
     ASTNode* init;
-    NExpression* condition;
-    NExpression* increment;
+    ASTNode* condition;
+    ASTNode* increment;
     NStatement* loop;
 
-    NForLoop(ASTNode* init, NExpression* condition, NExpression* increment, NStatement* loop)
+    NForLoop(ASTNode* init, ASTNode* condition, ASTNode* increment, NStatement* loop)
             : init(init), condition(condition), increment(increment), loop(loop) {}
 };
 

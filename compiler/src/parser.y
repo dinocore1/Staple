@@ -123,7 +123,7 @@ typedef struct YYLTYPE
 %type <stmtlist> stmts
 %type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 arrayindex
 %type <exprvec> expr_list
-%type <stmt> stmt block var_decl
+%type <stmt> stmt block var_decl exprstmt
 %type <token> comparison
 %type <nodelist> class_members
 %type <class_decl> class_decl
@@ -238,14 +238,18 @@ stmts
 
 /// a statement is something that does not return a value. For example, var decalaration, if, for, while, etc...
 
-stmt    : primary TEQUAL expr TSEMI { $$ = new NAssignment($1, $3); $$->location = @$; }
-        | primary TSEMI { $$ = new NExpressionStatement($1); }
-        | var_decl TSEMI { $$ = $1; }
+stmt    : exprstmt TSEMI { $$ = $1; }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec ELSE
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
-        | TFOR TLPAREN stmt expr TSEMI stmt TRPAREN stmt { $$ = new NForLoop($3, $4, $6, $8); $$->location = @$; }
+        | TFOR TLPAREN exprstmt TSEMI expr TSEMI exprstmt TRPAREN stmt { $$ = new NForLoop($3, $5, $7, $9); }
         | block
+        ;
+
+exprstmt
+        : primary TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
+        | primary { $$ = new NExpressionStatement($1); }
+        | var_decl
         ;
 
 var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; $$->location = @2; }
