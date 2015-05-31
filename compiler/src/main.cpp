@@ -64,8 +64,6 @@ int main(int argc, char **argv)
     LLVMCodeGenerator codeGenerator(&context);
     codeGenerator.generateCode(parserContext.compileUnit);
 
-    //CodeGenContext codeGen(context);
-    //codeGen.generateCode(*compileUnit);
 
     std::string errorCode;
     raw_fd_ostream output(context.outputFilename.c_str(), errorCode, sys::fs::OpenFlags::F_None);

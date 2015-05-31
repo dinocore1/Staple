@@ -111,7 +111,7 @@ typedef std::vector<NVariableDeclaration*> VariableList;
  */
 %type <type> type
 %type <stmtlist> stmts
-%type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 arrayindex
+%type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 lvalue callable arrayindex
 %type <exprvec> expr_list
 %type <stmt> stmt block var_decl exprstmt
 %type <token> comparison
@@ -264,6 +264,7 @@ stmts
 /// a statement is something that does not return a value. For example, var decalaration, if, for, while, etc...
 
 stmt    : exprstmt TSEMI { $$ = $1; }
+        | callable TSEMI { $$ = new NExpressionStatement($1); }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec ELSE
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
@@ -272,8 +273,7 @@ stmt    : exprstmt TSEMI { $$ = $1; }
         ;
 
 exprstmt
-        : primary TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
-        | primary { $$ = new NExpressionStatement($1); }
+        : lvalue TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         | var_decl
         ;
 
@@ -329,17 +329,27 @@ primary
         | TSIZEOF TLPAREN type TRPAREN { $$ = new NSizeOf($3); $$->location = @$; }
         | TNEW TIDENTIFIER { $$ = new NNew(*$2); delete $2; $$->location = @$; }
         | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); $$->location = @$; delete $1; delete $3; }
-        | p_1
+        | p_1 { $$ = new NLoad($1); }
         ;
 
 p_1
-        : p_1 TDOT TIDENTIFIER { $$ = new NMemberAccess($1, *$3); delete $3; $$->location = @$; }
-        | p_1 TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall($1, *$3, *$5); delete $3; delete $5; $$->location = @$; }
-        | p_1 TAT arrayindex { $$ = new NArrayElementPtr($1, $3); $$->location = @$; }
+        : p_1 TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; $$->location = @$; }
+        | p_1 TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
+        | p_1 TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); $$->location = @$; }
         | ident
         ;
 
+callable
+        : TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); $$->location = @$; delete $1; delete $3; }
+        | lvalue
+        ;
 
+lvalue
+        : ident
+        | lvalue TDOT TIDENTIFIER { $$ = new NMemberAccess(new NLoad($1), *$3); delete $3; $$->location = @$; }
+        | lvalue TAT arrayindex { $$ = new NArrayElementPtr(new NLoad($1), $3); $$->location = @$; }
+        | lvalue TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
+        ;
 
 literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
         | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; $$->location = @$; }
