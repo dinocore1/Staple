@@ -1,9 +1,14 @@
 #include <cstdio>
 #include <iostream>
+#include <fstream>
 #include <system_error>
+
+extern int yydebug;
+
 
 #include "compilercontext.h"
 #include "node.h"
+#include "parsercontext.h"
 #include "sempass.h"
 #include "codegen/LLVMCodeGenerator.h"
 
@@ -11,19 +16,10 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/CommandLine.h>
 
-extern "C" int yylex();
-int yyparse();
-extern "C" FILE *yyin;
-extern "C" int yydebug;
 
-char *filename;
 
 using namespace std;
 using namespace staple;
-
-extern NCompileUnit* compileUnit;
-
-
 
 
 cl::opt<string> OutputFilename("o", cl::desc("output filename"), cl::value_desc("filename"), cl::init("output.ll"));
@@ -44,31 +40,29 @@ int main(int argc, char **argv)
 
     yydebug = 1;
 
-    FILE *myfile = fopen(context.inputFilename.c_str(), "r");
-    if (!myfile) {
+    ifstream inputFileStream(context.inputFilename.c_str(), std::ifstream::binary);
+    if (!inputFileStream) {
         fprintf(stderr, "cannot open file: %s", context.inputFilename.c_str());
         return -1;
     }
-    // set lex to read from it instead of defaulting to STDIN:
-    yyin = myfile;
 
-    // parse through the input until there is no more:
-    do {
-        yyparse();
-    } while (!feof(yyin));
+    ParserContext parserContext(&inputFileStream);
 
-    context.package = compileUnit->package;
-    context.includes = compileUnit->includes;
+    yyparse(&parserContext);
+
+
+    context.package = parserContext.compileUnit->package;
+    context.includes = parserContext.compileUnit->includes;
 
     staple::SemPass semPass(context);
-    semPass.doSemPass(*compileUnit);
+    semPass.doSemPass(*parserContext.compileUnit);
 
     if(semPass.hasErrors()) {
         exit(1);
     }
 
     LLVMCodeGenerator codeGenerator(&context);
-    codeGenerator.generateCode(compileUnit);
+    codeGenerator.generateCode(parserContext.compileUnit);
 
     //CodeGenContext codeGen(context);
     //codeGen.generateCode(*compileUnit);

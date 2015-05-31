@@ -52,6 +52,13 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
         return it->second;
     }
 
+    //try local package
+    string localclassname = package + "." + className;
+    it = mClasses.find(localclassname);
+    if(it != mClasses.end()) {
+        return it->second;
+    }
+
     for(string package : includes) {
         string fqClassName = package + "." + className;
         it = mClasses.find(fqClassName);

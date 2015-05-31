@@ -5,6 +5,7 @@
 #include <map>
 
 #include "node.h"
+#include "parsercontext.h"
 #include "types/stapletype.h"
 
 #include <llvm/IR/Type.h>

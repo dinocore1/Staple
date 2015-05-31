@@ -1,84 +1,74 @@
+
+%define api.pure
+%locations
+%defines
+%error-verbose
+%parse-param { staple::ParserContext* context }
+%lex-param { void* scanner  }
+
 %{
-#include <cstdio>
-#include "node.h"
-using namespace staple;
-
-NCompileUnit *compileUnit; /* the top level root node of our final AST */
-
-extern int yylex();
+#include <iostream>
+#include <sstream>
 
 #define YYDEBUG 1
 
-extern int yylineno;
-extern char* yytext;
+#include "parsercontext.h"
 
-void yyerror(const char *s)
-{
-    printf("%d: %s at: %s\n", yylineno, s, yytext);
-    exit(-1);
-}
+using namespace staple;
+using namespace std;
 
-NType* NType::GetPointerType(const std::string& name, int numPtrs)
-{
-	NType* retval = new NType();
-	retval->name = name;
-	retval->isArray = false;
-	retval->numPointers = numPtrs;
-	return retval;
-}
 
-NType* NType::GetArrayType(const std::string& name, int size)
-{
-	NType* retval = new NType();
-	retval->name = name;
-	retval->isArray = true;
-	retval->size = size;
-	return retval;
-}
 
 %}
 
 %code requires {
 
-extern char *filename; /* current filename here for the lexer */
+#include <iostream>
+#include <vector>
 
-#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
-typedef struct YYLTYPE
-{
-  int first_line;
-  int first_column;
-  int last_line;
-  int last_column;
-  char* filename;
-} YYLTYPE;
-# define yyltype YYLTYPE /* obsolescent; will be withdrawn */
-# define YYLTYPE_IS_DECLARED 1
-#endif
+namespace staple {
 
+class CodeGenContext;
 
-# define YYLLOC_DEFAULT(Current, Rhs, N)                               \
-    do                                                                 \
-      if (N)                                                           \
-        {                                                              \
-          (Current).first_line   = YYRHSLOC (Rhs, 1).first_line;       \
-          (Current).first_column = YYRHSLOC (Rhs, 1).first_column;     \
-          (Current).last_line    = YYRHSLOC (Rhs, N).last_line;        \
-          (Current).last_column  = YYRHSLOC (Rhs, N).last_column;      \
-          (Current).filename     = YYRHSLOC (Rhs, 1).filename;         \
-        }                                                              \
-      else                                                             \
-        { /* empty RHS */                                              \
-          (Current).first_line   = (Current).last_line   =             \
-            YYRHSLOC (Rhs, 0).last_line;                               \
-          (Current).first_column = (Current).last_column =             \
-            YYRHSLOC (Rhs, 0).last_column;                             \
-          (Current).filename  = NULL;                        /* new */ \
-        }                                                              \
-    while (0)
+class ASTNode;
+class ASTVisitor;
 
+class NStatement;
+class NExpression;
+class NExpressionStatement;
+class NVariableDeclaration;
+class NClassDeclaration;
+class NType;
+class NReturn;
+class NField;
+class NFunction;
+class NCompileUnit;
+class NAssignment;
+class NArrayElementPtr;
+class NIdentifier;
+class NIntLiteral;
+class NBlock;
+class NArgument;
+class NFunctionPrototype;
+class NMemberAccess;
+class NFunctionCall;
+class NStringLiteral;
+class NNew;
+class NSizeOf;
+class NLoad;
+class NMethodFunction;
+class NMethodCall;
+class NIfStatement;
+class NBinaryOperator;
+class NForLoop;
+
+typedef std::vector<NStatement*> StatementList;
+typedef std::vector<NExpression*> ExpressionList;
+typedef std::vector<NVariableDeclaration*> VariableList;
 
 }
 
+}
 
 /* Represents the many different ways we can access our data */
 %union {
@@ -140,20 +130,55 @@ typedef struct YYLTYPE
 
 %start compileUnit
 
+%{
+
+#include "node.h"
+int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, void* scanner);
+
+void yyerror(YYLTYPE* locp, ParserContext* context, const char* err)
+{
+  cout << locp->first_line << ":" << err << endl;
+}
+
+#define scanner context->scanner
+
+
+NType* NType::GetPointerType(const std::string& name, int numPtrs)
+{
+       NType* retval = new NType();
+       retval->name = name;
+       retval->isArray = false;
+       retval->numPointers = numPtrs;
+       return retval;
+}
+
+NType* NType::GetArrayType(const std::string& name, int size)
+{
+       NType* retval = new NType();
+       retval->name = name;
+       retval->isArray = true;
+       retval->size = size;
+       return retval;
+}
+
+
+
+%}
+
 %%
 
 compileUnit
-        : { compileUnit = new NCompileUnit(); }
+        : { context->compileUnit = new NCompileUnit(); }
           header program
         ;
 
 header
-        : TPACKAGE package { compileUnit->package = *$2; delete $2; }
+        : TPACKAGE package { context->compileUnit->package = *$2; delete $2; }
           includes
         ;
 
 includes
-        : includes TINCLUDE package { compileUnit->includes.push_back(*$3); delete $3; }
+        : includes TINCLUDE package { context->compileUnit->includes.push_back(*$3); delete $3; }
         |
         ;
 
@@ -163,9 +188,9 @@ package
         ;
 
 program
-        : program class_decl { compileUnit->classes.push_back($2); }
-        | program global_func { compileUnit->functions.push_back($2); }
-        | program proto_func { compileUnit->externFunctions.push_back($2); }
+        : program class_decl { context->compileUnit->classes.push_back($2); }
+        | program global_func { context->compileUnit->functions.push_back($2); }
+        | program proto_func { context->compileUnit->externFunctions.push_back($2); }
         |
         ;
 
@@ -242,7 +267,7 @@ stmt    : exprstmt TSEMI { $$ = $1; }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec ELSE
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
-        | TFOR TLPAREN exprstmt TSEMI expr TSEMI exprstmt TRPAREN stmt { $$ = new NForLoop($3, $5, $7, $9); }
+        | TFOR TLPAREN exprstmt TSEMI expr TSEMI exprstmt TRPAREN stmt { $$ = new NForLoop($3, $5, $7, $9); $$->location = @$; }
         | block
         ;
 

@@ -5,49 +5,9 @@
 #include <iostream>
 #include <vector>
 
-namespace staple {
-
-class CodeGenContext;
-
-class ASTNode;
-class ASTVisitor;
-
-class NStatement;
-class NExpression;
-class NExpressionStatement;
-class NVariableDeclaration;
-class NClassDeclaration;
-class NType;
-class NReturn;
-class NField;
-class NFunction;
-class NCompileUnit;
-class NAssignment;
-class NArrayElementPtr;
-class NIdentifier;
-class NIntLiteral;
-class NBlock;
-class NArgument;
-class NFunctionPrototype;
-class NMemberAccess;
-class NFunctionCall;
-class NStringLiteral;
-class NNew;
-class NSizeOf;
-class NLoad;
-class NMethodFunction;
-class NMethodCall;
-class NIfStatement;
-class NBinaryOperator;
-class NForLoop;
-
-typedef std::vector<NStatement*> StatementList;
-typedef std::vector<NExpression*> ExpressionList;
-typedef std::vector<NVariableDeclaration*> VariableList;
-
-}
-
+#include "parsercontext.h"
 #include "parser.hpp"
+
 namespace staple {
 
 class ASTNode {

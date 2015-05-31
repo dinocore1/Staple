@@ -1,29 +1,34 @@
+
+%option reentrant
+%option bison-bridge
+%option bison-locations
+%option noyywrap
+%option yylineno
+
+
 %{
 
 #include <string>
-#include "node.h"
-using namespace staple;
-
+#include "parsercontext.h"
 #include "parser.hpp"
 
+#define YY_EXTRA_TYPE staple::ParserContext*
 
-/* handle locations */
-int yycolumn = 1;
-#define YY_USER_ACTION yylloc.filename = filename; \
-    yylloc.first_line = yylloc.last_line = yylineno; \
-    yylloc.first_column = yycolumn; yylloc.last_column = yycolumn+yyleng-1; \
-    yycolumn += yyleng;
+#define YY_USER_ACTION yylloc->first_line = yylineno;
 
 
+#define YY_INPUT(buf,result,max_size) \
+result = yyextra->readBytes(buf, max_size);
 
-#define SAVE_TOKEN yylval.string = new std::string(yytext, yyleng)
-#define TOKEN(t) (yylval.token = t)
-extern "C" int yywrap() { }
+#define SAVE_TOKEN yylval->string = new std::string(yytext, yyleng)
+#define TOKEN(t) (yylval->token = t)
+
+using namespace staple;
+
 %}
 
 %x comment
 
-%option yylineno
 
 %%
 
@@ -76,3 +81,15 @@ extern "C" int yywrap() { }
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%
+
+void ParserContext::init_scanner()
+{
+   yylex_init(&scanner);
+   yyset_extra(this, scanner);
+}
+
+void ParserContext::destroy_scanner()
+{
+   yylex_destroy(scanner);
+}
+

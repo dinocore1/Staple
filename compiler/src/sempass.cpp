@@ -558,7 +558,7 @@ void SemPass::logError(YYLTYPE location, const char *format, ...)
     va_list argptr;
     va_start(argptr, format);
 
-    fprintf(stderr, "%s:%d:%d: ", location.filename, location.first_line, location.first_column);
+    fprintf(stderr, "%s:%d:%d: ", ctx.inputFilename.c_str(), location.first_line, location.first_column);
     fprintf(stderr, "error: ");
     vfprintf(stderr, format, argptr);
     va_end(argptr);
@@ -569,7 +569,7 @@ void SemPass::logWarning(YYLTYPE location, const char *format, ...)
     va_list argptr;
     va_start(argptr, format);
 
-    fprintf(stderr, "%s:%d:%d: ", location.filename, location.first_line, location.first_column);
+    fprintf(stderr, "%s:%d:%d: ", ctx.inputFilename.c_str(), location.first_line, location.first_column);
     fprintf(stderr, "warning: ");
     vfprintf(stderr, format, argptr);
     va_end(argptr);
