@@ -42,7 +42,7 @@ int main(int argc, char **argv)
     context.debugSymobols = DebugSymbols;
     context.searchPaths = IncludePaths;
 
-    //yydebug = 1;
+    yydebug = 1;
 
     FILE *myfile = fopen(context.inputFilename.c_str(), "r");
     if (!myfile) {

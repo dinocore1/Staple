@@ -145,7 +145,14 @@ public:
 
 };
 
-class NClassDeclaration : public ASTNode {
+class NExpression : public ASTNode {
+};
+
+
+class NStatement : public ASTNode {
+};
+
+class NClassDeclaration : public NStatement {
 
 public:
     ACCEPT
@@ -170,14 +177,6 @@ public:
         collector.visitChildren(members);
     }
 
-};
-
-
-class NExpression : public ASTNode {
-};
-
-
-class NStatement : public NExpression {
 };
 
 class NLiteral : public NExpression {
@@ -221,7 +220,7 @@ public:
     NIdentifier(const std::string& name) : name(name) { }
 };
 
-class NArgument : public ASTNode {
+class NArgument : public NExpression {
 public:
     ACCEPT
     NType type;
@@ -389,19 +388,17 @@ public:
 
 };
 
-
 class NForLoop : public NStatement {
 public:
     ACCEPT
-    NExpression* init;
+    ASTNode* init;
     NExpression* condition;
     NExpression* increment;
     NStatement* loop;
 
-    NForLoop(NExpression* init, NExpression* condition, NExpression* increment, NStatement* loop)
+    NForLoop(ASTNode* init, NExpression* condition, NExpression* increment, NStatement* loop)
             : init(init), condition(condition), increment(increment), loop(loop) {}
 };
-
 
 class NExpressionStatement : public NStatement {
 public:
@@ -426,7 +423,7 @@ public:
 
 };
 
-class NFunctionPrototype : public ASTNode {
+class NFunctionPrototype : public NStatement {
 public:
     ACCEPT
     NType returnType;
@@ -444,13 +441,13 @@ public:
 class NFunction : public NFunctionPrototype {
 public:
     ACCEPT
-    NBlock block;
+    StatementList statements;
 
 
     NFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
-            const NBlock& block)
-            : NFunctionPrototype(type, name, arguments, isVarg), block(block) {
+            const StatementList& statements)
+            : NFunctionPrototype(type, name, arguments, isVarg), statements(statements) {
 
     }
 
@@ -460,13 +457,13 @@ public:
 class NMethodFunction : public NFunctionPrototype {
 public:
     ACCEPT
-    NBlock block;
+    StatementList statements;
 
 
     NMethodFunction(const NType& type, const std::string& name,
             const std::vector<NArgument*>& arguments, bool isVarg,
-            const NBlock& block)
-            : NFunctionPrototype(type, name, arguments, isVarg), block(block) { }
+            const StatementList& statements)
+            : NFunctionPrototype(type, name, arguments, isVarg), statements(statements) { }
 
 
 };

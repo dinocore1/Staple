@@ -249,7 +249,7 @@ public:
 
         mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[methodFunction]);
 
-        for(NStatement* statement : methodFunction->block.statements){
+        for(NStatement* statement : methodFunction->statements){
             statement->accept(this);
         }
         pop();
@@ -280,7 +280,7 @@ public:
 
         mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[function]);
 
-        for(NStatement* statement : function->block.statements){
+        for(NStatement* statement : function->statements){
             statement->accept(this);
         }
         pop();

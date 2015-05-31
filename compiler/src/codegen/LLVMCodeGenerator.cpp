@@ -385,7 +385,7 @@ namespace staple {
 
             }
 
-            for(NStatement* statement : function->block.statements) {
+            for(NStatement* statement : function->statements) {
                 statement->accept(this);
             }
 
@@ -449,7 +449,7 @@ namespace staple {
                 AI++;
             }
 
-            for(NStatement* statement : methodFunction->block.statements) {
+            for(NStatement* statement : methodFunction->statements) {
                 statement->accept(this);
             }
 
