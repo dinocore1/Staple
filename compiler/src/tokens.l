@@ -50,7 +50,7 @@ using namespace staple;
 "@"                     return TOKEN(TAT);
 "new"                   return TOKEN(TNEW);
 "sizeof"                return TOKEN(TSIZEOF);
-"include"               return TOKEN(TINCLUDE);
+"import"               return TOKEN(TIMPORT);
 "extends"               return TOKEN(TEXTENDS);
 \"([^\\\"]|\\.)*\"      SAVE_TOKEN; return TSTRINGLIT;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;

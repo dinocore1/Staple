@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 
     yydebug = 1;
 
-    ifstream inputFileStream(context.inputFilename.c_str(), std::ifstream::binary);
+    ifstream inputFileStream(context.inputFilename.c_str());
     if (!inputFileStream) {
         fprintf(stderr, "cannot open file: %s", context.inputFilename.c_str());
         return -1;

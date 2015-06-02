@@ -98,7 +98,7 @@ typedef std::vector<NVariableDeclaration*> VariableList;
    they represent.
  */
 %token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
-%token <token> TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TINCLUDE TEXTENDS
+%token <token> TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TIMPORT TEXTENDS
 %token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
 %token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
@@ -178,7 +178,7 @@ header
         ;
 
 includes
-        : includes TINCLUDE package { context->compileUnit->includes.push_back(*$3); delete $3; }
+        : includes TIMPORT package { context->compileUnit->includes.push_back(*$3); delete $3; }
         |
         ;
 

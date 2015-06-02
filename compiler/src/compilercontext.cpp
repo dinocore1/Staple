@@ -1,3 +1,5 @@
+#include <fstream>
+
 #include "compilercontext.h"
 
 #include <llvm/Support/FileSystem.h>
@@ -45,6 +47,16 @@ void CompilerContext::defineClass(StapleClass *localClass) {
     mClasses[fqClassName] = localClass;
 }
 
+std::string ReplaceString(std::string subject, const std::string& search,
+                          const std::string& replace) {
+    size_t pos = 0;
+    while ((pos = subject.find(search, pos)) != std::string::npos) {
+        subject.replace(pos, search.length(), replace);
+        pos += replace.length();
+    }
+    return subject;
+}
+
 StapleClass* CompilerContext::lookupClassName(const std::string &className) {
 
     auto it = mClasses.find(className);
@@ -67,14 +79,42 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
         }
     }
 
+    #define path_sep "/"
 
-    //TODO: loop though all the imports and try to find the class
     for(string path : searchPaths) {
         if(sys::fs::is_directory(path)) {
-            error_code ec;
-            for(sys::fs::directory_iterator it(path, ec); !ec; it = it .increment(ec)) {
+
+            for(string import : includes){
+                string srcFilePath = path + path_sep + ReplaceString(import, ".", path_sep) + ".stp";
+                if(sys::fs::is_regular_file(srcFilePath)) {
+
+                    ifstream inputFileStream(srcFilePath);
+                    if (!inputFileStream) {
+                        fprintf(stderr, "cannot open file: %s", srcFilePath.c_str());
+                    } else {
+
+                        ParserContext parserContext(&inputFileStream);
+                        yyparse(&parserContext);
+
+
+
+                    }
+
+
+                }
 
             }
+
+            /*
+            error_code ec;
+            for(sys::fs::directory_iterator it(path, ec); !ec; it = it.increment(ec)) {
+
+                sys::fs::directory_entry entry entry = it->directory_entry();
+                string path = entry.path();
+
+
+            }
+             */
 
         }
     }
