@@ -38,24 +38,9 @@ CompilerContext::CompilerContext() {
         STP_OBJ_CLASS->addMethod("kill", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
     }
 
-
-    defineClass(STP_OBJ_CLASS);
+    mRootScope.table[STP_OBJ_CLASS->getClassName()] = STP_OBJ_CLASS;
 };
 
-void CompilerContext::defineClass(StapleClass *localClass) {
-    string fqClassName = localClass->getClassName();
-    mClasses[fqClassName] = localClass;
-}
-
-std::string ReplaceString(std::string subject, const std::string& search,
-                          const std::string& replace) {
-    size_t pos = 0;
-    while ((pos = subject.find(search, pos)) != std::string::npos) {
-        subject.replace(pos, search.length(), replace);
-        pos += replace.length();
-    }
-    return subject;
-}
 
 StapleClass* CompilerContext::lookupClassName(const std::string &className) {
 
@@ -64,14 +49,7 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
         return it->second;
     }
 
-    //try local package
-    string localclassname = package + "." + className;
-    it = mClasses.find(localclassname);
-    if(it != mClasses.end()) {
-        return it->second;
-    }
-
-    for(string package : includes) {
+    for(string package : mCompileUnit->includes) {
         string fqClassName = package + "." + className;
         it = mClasses.find(fqClassName);
         if(it != mClasses.end()) {
@@ -84,7 +62,8 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
     for(string path : searchPaths) {
         if(sys::fs::is_directory(path)) {
 
-            for(string import : includes){
+            /*
+            for(string import : mCompileUnit->includes){
                 string srcFilePath = path + path_sep + ReplaceString(import, ".", path_sep) + ".stp";
                 if(sys::fs::is_regular_file(srcFilePath)) {
 
@@ -95,17 +74,11 @@ StapleClass* CompilerContext::lookupClassName(const std::string &className) {
 
                         ParserContext parserContext(&inputFileStream);
                         yyparse(&parserContext);
-
-
-
                     }
-
-
                 }
-
             }
 
-            /*
+
             error_code ec;
             for(sys::fs::directory_iterator it(path, ec); !ec; it = it.increment(ec)) {
 

@@ -7,6 +7,7 @@ extern int yydebug;
 
 
 #include "compilercontext.h"
+#include "importpass.h"
 #include "node.h"
 #include "parsercontext.h"
 #include "sempass.h"
@@ -47,14 +48,15 @@ int main(int argc, char **argv)
     }
 
     ParserContext parserContext(&inputFileStream);
-
     yyparse(&parserContext);
 
+    context.mCompileUnit = parserContext.compileUnit;
 
-    context.package = parserContext.compileUnit->package;
-    context.includes = parserContext.compileUnit->includes;
 
-    staple::SemPass semPass(context);
+    ImportPass importPass(&context);
+    importPass.doIt();
+
+    SemPass semPass(context);
     semPass.doSemPass(*parserContext.compileUnit);
 
     if(semPass.hasErrors()) {

@@ -914,7 +914,7 @@ namespace staple {
     }
 
     string LLVMCodeGenerator::createNamespaceSymbolName(const string &name) {
-        string retval = mCompilerContext->package;
+        string retval = mCompilerContext->mCompileUnit->package;
         replace(retval.begin(), retval.end(), '.', '_');
         retval += "_" + name;
         return retval;

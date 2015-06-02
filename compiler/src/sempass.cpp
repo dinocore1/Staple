@@ -4,7 +4,7 @@
 #include "types/stapletype.h"
 
 #include "sempass.h"
-#include "sempass/Pass1ClassVisitor.h"
+#include "typehelper.h"
 
 namespace staple {
 
@@ -18,25 +18,6 @@ if(type == NULL) { \
     positive \
 }
 
-class Scope {
-public:
-    Scope* parent;
-    map<string, StapleType*> table;
-
-    StapleType* get(const string& name) {
-        StapleType* retval = NULL;
-
-        map<string, StapleType*>::iterator it;
-        if((it = table.find(name)) != table.end()) {
-            retval = it->second;
-        } else if(parent != NULL) {
-            retval = parent->get(name);
-        }
-
-        return retval;
-    }
-};
-
 
 class TypeVisitor : public ASTVisitor {
 public:
@@ -46,15 +27,15 @@ public:
     SemPass* sempass;
 
     TypeVisitor(SemPass* sempass)
-    : scope(NULL)
-    , sempass(sempass) {}
+    : sempass(sempass)
+    {
+        scope = &sempass->ctx.mRootScope;
+    }
 
     using ASTVisitor::visit;
 
     void push() {
-        Scope* newScope = new Scope();
-        newScope->parent = scope;
-        scope = newScope;
+        scope = new Scope(scope);
     }
 
     void pop() {
@@ -81,8 +62,10 @@ public:
 
         //first pass class declaration
         for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            Pass1ClassVisitor visitor(&sempass->ctx, compileUnit->package);
-            classDeclaration->accept(&visitor);
+            string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
+            StapleClass* stpClass = new StapleClass(fqClassName);
+            sempass->ctx.mRootScope.table[fqClassName] = stpClass;
+            sempass->ctx.mRootScope.table[classDeclaration->name] = stpClass;
         }
 
         //first pass extern functions
@@ -128,12 +111,14 @@ public:
         //class fields and methods
         for(NClassDeclaration* classDeclaration : compileUnit->classes){
 
-            StapleClass* parentClass = sempass->ctx.lookupClassName(classDeclaration->mExtends);
+            const string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
+
+            StapleClass* parentClass = cast<StapleClass>(scope->get(classDeclaration->mExtends));
             if(parentClass == nullptr) {
                 sempass->logError(classDeclaration->location, "cannot find class '%s'", classDeclaration->mExtends.c_str());
             }
 
-            currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
+            currentClass = cast<StapleClass>(scope->get(fqClassName));
             currentClass->setParent(parentClass);
             sempass->ctx.typeTable[classDeclaration] = currentClass;
 
@@ -158,7 +143,7 @@ public:
 
         //second pass methods
         for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            currentClass = sempass->ctx.lookupClassName(classDeclaration->name);
+            currentClass = cast<StapleClass>(scope->get(classDeclaration->name));
             for(NMethodFunction* method : classDeclaration->functions) {
                 method->accept(this);
             }
@@ -175,43 +160,11 @@ public:
     }
 
     virtual void visit(NType* type) {
-
-        const string name = type->name;
-
-        StapleType* retval = NULL;
-        if(name.compare("void") == 0) {
-            retval = StapleType::getVoidType();
-        } else if(name.compare("uint") == 0 || name.compare("int") == 0 || name.compare("int32") == 0){
-            retval = StapleType::getInt32Type();
-        } else if(name.compare("uint8") == 0 || name.compare("int8") == 0) {
-            retval = StapleType::getInt8Type();
-        } else if(name.compare("uint16") == 0 || name.compare("int16") == 0) {
-            retval = StapleType::getInt16Type();
-        } else if(name.compare("float") == 0 || name.compare("float32") == 0) {
-            retval = StapleType::getFloat32Type();
-        } else if(name.compare("bool") == 0) {
-            retval = StapleType::getBoolType();
-        } else if(name.compare("obj") == 0){
-            retval = CompilerContext::getStpObjClass();
-
-        } else {
-
-            retval = sempass->ctx.lookupClassName(name);
-            if(retval == nullptr || !isa<StapleClass>(retval)) {
-                sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
-                sempass->ctx.typeTable[type] = NULL;
-                return;
-            }
+        StapleType* rettype = getStapleType(type, *scope);
+        if(rettype == nullptr) {
+            sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
         }
-
-        if(type->isArray) {
-            retval = new StapleArray(retval, type->size);
-        } else {
-            for(int i=0;i<type->numPointers;i++) {
-                retval = new StaplePointer(retval);
-            }
-        }
-        sempass->ctx.typeTable[type] = retval;
+        sempass->ctx.typeTable[type] = rettype;
     }
 
     virtual void visit(NField* field) {
@@ -332,7 +285,7 @@ public:
     }
 
     virtual void visit(NNew* newNode) {
-        StapleType* type = sempass->ctx.lookupClassName(newNode->id);
+        StapleType* type = scope->get(newNode->id);
 
         if(StapleClass* classType = dyn_cast<StapleClass>(type)) {
             sempass->ctx.typeTable[newNode] = new StaplePointer(classType);
@@ -573,6 +526,43 @@ void SemPass::logWarning(YYLTYPE location, const char *format, ...)
     fprintf(stderr, "warning: ");
     vfprintf(stderr, format, argptr);
     va_end(argptr);
+}
+
+StapleType* getStapleType(NType* type, const Scope& scope) {
+    const string name = type->name;
+
+    StapleType* retval = NULL;
+    if(name.compare("void") == 0) {
+        retval = StapleType::getVoidType();
+    } else if(name.compare("uint") == 0 || name.compare("int") == 0 || name.compare("int32") == 0){
+        retval = StapleType::getInt32Type();
+    } else if(name.compare("uint8") == 0 || name.compare("int8") == 0) {
+        retval = StapleType::getInt8Type();
+    } else if(name.compare("uint16") == 0 || name.compare("int16") == 0) {
+        retval = StapleType::getInt16Type();
+    } else if(name.compare("float") == 0 || name.compare("float32") == 0) {
+        retval = StapleType::getFloat32Type();
+    } else if(name.compare("bool") == 0) {
+        retval = StapleType::getBoolType();
+    } else if(name.compare("obj") == 0){
+        retval = CompilerContext::getStpObjClass();
+
+    } else {
+
+        retval = scope.get(name);
+        if(retval == nullptr || !isa<StapleClass>(retval)) {
+            return nullptr;
+        }
+    }
+
+    if(type->isArray) {
+        retval = new StapleArray(retval, type->size);
+    } else {
+        for(int i=0;i<type->numPointers;i++) {
+            retval = new StaplePointer(retval);
+        }
+    }
+    return retval;
 }
 
 }

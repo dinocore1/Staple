@@ -60,6 +60,7 @@ set(SOURCE_FILES
     src/types/stapletype.cpp
     src/codegen/LLVMCodeGenerator.cpp
     src/codegen/LLVMStapleObject.cpp
+    src/importpass.cpp
     )
 
 add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES})

@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 
+#include "scope.h"
 #include "node.h"
 #include "parsercontext.h"
 #include "types/stapletype.h"
@@ -23,14 +24,14 @@ namespace staple {
         string inputFilename;
         string outputFilename;
         bool debugSymobols;
-        string package;
-        vector<string> includes;
         vector<string> searchPaths;
+
+        NCompileUnit* mCompileUnit;
+        Scope mRootScope;
 
         static StapleClass* getStpObjClass();
         static StapleClassDef* getStpObjClassDef();
 
-        void defineClass(StapleClass *localClass);
         StapleClass *lookupClassName(const string &className);
 
         map<ASTNode*, StapleType*> typeTable;
