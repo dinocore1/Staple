@@ -5,6 +5,7 @@
 
 #include "sempass.h"
 #include "typehelper.h"
+#include "importpass.h"
 
 namespace staple {
 
@@ -160,7 +161,8 @@ public:
     }
 
     virtual void visit(NType* type) {
-        StapleType* rettype = getStapleType(type, *scope);
+        StapleType* rettype = getStapleType(type, &sempass->ctx, sempass->ctx.mCompileUnit, *scope);
+
         if(rettype == nullptr) {
             sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
         }
@@ -493,6 +495,7 @@ SemPass::SemPass(CompilerContext& ctx)
 : ctx(ctx)
 , numErrors(0) {
 
+    mImportPass = new ImportManager(&ctx);
 }
 
 bool SemPass::hasErrors() {
@@ -528,7 +531,7 @@ void SemPass::logWarning(YYLTYPE location, const char *format, ...)
     va_end(argptr);
 }
 
-StapleType* getStapleType(NType* type, const Scope& scope) {
+StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compileUnit, const Scope& scope) {
     const string name = type->name;
 
     StapleType* retval = NULL;
@@ -551,7 +554,10 @@ StapleType* getStapleType(NType* type, const Scope& scope) {
 
         retval = scope.get(name);
         if(retval == nullptr || !isa<StapleClass>(retval)) {
-            return nullptr;
+            retval = ctx->mImportManager->resolveClassType(compileUnit, type->name);
+            if(retval == nullptr) {
+                return nullptr;
+            }
         }
     }
 

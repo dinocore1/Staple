@@ -7,8 +7,7 @@
 
 namespace staple {
 
-
-
+class ImportManager;
 
 class SemPass {
 friend class TypeVisitor;
@@ -17,6 +16,7 @@ private:
     unsigned int numErrors;
 
 protected:
+    ImportManager * mImportPass;
     CompilerContext& ctx;
 
 public:

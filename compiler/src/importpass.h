@@ -9,15 +9,33 @@
 namespace staple {
     using namespace std;
 
-    class ImportPass {
+    class ScopeTreeNode;
+
+    bool treenodecomp(const ScopeTreeNode* lhs, const ScopeTreeNode* rhs);
+
+    class ScopeTreeNode {
+    public:
+        const string name;
+        const ScopeTreeNode* parent;
+        set<ScopeTreeNode*, bool(*)(const ScopeTreeNode*, const ScopeTreeNode*)> mChildren;
+
+        Scope* scope;
+
+        ScopeTreeNode(ScopeTreeNode* parent, const string& name, Scope* scope);
+
+    };
+
+    class ImportManager {
     private:
         CompilerContext* mContext;
         set<string> mVisitedPaths;
+        ScopeTreeNode* mScopeTreeRoot;
 
     public:
-        ImportPass(CompilerContext* ctx);
+        ImportManager(CompilerContext* ctx);
 
-        void doIt();
+        ScopeTreeNode* getScope(const string& path);
+        StapleType* resolveClassType(NCompileUnit* startingCompileUnit, const string& className);
     };
 }
 

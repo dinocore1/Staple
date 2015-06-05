@@ -15,6 +15,8 @@ namespace staple {
 
     using namespace std;
 
+    class ImportManager;
+
     class CompilerContext {
     private:
         //fully qualifed name class map
@@ -36,6 +38,8 @@ namespace staple {
 
         map<ASTNode*, StapleType*> typeTable;
         map<StapleType*, llvm::Type*> llvmType;
+
+        ImportManager* mImportManager;
 
         CompilerContext();
 

@@ -53,9 +53,6 @@ int main(int argc, char **argv)
     context.mCompileUnit = parserContext.compileUnit;
 
 
-    ImportPass importPass(&context);
-    importPass.doIt();
-
     SemPass semPass(context);
     semPass.doSemPass(*parserContext.compileUnit);
 

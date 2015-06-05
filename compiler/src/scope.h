@@ -1,6 +1,4 @@
-//
-// Created by paul on 6/1/15.
-//
+
 
 #ifndef STAPLE_SCOPE_H
 #define STAPLE_SCOPE_H
