@@ -9,6 +9,7 @@
 namespace staple {
     using namespace std;
 
+    /*
     class ScopeTreeNode;
 
     bool treenodecomp(const ScopeTreeNode* lhs, const ScopeTreeNode* rhs);
@@ -24,19 +25,42 @@ namespace staple {
         ScopeTreeNode(ScopeTreeNode* parent, const string& name, Scope* scope);
 
     };
+     */
 
-    class ImportManager {
+    class Pass1ClassVisitor : public ASTVisitor {
+    using ASTVisitor::visit;
     private:
         CompilerContext* mContext;
-        set<string> mVisitedPaths;
-        ScopeTreeNode* mScopeTreeRoot;
+        static set<string> mPass1VisitedPaths;
 
     public:
-        ImportManager(CompilerContext* ctx);
+        Pass1ClassVisitor(CompilerContext* context) : mContext(context)
+        { }
 
-        ScopeTreeNode* getScope(const string& path);
-        StapleType* resolveClassType(NCompileUnit* startingCompileUnit, const string& className);
+        void visit(NCompileUnit* compileUnit);
     };
+
+    class Pass2ClassVisitor : public ASTVisitor {
+    using ASTVisitor::visit;
+    private:
+        CompilerContext *mContext;
+        static set<string> mPass2VisitedPaths;
+        StapleClass *mCurrentClass;
+        map<ASTNode *, StapleType *> mType;
+        NCompileUnit *mCompileUnit;
+
+        StapleType *getType(ASTNode *node) {
+            node->accept(this);
+            return mType[node];
+        }
+
+    public:
+        Pass2ClassVisitor(CompilerContext *context) : mContext(context) { }
+        void visit(NField* field);
+        void visit(NType* type);
+        void visit(NCompileUnit* compileUnit);
+    };
+
 }
 
 #endif //STAPLE_IMPORTPASS_H

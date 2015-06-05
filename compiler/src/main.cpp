@@ -52,6 +52,11 @@ int main(int argc, char **argv)
 
     context.mCompileUnit = parserContext.compileUnit;
 
+    Pass1ClassVisitor p1ClassVisitor(&context);
+    p1ClassVisitor.visit(context.mCompileUnit);
+
+    Pass2ClassVisitor pass2ClassVisitor(&context);
+    pass2ClassVisitor.visit(context.mCompileUnit);
 
     SemPass semPass(context);
     semPass.doSemPass(*parserContext.compileUnit);

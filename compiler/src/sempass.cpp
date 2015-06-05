@@ -495,7 +495,6 @@ SemPass::SemPass(CompilerContext& ctx)
 : ctx(ctx)
 , numErrors(0) {
 
-    mImportPass = new ImportManager(&ctx);
 }
 
 bool SemPass::hasErrors() {
@@ -554,7 +553,7 @@ StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compi
 
         retval = scope.get(name);
         if(retval == nullptr || !isa<StapleClass>(retval)) {
-            retval = ctx->mImportManager->resolveClassType(compileUnit, type->name);
+            retval = resolveClassType(ctx, compileUnit, type->name);
             if(retval == nullptr) {
                 return nullptr;
             }
@@ -569,6 +568,32 @@ StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compi
         }
     }
     return retval;
+}
+
+StapleClass* resolveClassType(CompilerContext* context, NCompileUnit *startingCompileUnit, const string &className) {
+
+    StapleClass* retval = nullptr;
+    StapleType* value;
+    string fqClassName = startingCompileUnit->package + '.' + className;
+    value = context->mRootScope.get(fqClassName);
+
+
+    if(value != nullptr && (retval = dyn_cast<StapleClass>(value))) {
+        return retval;
+    }
+
+
+    for(string include : context->mCompileUnit->includes) {
+
+        size_t pos = include.find_last_of(className);
+        if(pos != string::npos) {
+            value = context->mRootScope.get(fqClassName);
+            if(value != nullptr && (retval = dyn_cast<StapleClass>(value))) {
+                return retval;
+            }
+            break;
+        }
+    }
 }
 
 }

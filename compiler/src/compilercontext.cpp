@@ -42,7 +42,6 @@ CompilerContext::CompilerContext() {
     mRootScope.table[STP_OBJ_CLASS->getClassName()] = STP_OBJ_CLASS;
 
 
-    mImportManager = new ImportManager(this);
 };
 
 
