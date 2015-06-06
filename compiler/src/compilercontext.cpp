@@ -1,3 +1,4 @@
+#include <cstdarg>
 #include <fstream>
 
 #include "compilercontext.h"
@@ -24,79 +25,51 @@ using namespace std;
     }
 
 
-CompilerContext::CompilerContext() {
+    CompilerContext::CompilerContext()
+    : numErrors(0) {
+        STP_OBJ_CLASS->addField("class", new StaplePointer(new StapleClassDef(STP_OBJ_CLASS)));
+        //STP_OBJ_CLASS->addField("refCount", StapleType::getInt32Type());
 
-    STP_OBJ_CLASS->addField("class", new StaplePointer(new StapleClassDef(STP_OBJ_CLASS)));
-    //STP_OBJ_CLASS->addField("refCount", StapleType::getInt32Type());
-
-    {
-        vector<StapleType *> args{};
-        STP_OBJ_CLASS->addMethod("init", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Static);
-    }
-
-    {
-        vector<StapleType *> args{};
-        STP_OBJ_CLASS->addMethod("kill", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
-    }
-
-    mRootScope.table[STP_OBJ_CLASS->getClassName()] = STP_OBJ_CLASS;
-
-
-};
-
-
-StapleClass* CompilerContext::lookupClassName(const std::string &className) {
-
-    auto it = mClasses.find(className);
-    if(it != mClasses.end()) {
-        return it->second;
-    }
-
-    for(string package : mCompileUnit->includes) {
-        string fqClassName = package + "." + className;
-        it = mClasses.find(fqClassName);
-        if(it != mClasses.end()) {
-            return it->second;
+        {
+            vector<StapleType *> args{};
+            STP_OBJ_CLASS->addMethod("init", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Static);
         }
-    }
 
-    #define path_sep "/"
-
-    for(string path : searchPaths) {
-        if(sys::fs::is_directory(path)) {
-
-            /*
-            for(string import : mCompileUnit->includes){
-                string srcFilePath = path + path_sep + ReplaceString(import, ".", path_sep) + ".stp";
-                if(sys::fs::is_regular_file(srcFilePath)) {
-
-                    ifstream inputFileStream(srcFilePath);
-                    if (!inputFileStream) {
-                        fprintf(stderr, "cannot open file: %s", srcFilePath.c_str());
-                    } else {
-
-                        ParserContext parserContext(&inputFileStream);
-                        yyparse(&parserContext);
-                    }
-                }
-            }
-
-
-            error_code ec;
-            for(sys::fs::directory_iterator it(path, ec); !ec; it = it.increment(ec)) {
-
-                sys::fs::directory_entry entry entry = it->directory_entry();
-                string path = entry.path();
-
-
-            }
-             */
-
+        {
+            vector<StapleType *> args{};
+            STP_OBJ_CLASS->addMethod("kill", StapleType::getVoidType(), args, false, StapleMethodFunction::Type::Virtual);
         }
+
+        mRootScope.table[STP_OBJ_CLASS->getClassName()] = STP_OBJ_CLASS;
+
     }
 
 
-    return nullptr;
-}
+    bool CompilerContext::hasErrors() {
+        return numErrors > 0;
+    }
+
+    void CompilerContext::logError(YYLTYPE location, const char *format, ...)
+    {
+        numErrors++;
+        va_list argptr;
+        va_start(argptr, format);
+
+        fprintf(stderr, "%s:%d:%d: ", inputFilename.c_str(), location.first_line, location.first_column);
+        fprintf(stderr, "error: ");
+        vfprintf(stderr, format, argptr);
+        va_end(argptr);
+    }
+
+    void CompilerContext::logWarning(YYLTYPE location, const char *format, ...)
+    {
+        va_list argptr;
+        va_start(argptr, format);
+
+        fprintf(stderr, "%s:%d:%d: ", inputFilename.c_str(), location.first_line, location.first_column);
+        fprintf(stderr, "warning: ");
+        vfprintf(stderr, format, argptr);
+        va_end(argptr);
+    }
 
 }

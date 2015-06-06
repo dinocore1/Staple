@@ -10,19 +10,12 @@ namespace staple {
 class SemPass {
 friend class TypeVisitor;
 
-private:
-    unsigned int numErrors;
-
 protected:
-    CompilerContext& ctx;
+    CompilerContext* ctx;
 
 public:
-    SemPass(CompilerContext& ctx);
-
-    void doSemPass(NCompileUnit& root);
-    bool hasErrors();
-    void logError(YYLTYPE location, const char* format, ...);
-    void logWarning(YYLTYPE location, const char* format, ...);
+    SemPass(CompilerContext* ctx);
+    void doIt();
 };
 
 }

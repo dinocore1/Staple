@@ -57,6 +57,7 @@ public:
     VISIT(NBlock)
     VISIT(NFunctionPrototype)
     VISIT(NForLoop)
+    VISIT(NArgument)
 };
 
 

@@ -1,4 +1,3 @@
-#include <cstdarg>
 
 #include "node.h"
 #include "types/stapletype.h"
@@ -14,7 +13,7 @@ using namespace llvm;
 
 #define CheckType(type, location, name, positive) \
 if(type == NULL) { \
-    sempass->logError(location, "undefined type: '%s'", name.c_str()); \
+    sempass->ctx->logError(location, "undefined type: '%s'", name.c_str()); \
 } else { \
     positive \
 }
@@ -22,15 +21,16 @@ if(type == NULL) { \
 
 class TypeVisitor : public ASTVisitor {
 public:
+    CompilerContext* mContext;
     StapleFunction* mCurrentFunctionType;
-    StapleClass *currentClass;
+    StapleClass *mCurrentClass;
     Scope* scope;
     SemPass* sempass;
 
     TypeVisitor(SemPass* sempass)
-    : sempass(sempass)
+    : mContext(sempass->ctx), sempass(sempass)
     {
-        scope = &sempass->ctx.mRootScope;
+        scope = &sempass->ctx->mRootScope;
     }
 
     using ASTVisitor::visit;
@@ -49,144 +49,113 @@ public:
         scope->table[name] = type;
     }
 
+    StapleType* resolve(const string& name) {
+        return scope->get(name);
+    }
+
     StapleType* getType(ASTNode* node) {
         node->accept(this);
-        return sempass->ctx.typeTable[node];
+        return sempass->ctx->typeTable[node];
     }
 
 
 
     virtual void visit(NCompileUnit* compileUnit) {
 
-        currentClass = NULL;
         push();
 
-        //first pass class declaration
-        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
-            StapleClass* stpClass = new StapleClass(fqClassName);
-            sempass->ctx.mRootScope.table[fqClassName] = stpClass;
-            sempass->ctx.mRootScope.table[classDeclaration->name] = stpClass;
-        }
+        //put all the included Classes into scope
+        for(string include : compileUnit->includes) {
+            StapleType* stpType = mContext->mRootScope.get(include);
+            StapleClass* stpClass;
+            if(stpType != nullptr && (stpClass = dyn_cast<StapleClass>(stpType))) {
+                const size_t i = include.find_last_of('.');
+                define(include.substr(i+1, include.length()-i), stpClass);
 
-        //first pass extern functions
-        for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
-
-            std::vector<StapleType*> argsType;
-            for(NArgument* arg : functionPrototype->arguments){
-                StapleType* type = getType(&arg->type);
-
-                CheckType(type, arg->location, arg->name,
-                          argsType.push_back(type);
-                                  sempass->ctx.typeTable[arg] = type;
-                )
-            }
-
-            StapleType* returnType = getType(&functionPrototype->returnType);
-            CheckType(returnType, functionPrototype->location, functionPrototype->returnType.name,
-                      sempass->ctx.typeTable[functionPrototype] = new StapleFunction(returnType, argsType, functionPrototype->isVarg);
-                              define(functionPrototype->name, sempass->ctx.typeTable[functionPrototype]);
-            )
-
-        }
-
-        //first pass global functions
-        for(NFunction* function : compileUnit->functions){
-            std::vector<StapleType*> argsType;
-            for(NArgument* arg : function->arguments){
-                StapleType* type = getType(&arg->type);
-
-                CheckType(type, arg->location, arg->name,
-                          argsType.push_back(type);
-                                  sempass->ctx.typeTable[arg] = type;
-                )
-            }
-
-            StapleType* returnType = getType(&function->returnType);
-            CheckType(returnType, function->location, function->returnType.name,
-                      sempass->ctx.typeTable[function] = new StapleFunction(returnType, argsType, function->isVarg);
-                              define(function->name, sempass->ctx.typeTable[function]);
-            )
-        }
-
-        //class fields and methods
-        for(NClassDeclaration* classDeclaration : compileUnit->classes){
-
-            const string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
-
-            StapleClass* parentClass = cast<StapleClass>(scope->get(classDeclaration->mExtends));
-            if(parentClass == nullptr) {
-                sempass->logError(classDeclaration->location, "cannot find class '%s'", classDeclaration->mExtends.c_str());
-            }
-
-            currentClass = cast<StapleClass>(scope->get(fqClassName));
-            currentClass->setParent(parentClass);
-            sempass->ctx.typeTable[classDeclaration] = currentClass;
-
-            for(NField* field : classDeclaration->fields) {
-                field->accept(this);
-            }
-
-            for(NMethodFunction* method : classDeclaration->functions) {
-
-                std::vector<StapleType*> args;
-                for(NArgument* arg : method->arguments){
-                    StapleType* type = getType(&arg->type);
-                    CheckType(type, arg->location, arg->type.name, args.push_back(type); )
-                }
-
-                StapleType* returnType = getType(&method->returnType);
-                CheckType(returnType, method->returnType.location, method->returnType.name, )
-
-                sempass->ctx.typeTable[method] = currentClass->addMethod(method->name, returnType, args, method->isVarg);
             }
         }
 
-        //second pass methods
-        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            currentClass = cast<StapleClass>(scope->get(classDeclaration->name));
-            for(NMethodFunction* method : classDeclaration->functions) {
-                method->accept(this);
-            }
+        //put all the package functions into scope
+        for(NFunction* function : compileUnit->functions) {
+
         }
 
-        //second pass global functions
-        for(NFunction* function : compileUnit->functions){
+        for(NFunction* function : compileUnit->functions) {
             function->accept(this);
         }
 
-        currentClass = NULL;
+        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
+            string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
+            mCurrentClass = cast<StapleClass>(sempass->ctx->mRootScope.table[fqClassName]);
+
+            for(NMethodFunction* methodFunction : classDeclaration->functions) {
+                methodFunction->accept(this);
+            }
+        }
 
         pop();
     }
 
-    virtual void visit(NType* type) {
-        StapleType* rettype = getStapleType(type, &sempass->ctx, sempass->ctx.mCompileUnit, *scope);
+    virtual void visit(NFunction* functionDecl) {
 
-        if(rettype == nullptr) {
-            sempass->logError(type->location, "unknown type: '%s'", type->name.c_str());
+        string fqFunctionName;
+        if(functionDecl->name.compare("main") == 0){
+            fqFunctionName = "main";
+        } else {
+            fqFunctionName = !mContext->mCompileUnit->package.empty() ? (mContext->mCompileUnit->package + "." + functionDecl->name)
+                                                                      : functionDecl->name;
         }
-        sempass->ctx.typeTable[type] = rettype;
+        mCurrentFunctionType = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
+
+
+        push();
+
+        for(NArgument* arg : functionDecl->arguments){
+            StapleType* type = getType(arg);
+            if(type != nullptr){
+                define(arg->name, type);
+            }
+        }
+
+        for(NStatement* statement : functionDecl->statements){
+            statement->accept(this);
+        }
+
+        pop();
+    }
+
+    virtual void visit(NArgument* argument) override {
+        StapleType* stpType = getType(&argument->type);
+        if(stpType != nullptr) {
+            mContext->typeTable[argument] = stpType;
+        }
+    }
+
+    virtual void visit(NType* type) {
+        StapleType* rettype = getStapleType(type, sempass->ctx, sempass->ctx->mCompileUnit, *scope);
+        CheckType(rettype, type->location, type->name,
+                  sempass->ctx->typeTable[type] = rettype;
+        )
     }
 
     virtual void visit(NField* field) {
         StapleType* fieldType = getType(&field->type);
         CheckType(fieldType, field->location, field->type.name,
-                sempass->ctx.typeTable[field] = currentClass->addField(field->name, fieldType);
+                sempass->ctx->typeTable[field] = mCurrentClass->addField(field->name, fieldType);
         )
     }
 
     virtual void visit(NExpressionStatement* expressionStatement) {
-        sempass->ctx.typeTable[expressionStatement] = getType(expressionStatement->expression);
+        sempass->ctx->typeTable[expressionStatement] = getType(expressionStatement->expression);
     }
 
     virtual void visit(NMethodFunction* methodFunction) {
         push();
 
-        StapleType* thisType = new StaplePointer(currentClass);
+        StapleType* thisType = new StaplePointer(mCurrentClass);
         define("this", thisType);
 
-        for(StapleField* field : currentClass->getFields()){
+        for(StapleField* field : mCurrentClass->getFields()){
             define(field->getName(), field);
         }
 
@@ -195,14 +164,14 @@ public:
 
             CheckType(type, arg->location, arg->type.name,
                     define(arg->name, type);
-                    sempass->ctx.typeTable[arg] = type;
+                    sempass->ctx->typeTable[arg] = type;
             )
         }
 
         StapleType* returnType = getType(&methodFunction->returnType);
         CheckType(returnType, methodFunction->returnType.location, methodFunction->returnType.name, )
 
-        mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[methodFunction]);
+        mCurrentFunctionType = cast<StapleFunction>(sempass->ctx->typeTable[methodFunction]);
 
         for(NStatement* statement : methodFunction->statements){
             statement->accept(this);
@@ -213,68 +182,48 @@ public:
     virtual void visit(NReturn* returnexp) {
         StapleType* returnType = getType(returnexp->ret);
         if(!returnType->isAssignable(mCurrentFunctionType->getReturnType())) {
-            sempass->logError(returnexp->location, "return type mismatch");
+            sempass->ctx->logError(returnexp->location, "return type mismatch");
         }
 
-        sempass->ctx.typeTable[returnexp] = StapleType::getVoidType();
+        sempass->ctx->typeTable[returnexp] = StapleType::getVoidType();
     }
 
-    virtual void visit(NFunction* function) {
-        push();
-        for(NArgument* arg : function->arguments){
-            StapleType* type = getType(&arg->type);
 
-            CheckType(type, arg->location, arg->type.name,
-                    define(arg->name, type);
-                    sempass->ctx.typeTable[arg] = type;
-            )
-        }
-
-        StapleType* returnType = getType(&function->returnType);
-        CheckType(returnType, function->returnType.location, function->returnType.name, )
-
-        mCurrentFunctionType = cast<StapleFunction>(sempass->ctx.typeTable[function]);
-
-        for(NStatement* statement : function->statements){
-            statement->accept(this);
-        }
-        pop();
-    }
 
     virtual void visit(NVariableDeclaration* variableDeclaration) {
         StapleType* type = getType(variableDeclaration->type);
         CheckType(type, variableDeclaration->location, variableDeclaration->type->name,
                 define(variableDeclaration->name, type);
-                sempass->ctx.typeTable[variableDeclaration] = type;
+                sempass->ctx->typeTable[variableDeclaration] = type;
         )
 
         if(variableDeclaration->assignmentExpr != NULL) {
             variableDeclaration->assignmentExpr->accept(this);
-            StapleType* rhs = sempass->ctx.typeTable[variableDeclaration->assignmentExpr];
+            StapleType* rhs = sempass->ctx->typeTable[variableDeclaration->assignmentExpr];
 
             if(!rhs->isAssignable(type)) {
-                sempass->logError(variableDeclaration->location, "cannot convert rhs to lhs");
+                sempass->ctx->logError(variableDeclaration->location, "cannot convert rhs to lhs");
             }
         }
     }
 
     virtual void visit(NIntLiteral* intLiteral) {
-        sempass->ctx.typeTable[intLiteral] = StapleType::getInt32Type();
+        sempass->ctx->typeTable[intLiteral] = StapleType::getInt32Type();
     }
 
     virtual void visit(NStringLiteral* literal) {
-        sempass->ctx.typeTable[literal] = StapleType::getInt8PtrType();
+        sempass->ctx->typeTable[literal] = StapleType::getInt8PtrType();
     }
 
     virtual void visit(NAssignment* assignment) {
         assignment->lhs->accept(this);
         assignment->rhs->accept(this);
 
-        StapleType* lhsType = sempass->ctx.typeTable[assignment->lhs];
-        StapleType* rhsType = sempass->ctx.typeTable[assignment->rhs];
+        StapleType* lhsType = sempass->ctx->typeTable[assignment->lhs];
+        StapleType* rhsType = sempass->ctx->typeTable[assignment->rhs];
 
         if(!rhsType->isAssignable(lhsType)){
-            sempass->logError(assignment->location, "cannot convert rhs to lhs");
+            sempass->ctx->logError(assignment->location, "cannot convert rhs to lhs");
         }
     }
 
@@ -282,26 +231,26 @@ public:
         StapleType* type = getType(nsizeOf->type);
 
         if(type != NULL) {
-            sempass->ctx.typeTable[nsizeOf] = StapleType::getInt32Type();
+            sempass->ctx->typeTable[nsizeOf] = StapleType::getInt32Type();
         }
     }
 
     virtual void visit(NNew* newNode) {
-        StapleType* type = scope->get(newNode->id);
+        StapleType* type = resolve(newNode->id);
 
         if(StapleClass* classType = dyn_cast<StapleClass>(type)) {
-            sempass->ctx.typeTable[newNode] = new StaplePointer(classType);
+            sempass->ctx->typeTable[newNode] = new StaplePointer(classType);
         } else {
-            sempass->logError(newNode->location, "undefined class: '%s'", newNode->id.c_str());
+            sempass->ctx->logError(newNode->location, "undefined class: '%s'", newNode->id.c_str());
         }
     }
 
     virtual void visit(NIdentifier* identifier) {
         StapleType* type = scope->get(identifier->name);
         if(type == nullptr) {
-            sempass->logError(identifier->location, "undeclaired identifier: '%s'", identifier->name.c_str());
+            sempass->ctx->logError(identifier->location, "undeclaired identifier: '%s'", identifier->name.c_str());
         }
-        sempass->ctx.typeTable[identifier] = type;
+        sempass->ctx->typeTable[identifier] = type;
     }
 
     virtual void visit(NArrayElementPtr* arrayElementPtr) {
@@ -315,20 +264,20 @@ public:
             StapleType* exprType = getType(arrayElementPtr->expr);
 
             if(isa<StapleInt>(exprType)) {
-                sempass->ctx.typeTable[arrayElementPtr] = ptrType->getElementType();
+                sempass->ctx->typeTable[arrayElementPtr] = ptrType->getElementType();
             } else {
-                sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
+                sempass->ctx->logError(arrayElementPtr->expr->location, "array index is not an integer");
             }
         } else if(StapleArray* arrayType = dyn_cast<StapleArray>(baseType)) {
             StapleType* exprType = getType(arrayElementPtr->expr);
 
             if(isa<StapleInt>(exprType)) {
-                sempass->ctx.typeTable[arrayElementPtr] = baseType;
+                sempass->ctx->typeTable[arrayElementPtr] = baseType;
             } else {
-                sempass->logError(arrayElementPtr->expr->location, "array index is not an integer");
+                sempass->ctx->logError(arrayElementPtr->expr->location, "array index is not an integer");
             }
         } else {
-            sempass->logError(arrayElementPtr->base->location, "not an array or pointer type");
+            sempass->ctx->logError(arrayElementPtr->base->location, "not an array or pointer type");
         }
 
     }
@@ -347,17 +296,17 @@ public:
             //memberAccess->base = new NLoad(memberAccess->base);
             //memberAccess->base->accept(this);
         } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
-            sempass->logError(memberAccess->base->location, "not a class type");
+            sempass->ctx->logError(memberAccess->base->location, "not a class type");
             return;
         }
 
         uint index = 0;
         StapleField* field = classPtr->getField(memberAccess->field, index);
         if(field != nullptr){
-            sempass->ctx.typeTable[memberAccess] = field->getElementType();
+            sempass->ctx->typeTable[memberAccess] = field->getElementType();
             memberAccess->fieldIndex = index;
         } else {
-            sempass->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
+            sempass->ctx->logError(memberAccess->location, "class '%s' does not have field named: '%s'",
                               classPtr->getClassName().c_str(),
                               memberAccess->field.c_str());
         }
@@ -368,7 +317,7 @@ public:
         StapleType* conditionType = getType(ifStatement->condition);
 
         if(!isa<StapleInt>(conditionType)){
-            sempass->logError(ifStatement->condition->location, "cannot evaluate condition");
+            sempass->ctx->logError(ifStatement->condition->location, "cannot evaluate condition");
         }
 
         ifStatement->thenBlock->accept(this);
@@ -381,7 +330,7 @@ public:
         forLoop->init->accept(this);
         StapleType* conditionType = getType(forLoop->condition);
         if(!isa<StapleInt>(conditionType)){
-            sempass->logError(forLoop->condition->location, "cannot evaluate condition");
+            sempass->ctx->logError(forLoop->condition->location, "cannot evaluate condition");
         }
         forLoop->increment->accept(this);
         forLoop->loop->accept(this);
@@ -407,11 +356,11 @@ public:
             case TMINUS:
             case TMUL:
             case TDIV:
-                returnType = sempass->ctx.typeTable[binaryOperator->lhs];
+                returnType = sempass->ctx->typeTable[binaryOperator->lhs];
                 break;
         }
 
-        sempass->ctx.typeTable[binaryOperator] = returnType;
+        sempass->ctx->typeTable[binaryOperator] = returnType;
     }
 
     virtual void visit(NMethodCall* methodCall) {
@@ -425,7 +374,7 @@ public:
             //methodCall->base = new NLoad(methodCall->base);
             //methodCall->base->accept(this);
         } else if(!(classPtr = dyn_cast<StapleClass>(baseType))) {
-            sempass->logError(methodCall->base->location, "not a class type");
+            sempass->ctx->logError(methodCall->base->location, "not a class type");
             return;
         }
 
@@ -441,15 +390,15 @@ public:
                 if(i < method->getArguments().size()) {
                     StapleType* definedArgType = method->getArguments()[i];
                     if(!argType->isAssignable(definedArgType)) {
-                        sempass->logError(arg->location, "argument mismatch");
+                        sempass->ctx->logError(arg->location, "argument mismatch");
                     }
                 }
                 i++;
             }
 
-            sempass->ctx.typeTable[methodCall] = method->getReturnType();
+            sempass->ctx->typeTable[methodCall] = method->getReturnType();
         } else {
-            sempass->logError(methodCall->base->location, "class '%s' does not have method: '%s'",
+            sempass->ctx->logError(methodCall->base->location, "class '%s' does not have method: '%s'",
                               classPtr->getClassName().c_str(), methodCall->name.c_str());
         }
     }
@@ -465,21 +414,21 @@ public:
                 if(i < function->getArguments().size()) {
                     StapleType* definedArgType = function->getArguments()[i];
                     if(!argType->isAssignable(definedArgType)) {
-                        sempass->logError(arg->location, "argument mismatch");
+                        sempass->ctx->logError(arg->location, "argument mismatch");
                     }
                 }
                 i++;
             }
 
-            sempass->ctx.typeTable[functionCall] = function->getReturnType();
+            sempass->ctx->typeTable[functionCall] = function->getReturnType();
         } else {
-            sempass->logError(functionCall->location, "undefined function: '%s'", functionCall->name.c_str());
+            sempass->ctx->logError(functionCall->location, "undefined function: '%s'", functionCall->name.c_str());
         }
     }
 
     virtual void visit(NLoad* load) {
         StapleType* type = getType(load->expr);
-        sempass->ctx.typeTable[load] = type;
+        sempass->ctx->typeTable[load] = type;
     }
 
     virtual void visit(NBlock* block) {
@@ -491,44 +440,22 @@ public:
     }
 };
 
-SemPass::SemPass(CompilerContext& ctx)
-: ctx(ctx)
-, numErrors(0) {
+SemPass::SemPass(CompilerContext* ctx)
+: ctx(ctx) { }
 
-}
 
-bool SemPass::hasErrors() {
-    return numErrors > 0;
-}
-
-void SemPass::doSemPass(NCompileUnit& root)
+void SemPass::doIt()
 {
+    Pass1ClassVisitor p1ClassVisitor(ctx);
+    p1ClassVisitor.visit(ctx->mCompileUnit);
+
+    Pass2ClassVisitor pass2ClassVisitor(ctx);
+    pass2ClassVisitor.visit(ctx->mCompileUnit);
+
     TypeVisitor typeVisitor(this);
-    root.accept(&typeVisitor);
+    ctx->mCompileUnit->accept(&typeVisitor);
 }
 
-void SemPass::logError(YYLTYPE location, const char *format, ...)
-{
-    numErrors++;
-    va_list argptr;
-    va_start(argptr, format);
-
-    fprintf(stderr, "%s:%d:%d: ", ctx.inputFilename.c_str(), location.first_line, location.first_column);
-    fprintf(stderr, "error: ");
-    vfprintf(stderr, format, argptr);
-    va_end(argptr);
-}
-
-void SemPass::logWarning(YYLTYPE location, const char *format, ...)
-{
-    va_list argptr;
-    va_start(argptr, format);
-
-    fprintf(stderr, "%s:%d:%d: ", ctx.inputFilename.c_str(), location.first_line, location.first_column);
-    fprintf(stderr, "warning: ");
-    vfprintf(stderr, format, argptr);
-    va_end(argptr);
-}
 
 StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compileUnit, const Scope& scope) {
     const string name = type->name;
@@ -587,13 +514,15 @@ StapleClass* resolveClassType(CompilerContext* context, NCompileUnit *startingCo
 
         size_t pos = include.find_last_of(className);
         if(pos != string::npos) {
-            value = context->mRootScope.get(fqClassName);
+            value = context->mRootScope.get(include);
             if(value != nullptr && (retval = dyn_cast<StapleClass>(value))) {
                 return retval;
             }
             break;
         }
     }
+
+    return nullptr;
 }
 
 }

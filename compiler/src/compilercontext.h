@@ -16,10 +16,10 @@ namespace staple {
     using namespace std;
 
 
+
     class CompilerContext {
     private:
-        //fully qualifed name class map
-        map<string, StapleClass*> mClasses;
+        unsigned int numErrors;
 
     public:
         string inputFilename;
@@ -33,13 +33,16 @@ namespace staple {
         static StapleClass* getStpObjClass();
         static StapleClassDef* getStpObjClassDef();
 
-        StapleClass *lookupClassName(const string &className);
 
         map<ASTNode*, StapleType*> typeTable;
         map<StapleType*, llvm::Type*> llvmType;
 
 
         CompilerContext();
+
+        bool hasErrors();
+        void logError(YYLTYPE location, const char* format, ...);
+        void logWarning(YYLTYPE location, const char* format, ...);
 
 
     };

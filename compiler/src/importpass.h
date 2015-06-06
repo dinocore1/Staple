@@ -9,28 +9,11 @@
 namespace staple {
     using namespace std;
 
-    /*
-    class ScopeTreeNode;
-
-    bool treenodecomp(const ScopeTreeNode* lhs, const ScopeTreeNode* rhs);
-
-    class ScopeTreeNode {
-    public:
-        const string name;
-        const ScopeTreeNode* parent;
-        set<ScopeTreeNode*, bool(*)(const ScopeTreeNode*, const ScopeTreeNode*)> mChildren;
-
-        Scope* scope;
-
-        ScopeTreeNode(ScopeTreeNode* parent, const string& name, Scope* scope);
-
-    };
-     */
-
     class Pass1ClassVisitor : public ASTVisitor {
     using ASTVisitor::visit;
     private:
         CompilerContext* mContext;
+        NCompileUnit *mCompileUnit;
         static set<string> mPass1VisitedPaths;
 
     public:
@@ -56,9 +39,14 @@ namespace staple {
 
     public:
         Pass2ClassVisitor(CompilerContext *context) : mContext(context) { }
-        void visit(NField* field);
-        void visit(NType* type);
-        void visit(NCompileUnit* compileUnit);
+        void visit(NCompileUnit* compileUnit) override;
+        void visit(NFunctionPrototype* functionPrototype) override;
+        void visit(NFunction* function) override;
+        void visit(NMethodFunction* methodFunction) override;
+        void visit(NField* field) override;
+        void visit(NArgument* argument) override;
+        void visit(NType* type) override;
+
     };
 
 }

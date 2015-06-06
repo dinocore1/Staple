@@ -7,7 +7,6 @@ extern int yydebug;
 
 
 #include "compilercontext.h"
-#include "importpass.h"
 #include "node.h"
 #include "parsercontext.h"
 #include "sempass.h"
@@ -52,16 +51,10 @@ int main(int argc, char **argv)
 
     context.mCompileUnit = parserContext.compileUnit;
 
-    Pass1ClassVisitor p1ClassVisitor(&context);
-    p1ClassVisitor.visit(context.mCompileUnit);
+    SemPass semPass(&context);
+    semPass.doIt();
 
-    Pass2ClassVisitor pass2ClassVisitor(&context);
-    pass2ClassVisitor.visit(context.mCompileUnit);
-
-    SemPass semPass(context);
-    semPass.doSemPass(*parserContext.compileUnit);
-
-    if(semPass.hasErrors()) {
+    if(context.hasErrors()) {
         exit(1);
     }
 

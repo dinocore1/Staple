@@ -55,6 +55,7 @@ namespace staple {
     class StapleFunction : public StapleType {
         friend class StapleClass;
     protected:
+        const string mFQName;
         StapleFunction(StapleKind kind, StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
                 : StapleType(kind), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg){}
 
@@ -63,8 +64,20 @@ namespace staple {
         bool mIsVarg;
 
     public:
+        StapleFunction(const string& fqName)
+        : StapleType(SK_Function), mFQName(fqName) { }
+
         StapleFunction(StapleType* returnType, vector<StapleType*> argsType, bool isVarg)
                 : StapleType(SK_Function), mReturnType(returnType), mArgumentTypes(argsType), mIsVarg(isVarg) {}
+
+        void setReturnType(StapleType* type) {
+            mReturnType = type;
+        }
+
+        void setArgumentTypes(vector<StapleType*> argTypes, bool isVarArg) {
+            mArgumentTypes = argTypes;
+            mIsVarg = isVarArg;
+        }
 
         StapleType* getReturnType() const { return mReturnType; }
         const vector<StapleType*> getArguments() const { return mArgumentTypes; }
