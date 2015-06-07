@@ -202,38 +202,40 @@ namespace staple {
             string functionName = codeGenerator->createClassSymbolName(mClassType) + "_kill";
             mKillFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
 
-            BasicBlock* bblock = BasicBlock::Create(getGlobalContext(), "entry", mKillFunction);
-            IRBuilder<> irBuilder(bblock);
+            if(!mClassType->isImport()) {
+                BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mKillFunction);
+                IRBuilder<> irBuilder(bblock);
 
-            Value* thisPtr = mKillFunction->arg_begin();
-            thisPtr = irBuilder.CreatePointerCast(thisPtr, PointerType::getUnqual(getObjectType(codeGenerator)));
+                Value *thisPtr = mKillFunction->arg_begin();
+                thisPtr = irBuilder.CreatePointerCast(thisPtr, PointerType::getUnqual(getObjectType(codeGenerator)));
 
-            if(mClassType->getParent() != nullptr) {
-                LLVMStapleObject* parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
+                if (mClassType->getParent() != nullptr) {
+                    LLVMStapleObject *parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
 
-                Type* destType = PointerType::getUnqual(parentStapleObj->getObjectType(codeGenerator));
-                Value* superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
+                    Type *destType = PointerType::getUnqual(parentStapleObj->getObjectType(codeGenerator));
+                    Value *superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
 
-                irBuilder.CreateCall(parentStapleObj->getKillFunction(codeGenerator), superPtr);
-            }
+                    irBuilder.CreateCall(parentStapleObj->getKillFunction(codeGenerator), superPtr);
+                }
 
-            for(StapleField* field : mClassType->getFields()) {
-                if(StaplePointer* ptrType = dyn_cast<StaplePointer>(field->getElementType())) {
-                    if(StapleClass* elementType = dyn_cast<StapleClass>(ptrType->getElementType())) {
-                        Value* value = getFieldPtr(field->getName(), irBuilder, thisPtr);
-                        value = irBuilder.CreateLoad(value);
-                        Function* releaseFunction = getReleaseFunction(&codeGenerator->mModule);
-                        value = irBuilder.CreatePointerCast(value, PointerType::getUnqual(getStpObjInstanceType()));
-                        irBuilder.CreateCall(releaseFunction, value);
+                for (StapleField *field : mClassType->getFields()) {
+                    if (StaplePointer *ptrType = dyn_cast<StaplePointer>(field->getElementType())) {
+                        if (StapleClass *elementType = dyn_cast<StapleClass>(ptrType->getElementType())) {
+                            Value *value = getFieldPtr(field->getName(), irBuilder, thisPtr);
+                            value = irBuilder.CreateLoad(value);
+                            Function *releaseFunction = getReleaseFunction(&codeGenerator->mModule);
+                            value = irBuilder.CreatePointerCast(value, PointerType::getUnqual(getStpObjInstanceType()));
+                            irBuilder.CreateCall(releaseFunction, value);
+                        }
                     }
                 }
+
+                Function *freeFunction = codeGenerator->getFreeFunction();
+                Value *value = irBuilder.CreatePointerCast(thisPtr, freeFunction->arg_begin()->getType());
+                irBuilder.CreateCall(freeFunction, value);
+
+                irBuilder.CreateRetVoid();
             }
-
-            Function* freeFunction = codeGenerator->getFreeFunction();
-            Value* value = irBuilder.CreatePointerCast(thisPtr, freeFunction->arg_begin()->getType());
-            irBuilder.CreateCall(freeFunction, value);
-
-            irBuilder.CreateRetVoid();
 
         }
         return mKillFunction;
@@ -251,37 +253,41 @@ namespace staple {
             string functionName = codeGenerator->createClassSymbolName(mClassType) + "_init";
             mInitFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
 
-            BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
-            IRBuilder<> irBuilder(bblock);
+            if(!mClassType->isImport()) {
 
-            Value* thisPtr = mInitFunction->arg_begin();
+                BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
+                IRBuilder<> irBuilder(bblock);
 
-            Value* value = irBuilder.CreateConstGEP2_32(thisPtr, 0, 0);
-            irBuilder.CreateStore(getClassDefinition(codeGenerator), value);
+                Value *thisPtr = mInitFunction->arg_begin();
+
+                Value *value = irBuilder.CreateConstGEP2_32(thisPtr, 0, 0);
+                irBuilder.CreateStore(getClassDefinition(codeGenerator), value);
 
 
-            if(mClassType->getParent() != nullptr) {
-                LLVMStapleObject* parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
+                if (mClassType->getParent() != nullptr) {
+                    LLVMStapleObject *parentStapleObj = LLVMStapleObject::get(mClassType->getParent());
 
-                Type* destType = PointerType::getUnqual(parentStapleObj->getObjectType(codeGenerator));
-                Value* superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
+                    Type *destType = PointerType::getUnqual(parentStapleObj->getObjectType(codeGenerator));
+                    Value *superPtr = irBuilder.CreatePointerCast(thisPtr, destType);
 
-                irBuilder.CreateCall(parentStapleObj->getInitFunction(codeGenerator), superPtr);
-            }
-
-            for(StapleField* field : mClassType->getFields()) {
-                StapleType* fieldType = field->getElementType();
-                if(StapleInt* intType = dyn_cast<StapleInt>(fieldType)) {
-                    irBuilder.CreateStore(irBuilder.getInt(APInt(intType->getWidth(), 0)),
-                                          getFieldPtr(field->getName(), irBuilder, thisPtr));
-                } else if(StaplePointer* ptrType = dyn_cast<StaplePointer>(fieldType)) {
-                    irBuilder.CreateStore(ConstantPointerNull::get(PointerType::getUnqual(codeGenerator->getLLVMType(ptrType->getElementType()))),
-                                          getFieldPtr(field->getName(), irBuilder, thisPtr));
-
+                    irBuilder.CreateCall(parentStapleObj->getInitFunction(codeGenerator), superPtr);
                 }
-            }
 
-            irBuilder.CreateRetVoid();
+                for (StapleField *field : mClassType->getFields()) {
+                    StapleType *fieldType = field->getElementType();
+                    if (StapleInt *intType = dyn_cast<StapleInt>(fieldType)) {
+                        irBuilder.CreateStore(irBuilder.getInt(APInt(intType->getWidth(), 0)),
+                                              getFieldPtr(field->getName(), irBuilder, thisPtr));
+                    } else if (StaplePointer *ptrType = dyn_cast<StaplePointer>(fieldType)) {
+                        irBuilder.CreateStore(ConstantPointerNull::get(PointerType::getUnqual(
+                                                      codeGenerator->getLLVMType(ptrType->getElementType()))),
+                                              getFieldPtr(field->getName(), irBuilder, thisPtr));
+
+                    }
+                }
+
+                irBuilder.CreateRetVoid();
+            }
         }
 
         return mInitFunction;

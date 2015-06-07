@@ -60,6 +60,9 @@ namespace staple {
                 mContext->logError(classDeclaration->location, "redefination of class '%'", classDeclaration->name.c_str());
             } else {
                 StapleClass *stpClass = new StapleClass(fqClassName);
+                if(mSetImport) {
+                    stpClass->setImport();
+                }
                 mContext->mRootScope.table[fqClassName] = stpClass;
                 mFQClasses.insert(fqClassName);
             }
@@ -86,7 +89,7 @@ namespace staple {
                             ParserContext parserContext(&inputFileStream);
                             yyparse(&parserContext);
 
-                            Pass1ClassVisitor* visitor = new Pass1ClassVisitor(mContext);
+                            Pass1ClassVisitor* visitor = new Pass1ClassVisitor(mContext, true);
 
                             mImportVisitors.push_back(unique_ptr<Pass1ClassVisitor>(visitor));
 

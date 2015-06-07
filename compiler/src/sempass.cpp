@@ -62,7 +62,7 @@ public:
 
     virtual void visit(NCompileUnit* compileUnit) {
 
-        Pass1ClassVisitor p1ClassVisitor(mContext);
+        Pass1ClassVisitor p1ClassVisitor(mContext, false);
         p1ClassVisitor.visit(compileUnit);
 
         Pass2ClassVisitor pass2ClassVisitor(mContext);
