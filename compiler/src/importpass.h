@@ -2,6 +2,7 @@
 #ifndef STAPLE_IMPORTPASS_H
 #define STAPLE_IMPORTPASS_H
 
+#include <map>
 #include <set>
 
 #include "compilercontext.h"
@@ -17,6 +18,9 @@ namespace staple {
         static set<string> mPass1VisitedPaths;
 
     public:
+        set<string> mFQFunctions;
+        set<string> mFQClasses;
+
         Pass1ClassVisitor(CompilerContext* context) : mContext(context)
         { }
 

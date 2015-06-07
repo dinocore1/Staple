@@ -62,22 +62,31 @@ public:
 
     virtual void visit(NCompileUnit* compileUnit) {
 
+        Pass1ClassVisitor p1ClassVisitor(mContext);
+        p1ClassVisitor.visit(compileUnit);
+
+        Pass2ClassVisitor pass2ClassVisitor(mContext);
+        pass2ClassVisitor.visit(compileUnit);
+
         push();
 
-        //put all the included Classes into scope
-        for(string include : compileUnit->includes) {
-            StapleType* stpType = mContext->mRootScope.get(include);
-            StapleClass* stpClass;
-            if(stpType != nullptr && (stpClass = dyn_cast<StapleClass>(stpType))) {
-                const size_t i = include.find_last_of('.');
-                define(include.substr(i+1, include.length()-i), stpClass);
+        for(string fqFunctionName : p1ClassVisitor.mFQFunctions) {
+            StapleFunction* stapleFunction = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
 
+            string simpleName;
+            size_t pos = fqFunctionName.find_last_of('.');
+            if(pos == string::npos) {
+                simpleName = fqFunctionName;
+            } else {
+                simpleName = fqFunctionName.substr(pos+1);
             }
+
+            define(simpleName, stapleFunction);
         }
 
-        //put all the package functions into scope
-        for(NFunction* function : compileUnit->functions) {
-
+        for(string fqClassName : p1ClassVisitor.mFQFunctions) {
+            StapleClass* stapleClass = cast<StapleClass>(mContext->mRootScope.table[fqClassName]);
+            define(stapleClass->getSimpleName(), stapleClass);
         }
 
         for(NFunction* function : compileUnit->functions) {
@@ -446,11 +455,6 @@ SemPass::SemPass(CompilerContext* ctx)
 
 void SemPass::doIt()
 {
-    Pass1ClassVisitor p1ClassVisitor(ctx);
-    p1ClassVisitor.visit(ctx->mCompileUnit);
-
-    Pass2ClassVisitor pass2ClassVisitor(ctx);
-    pass2ClassVisitor.visit(ctx->mCompileUnit);
 
     TypeVisitor typeVisitor(this);
     ctx->mCompileUnit->accept(&typeVisitor);

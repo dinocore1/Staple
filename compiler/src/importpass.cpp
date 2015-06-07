@@ -30,6 +30,7 @@ namespace staple {
             } else {
                 StapleFunction* function = new StapleFunction(fqFunctionName);
                 mContext->mRootScope.table[fqFunctionName] = function;
+                mFQFunctions.insert(fqFunctionName);
             }
 
         }
@@ -48,6 +49,7 @@ namespace staple {
             } else {
                 StapleFunction* function = new StapleFunction(fqFunctionName);
                 mContext->mRootScope.table[fqFunctionName] = function;
+                mFQFunctions.insert(fqFunctionName);
             }
         }
 
@@ -59,6 +61,7 @@ namespace staple {
             } else {
                 StapleClass *stpClass = new StapleClass(fqClassName);
                 mContext->mRootScope.table[fqClassName] = stpClass;
+                mFQClasses.insert(fqClassName);
             }
         }
 
