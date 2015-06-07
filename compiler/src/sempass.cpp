@@ -70,7 +70,28 @@ public:
 
         push();
 
-        for(string fqFunctionName : p1ClassVisitor.mFQFunctions) {
+        for(const unique_ptr<Pass1ClassVisitor>& p : p1ClassVisitor.mImportVisitors) {
+            for(string fqFunctionName : p->mFQFunctions) {
+                StapleFunction* stapleFunction = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
+
+                string simpleName;
+                size_t pos = fqFunctionName.find_last_of('.');
+                if(pos == string::npos) {
+                    simpleName = fqFunctionName;
+                } else {
+                    simpleName = fqFunctionName.substr(pos+1);
+                }
+
+                define(simpleName, stapleFunction);
+            }
+
+            for(string fqClassName : p->mFQClasses) {
+                StapleClass* stapleClass = cast<StapleClass>(mContext->mRootScope.table[fqClassName]);
+                define(stapleClass->getSimpleName(), stapleClass);
+            }
+        }
+
+        for(const string fqFunctionName : p1ClassVisitor.mFQFunctions) {
             StapleFunction* stapleFunction = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
 
             string simpleName;
@@ -84,10 +105,11 @@ public:
             define(simpleName, stapleFunction);
         }
 
-        for(string fqClassName : p1ClassVisitor.mFQFunctions) {
+        for(const string fqClassName : p1ClassVisitor.mFQClasses) {
             StapleClass* stapleClass = cast<StapleClass>(mContext->mRootScope.table[fqClassName]);
             define(stapleClass->getSimpleName(), stapleClass);
         }
+
 
         for(NFunction* function : compileUnit->functions) {
             function->accept(this);

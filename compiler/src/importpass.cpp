@@ -23,7 +23,7 @@ namespace staple {
         mCompileUnit = compileUnit;
 
         for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
-            string fqFunctionName = functionPrototype->name;
+            const string fqFunctionName = functionPrototype->name;
 
             if(CONTAINS(fqFunctionName, mContext->mRootScope.table)) {
                 mContext->logError(functionPrototype->location, "redefination of function '%'", functionPrototype->name.c_str());
@@ -86,8 +86,11 @@ namespace staple {
                             ParserContext parserContext(&inputFileStream);
                             yyparse(&parserContext);
 
-                            Pass1ClassVisitor visitor(mContext);
-                            visitor.visit(parserContext.compileUnit);
+                            Pass1ClassVisitor* visitor = new Pass1ClassVisitor(mContext);
+
+                            mImportVisitors.push_back(unique_ptr<Pass1ClassVisitor>(visitor));
+
+                            visitor->visit(parserContext.compileUnit);
 
                         }
                         break;

@@ -20,6 +20,7 @@ namespace staple {
     public:
         set<string> mFQFunctions;
         set<string> mFQClasses;
+        vector<unique_ptr<Pass1ClassVisitor>> mImportVisitors;
 
         Pass1ClassVisitor(CompilerContext* context) : mContext(context)
         { }
