@@ -7,7 +7,7 @@ $(LOCAL_PATH)src/parser.cpp: $(LOCAL_PATH)src/parser.y
 $(LOCAL_PATH)src/parser.hpp: $(LOCAL_PATH)src/parser.cpp
 
 $(LOCAL_PATH)src/tokens.cpp: $(LOCAL_PATH)src/tokens.l $(LOCAL_PATH)src/parser.hpp
-	lex -o $@ $^
+	flex -o $@ $^
 
 
 include $(DEFINE_MODULE)
@@ -23,7 +23,8 @@ LOCAL_SRCS := \
 	src/types/stapletype.cpp \
 	src/codegen/LLVMCodeGenerator.cpp \
 	src/codegen/LLVMStapleObject.cpp \
-	src/main.cpp 
+	src/importpass.cpp \
+	src/main.cpp
 
 LOCAL_CLEAN := \
 	src/parser.cpp \

@@ -3,6 +3,7 @@ $(eval ALL_MODULES += $(MODULE))
 LOCAL_C_SOURCES := $(filter %.c,$(LOCAL_SRCS))
 LOCAL_CPP_SOURCES := $(filter %.cpp,$(LOCAL_SRCS))
 LOCAL_LLVM_SOURCES := $(filter %.ll,$(LOCAL_SRCS))
+LOCAL_STP_SOURCES := $(filter %.stp,$(LOCAL_SRCS))
 
 cflags := $(LOCAL_CFLAGS) $(CFLAGS) -MMD -fPIC
 $(foreach file,$(LOCAL_C_SOURCES),$(eval $(call c_template,$(file))))
@@ -12,6 +13,8 @@ $(foreach file,$(LOCAL_CPP_SOURCES),$(eval $(call cpp_template,$(file))))
 
 cflags := $(LOCAL_LLVMFLAGS) -filetype=obj
 $(foreach file,$(LOCAL_LLVM_SOURCES),$(eval $(call llvm_template,$(file))))
+
+$(foreach file,$(LOCAL_STP_SOURCES),$(eval $(call stp_template,$(file))))
 
 SHARED_LIB := $(BUILDDIR)/$(MODULE)/lib$(MODULE).so
 STATIC_LIB := $(BUILDDIR)/$(MODULE)/$(MODULE).a

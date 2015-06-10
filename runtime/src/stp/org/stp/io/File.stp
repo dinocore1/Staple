@@ -1,0 +1,11 @@
+package org.stp.io
+
+import org.stp.String
+
+class File {
+
+  initWithPath(String* path) {
+
+  }
+
+}
