@@ -4,7 +4,8 @@ import org.stp.String
 
 class File {
 
-  initWithPath(String* path) {
+  File* initWithPath(String* path) {
+    return this;
 
   }
 

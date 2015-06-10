@@ -2,6 +2,7 @@ package org.stp
 
 class String {
 
-
+  uint8* mData;
+  uint mLength;
 
 }
