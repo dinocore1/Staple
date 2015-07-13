@@ -72,6 +72,8 @@ typedef std::vector<NVariableDeclaration*> VariableList;
 
 /* Represents the many different ways we can access our data */
 %union {
+    uint64_t ival;
+    double fval;
     staple::ASTNode *node;
     staple::NType *type;
     staple::NExpression *expr;
@@ -80,7 +82,6 @@ typedef std::vector<NVariableDeclaration*> VariableList;
     std::vector<staple::NVariableDeclaration*> *varvec;
     std::vector<staple::NExpression*> *exprvec;
     std::string *string;
-    int token;
     staple::ASTNode *nodelist;
     staple::NClassDeclaration *class_decl;
     staple::NField *field;
@@ -97,12 +98,14 @@ typedef std::vector<NVariableDeclaration*> VariableList;
    match our tokens.l lex file. We also define the ASTNode type
    they represent.
  */
-%token <string> TIDENTIFIER TINTEGER TDOUBLE TSTRINGLIT
-%token <token> TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TIMPORT TEXTENDS
-%token <token> TIF TELSE TAT TNEW TSIZEOF TNOT
-%token <token> TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
-%token <token> TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
-%token <token> TPLUS TMINUS TMUL TDIV TFOR
+%token <ival> TINTEGER
+%token <fval> TFLOAT
+%token <string> TIDENTIFIER TSTRINGLIT
+%token TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TIMPORT TEXTENDS
+%token TIF TELSE TAT TNEW TSIZEOF TNOT
+%token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
+%token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
+%token TPLUS TMINUS TMUL TDIV TFOR
 
 /* Define the type of node our nonterminal symbols represent.
    The types refer to the %union declaration above. Ex: when
@@ -114,7 +117,6 @@ typedef std::vector<NVariableDeclaration*> VariableList;
 %type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 lvalue callable arrayindex
 %type <exprvec> expr_list
 %type <stmt> stmt block var_decl exprstmt
-%type <token> comparison
 %type <nodelist> class_members
 %type <class_decl> class_decl
 %type <field> field
@@ -124,7 +126,7 @@ typedef std::vector<NVariableDeclaration*> VariableList;
 %type <function> global_func
 %type <method_function> method
 %type <count> numPointers
-%type <string> package extends
+%type <string> namespace extends
 
 %right ELSE TELSE
 
@@ -173,18 +175,24 @@ compileUnit
         ;
 
 header
-        : TPACKAGE package { context->compileUnit->package = *$2; delete $2; }
-          includes
-        ;
-
-includes
-        : includes TIMPORT package { context->compileUnit->includes.push_back(*$3); delete $3; }
-        |
+        : package includes
         ;
 
 package
+        : TPACKAGE namespace { context->compileUnit->package = *$2; delete $2; }
+
+includes
+        : includes import
+        |
+        ;
+
+import
+        : TIMPORT namespace { context->compileUnit->includes.push_back(*$2); delete $2; }
+        ;
+
+namespace
         : TIDENTIFIER { $$ = new std::string(*$1); delete $1; }
-        | package TDOT TIDENTIFIER { (*$$)+="."; (*$$)+=*$3; delete $3;  }
+        | namespace TDOT TIDENTIFIER { (*$$)+="." + *$3; delete $3;  }
         ;
 
 program
@@ -283,7 +291,7 @@ var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2;
 
 type
         : TIDENTIFIER numPointers { $$ = NType::GetPointerType(*$1, $2); delete $1; $$->location = @$; }
-        | TIDENTIFIER TLBRACKET TINTEGER TRBRACKET { $$ = NType::GetArrayType(*$1, atoi($3->c_str())); delete $1; delete $3; $$->location = @$; }
+        | TIDENTIFIER TLBRACKET TINTEGER TRBRACKET { $$ = NType::GetArrayType(*$1, $3); delete $1; $$->location = @$; }
         ;
 
 numPointers
@@ -299,21 +307,22 @@ expr
         ;
 
 compexpr
-        : addexpr comparison addexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
+        : addexpr TCEQ addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::Equal); $$->location = @$; }
+        | addexpr TCNE addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::NotEqual); $$->location = @$; }
+        | addexpr TCLT addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::LessThan); $$->location = @$; }
+        | addexpr TCLE addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::LessThanEqual); $$->location = @$; }
+        | addexpr TCGT addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::GreaterThan); $$->location = @$; }
+        | addexpr TCGE addexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::GreaterThanEqual); $$->location = @$; }
         | addexpr { $$ = $1; }
         ;
 
-comparison
-        : TCEQ | TCNE | TCLT | TCLE | TCGT | TCGE
-        ;
-
-addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
-        | multexpr TMINUS multexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
+addexpr : multexpr TPLUS multexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::Add); $$->location = @$; }
+        | multexpr TMINUS multexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::Sub); $$->location = @$; }
         | multexpr { $$ = $1; }
         ;
 
-multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
-         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator($1, $2, $3); $$->location = @$; }
+multexpr : unaryexpr TMUL unaryexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::Mul); $$->location = @$; }
+         | unaryexpr TDIV unaryexpr { $$ = new NBinaryOperator($1, $3, NBinaryOperator::Operator::Div); $$->location = @$; }
          | unaryexpr { $$ = $1; }
          ;
 
@@ -351,9 +360,9 @@ lvalue
         | lvalue TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
-literal : TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
-        | TDOUBLE { $$ = new NFloatLiteral(*$1); delete $1; $$->location = @$; }
-        | TSTRINGLIT { std::string tmp = $1->substr(1, $1->length()-2); $$ = new NStringLiteral(tmp); delete $1; $$->location = @$; }
+literal : TINTEGER { $$ = new NIntLiteral($1); $$->location = @$; }
+        | TFLOAT { $$ = new NFloatLiteral($1); $$->location = @$; }
+        | TSTRINGLIT { $$ = new NStringLiteral(*$1); delete $1; $$->location = @$; }
         ;
 
 
@@ -370,7 +379,7 @@ expr_list
 
 arrayindex
         : ident { $$ = $1; }
-        | TINTEGER { $$ = new NIntLiteral(*$1); delete $1; $$->location = @$; }
+        | TINTEGER { $$ = new NIntLiteral($1); $$->location = @$; }
         | TLPAREN expr TRPAREN { $$ = $2; }
         ;
 

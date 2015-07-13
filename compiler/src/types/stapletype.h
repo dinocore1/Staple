@@ -145,7 +145,6 @@ namespace staple {
         StapleClass* mParent;
         vector<StapleField*> mFields;
         vector<StapleMethodFunction*> mMethods;
-        bool mIsImport;
 
 
     public:
@@ -192,8 +191,6 @@ namespace staple {
 
         bool isAssignable(StapleType* type);
 
-        void setImport();
-        bool isImport();
     };
 
     class StapleField : public StapleType {

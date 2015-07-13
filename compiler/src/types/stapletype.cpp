@@ -78,7 +78,7 @@ namespace staple {
     //////// Staple Class ///////
 
     StapleClass::StapleClass(const string &name, StapleClass* parent)
-    : StapleType(SK_Class), mName(name), mParent(parent), mIsImport(false) {
+    : StapleType(SK_Class), mName(name), mParent(parent) {
         //addField("class", new StaplePointer(new StapleClassDef(this)));
     }
 
@@ -111,14 +111,6 @@ namespace staple {
         }
 
         return retval;
-    }
-
-    void StapleClass::setImport() {
-        mIsImport = true;
-    }
-
-    bool StapleClass::isImport() {
-        return mIsImport;
     }
 
     StapleField* StapleClass::addField(const string &name, StapleType *type) {

@@ -6,8 +6,9 @@
 
 namespace staple {
 
+    StapleType* getStapleType(const std::string& value, NCompileUnit* compileUnit, CompilerContext* context);
     StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compileUnit, const Scope& scope);
-    StapleClass* resolveClassType(CompilerContext* context, NCompileUnit *startingCompileUnit, const string &className);
+    StapleType* searchNamespace(CompilerContext *context, NCompileUnit *startingCompileUnit, const string &name);
 }
 
 #endif //STAPLE_TYPEHELPER_H

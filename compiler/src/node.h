@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 
 #include "parsercontext.h"
 #include "parser.hpp"
@@ -140,37 +141,31 @@ public:
 
 };
 
-class NLiteral : public NExpression {
-public:
-    const std::string str;
-
-    NLiteral(const std::string& str)
-    : str(str) {}
-};
-
-class NIntLiteral : public NLiteral {
+class NIntLiteral : public NExpression {
 public:
     ACCEPT
+    const long int mValue;
     unsigned width;
-    NIntLiteral(std::string const &str, unsigned width = 32)
-    : NLiteral(str), width(width) {
-    }
+    NIntLiteral(const long int value, unsigned width = 32)
+    : mValue(value), width(width) { }
 
 };
 
-class NFloatLiteral : public NLiteral {
+class NFloatLiteral : public NExpression {
 public:
     ACCEPT
-    NFloatLiteral(std::string const &str) : NLiteral(str) {
-    }
+    const double mValue;
+    NFloatLiteral(const double value)
+    : mValue(value) { }
 
 };
 
-class NStringLiteral : public NLiteral {
+class NStringLiteral : public NExpression {
 public:
     ACCEPT
-    NStringLiteral(std::string const &str) : NLiteral(str) {
-    }
+    const std::string mValue;
+    NStringLiteral(const std::string& value)
+    : mValue(value) { }
 
 };
 
@@ -296,11 +291,28 @@ public:
 
 class NBinaryOperator : public NExpression {
 public:
+
+    enum Operator {
+        Add,
+        Sub,
+        Mul,
+        Div,
+        And,
+        Or,
+        XOr,
+        Equal,
+        LessThan,
+        GreaterThan,
+        LessThanEqual,
+        GreaterThanEqual,
+        NotEqual
+    };
+
     ACCEPT
-    int op;
+    Operator op;
     NExpression* lhs;
     NExpression* rhs;
-    NBinaryOperator(NExpression* lhs, int op, NExpression* rhs) :
+    NBinaryOperator(NExpression* lhs, NExpression* rhs, Operator op) :
         lhs(lhs), rhs(rhs), op(op) {}
 
 };
@@ -437,6 +449,7 @@ public:
     std::vector<NClassDeclaration*> classes;
     std::vector<NFunction*> functions;
     std::vector<NFunctionPrototype*> externFunctions;
+    std::set<std::string> usingNamespaces;
 
     NCompileUnit() {}
 

@@ -5,6 +5,7 @@
 #include "sempass.h"
 #include "typehelper.h"
 #include "importpass.h"
+#include "stringutils.h"
 
 namespace staple {
 
@@ -22,14 +23,14 @@ if(type == NULL) { \
 class TypeVisitor : public ASTVisitor {
 public:
     CompilerContext* mContext;
+    NCompileUnit* mCompileUnit;
     StapleFunction* mCurrentFunctionType;
     StapleClass *mCurrentClass;
     Scope* scope;
     SemPass* sempass;
 
     TypeVisitor(SemPass* sempass)
-    : mContext(sempass->ctx), sempass(sempass)
-    {
+    : mContext(sempass->ctx), sempass(sempass) {
         scope = &sempass->ctx->mRootScope;
     }
 
@@ -61,8 +62,9 @@ public:
 
 
     virtual void visit(NCompileUnit* compileUnit) {
+        mCompileUnit = compileUnit;
 
-        Pass1ClassVisitor p1ClassVisitor(mContext, false);
+        Pass1ClassVisitor p1ClassVisitor(mContext);
         p1ClassVisitor.visit(compileUnit);
 
         Pass2ClassVisitor pass2ClassVisitor(mContext);
@@ -70,46 +72,27 @@ public:
 
         push();
 
-        for(const unique_ptr<Pass1ClassVisitor>& p : p1ClassVisitor.mImportVisitors) {
-            for(string fqFunctionName : p->mFQFunctions) {
-                StapleFunction* stapleFunction = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
 
-                string simpleName;
-                size_t pos = fqFunctionName.find_last_of('.');
-                if(pos == string::npos) {
-                    simpleName = fqFunctionName;
-                } else {
-                    simpleName = fqFunctionName.substr(pos+1);
+
+        //collect symbols in used namespaces
+        for(string namespaceName : mCompileUnit->usingNamespaces) {
+            for(auto& entry : mContext->mRootScope.table) {
+                if(strStartWith(entry.first, namespaceName)) {
+                    size_t len = entry.first.length() - mCompileUnit->package.length()-1;
+                    string shortName = entry.first.substr(namespaceName.length()+1, len);
+                    define(shortName, entry.second);
                 }
-
-                define(simpleName, stapleFunction);
-            }
-
-            for(string fqClassName : p->mFQClasses) {
-                StapleClass* stapleClass = cast<StapleClass>(mContext->mRootScope.table[fqClassName]);
-                define(stapleClass->getSimpleName(), stapleClass);
             }
         }
 
-        for(const string fqFunctionName : p1ClassVisitor.mFQFunctions) {
-            StapleFunction* stapleFunction = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
-
-            string simpleName;
-            size_t pos = fqFunctionName.find_last_of('.');
-            if(pos == string::npos) {
-                simpleName = fqFunctionName;
-            } else {
-                simpleName = fqFunctionName.substr(pos+1);
+        //collect symbols in scope
+        for(auto& entry : mContext->mRootScope.table) {
+            if(strStartWith(entry.first, mCompileUnit->package)) {
+                size_t len = entry.first.length() - mCompileUnit->package.length()-1;
+                string shortName = entry.first.substr(mCompileUnit->package.length()+1, len);
+                define(shortName, entry.second);
             }
-
-            define(simpleName, stapleFunction);
         }
-
-        for(const string fqClassName : p1ClassVisitor.mFQClasses) {
-            StapleClass* stapleClass = cast<StapleClass>(mContext->mRootScope.table[fqClassName]);
-            define(stapleClass->getSimpleName(), stapleClass);
-        }
-
 
         for(NFunction* function : compileUnit->functions) {
             function->accept(this);
@@ -129,15 +112,9 @@ public:
 
     virtual void visit(NFunction* functionDecl) {
 
-        string fqFunctionName;
-        if(functionDecl->name.compare("main") == 0){
-            fqFunctionName = "main";
-        } else {
-            fqFunctionName = !mContext->mCompileUnit->package.empty() ? (mContext->mCompileUnit->package + "." + functionDecl->name)
-                                                                      : functionDecl->name;
-        }
+        string fqFunctionName = !mContext->mCompileUnit->package.empty() ? (mContext->mCompileUnit->package + "." + functionDecl->name)
+                                                                         : functionDecl->name;
         mCurrentFunctionType = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
-
 
         push();
 
@@ -267,7 +244,7 @@ public:
     }
 
     virtual void visit(NNew* newNode) {
-        StapleType* type = resolve(newNode->id);
+        StapleType* type = getStapleType(newNode->id, mCompileUnit, mContext);
 
         if(StapleClass* classType = dyn_cast<StapleClass>(type)) {
             sempass->ctx->typeTable[newNode] = new StaplePointer(classType);
@@ -374,19 +351,19 @@ public:
         StapleType* returnType = StapleType::getVoidType();
 
         switch(binaryOperator->op) {
-            case TCEQ:
-            case TCNE:
-            case TCGT:
-            case TCLT:
-            case TCGE:
-            case TCLE:
+            case NBinaryOperator::Operator::Equal:
+            case NBinaryOperator::Operator::NotEqual:
+            case NBinaryOperator::Operator::LessThan:
+            case NBinaryOperator::Operator::LessThanEqual:
+            case NBinaryOperator::Operator::GreaterThan:
+            case NBinaryOperator::Operator::GreaterThanEqual:
                 returnType = StapleType::getBoolType();
                 break;
 
-            case TPLUS:
-            case TMINUS:
-            case TMUL:
-            case TDIV:
+            case NBinaryOperator::Operator::Add:
+            case NBinaryOperator::Operator::Sub:
+            case NBinaryOperator::Operator::Mul:
+            case NBinaryOperator::Operator::Div:
                 returnType = sempass->ctx->typeTable[binaryOperator->lhs];
                 break;
         }
@@ -435,7 +412,7 @@ public:
     }
 
     virtual void visit(NFunctionCall* functionCall) {
-        StapleType* type = scope->get(functionCall->name);
+        StapleType* type = resolve(functionCall->name);
 
         if(StapleFunction* function = dyn_cast<StapleFunction>(type)) {
             int i = 0;
@@ -482,6 +459,40 @@ void SemPass::doIt()
     ctx->mCompileUnit->accept(&typeVisitor);
 }
 
+bool hasEnding (std::string const &fullString, std::string const &ending) {
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare (fullString.length() - ending.length(), ending.length(), ending));
+    } else {
+        return false;
+    }
+}
+
+StapleType* getStapleType(const std::string& value, NCompileUnit* compileUnit, CompilerContext* ctx) {
+    StapleType* retval = NULL;
+    if(value.compare("void") == 0) {
+        retval = StapleType::getVoidType();
+    } else if(value.compare("uint") == 0 || value.compare("int") == 0 || value.compare("int32") == 0){
+        retval = StapleType::getInt32Type();
+    } else if(value.compare("uint8") == 0 || value.compare("int8") == 0) {
+        retval = StapleType::getInt8Type();
+    } else if(value.compare("uint16") == 0 || value.compare("int16") == 0) {
+        retval = StapleType::getInt16Type();
+    } else if(value.compare("float") == 0 || value.compare("float32") == 0) {
+        retval = StapleType::getFloat32Type();
+    } else if(value.compare("bool") == 0) {
+        retval = StapleType::getBoolType();
+    } else if(value.compare("obj") == 0){
+        retval = CompilerContext::getStpObjClass();
+
+    } else {
+        retval = searchNamespace(ctx, compileUnit, value);
+        if(retval == nullptr) {
+            return nullptr;
+        }
+    }
+
+    return retval;
+}
 
 StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compileUnit, const Scope& scope) {
     const string name = type->name;
@@ -505,8 +516,8 @@ StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compi
     } else {
 
         retval = scope.get(name);
-        if(retval == nullptr || !isa<StapleClass>(retval)) {
-            retval = resolveClassType(ctx, compileUnit, type->name);
+        if(retval == nullptr) {
+            retval = searchNamespace(ctx, compileUnit, type->name);
             if(retval == nullptr) {
                 return nullptr;
             }
@@ -523,32 +534,25 @@ StapleType* getStapleType(NType* type, CompilerContext* ctx, NCompileUnit* compi
     return retval;
 }
 
-StapleClass* resolveClassType(CompilerContext* context, NCompileUnit *startingCompileUnit, const string &className) {
+StapleType* searchNamespace(CompilerContext *context, NCompileUnit *startingCompileUnit, const string &name) {
 
-    StapleClass* retval = nullptr;
-    StapleType* value;
-    string fqClassName = startingCompileUnit->package + '.' + className;
-    value = context->mRootScope.get(fqClassName);
+    StapleType* retval = nullptr;
+    string fqName = startingCompileUnit->package + '.' + name;
+    retval = context->mRootScope.get(fqName);
 
-
-    if(value != nullptr && (retval = dyn_cast<StapleClass>(value))) {
+    if(retval != nullptr) {
         return retval;
     }
 
-
-    for(string include : context->mCompileUnit->includes) {
-
-        size_t pos = include.find_last_of(className);
-        if(pos != string::npos) {
-            value = context->mRootScope.get(include);
-            if(value != nullptr && (retval = dyn_cast<StapleClass>(value))) {
-                return retval;
-            }
+    for(string namespacePackage : context->mCompileUnit->usingNamespaces) {
+        fqName = namespacePackage + '.' + name;
+        retval = context->mRootScope.get(fqName);
+        if(retval != nullptr) {
             break;
         }
     }
 
-    return nullptr;
+    return retval;
 }
 
 }

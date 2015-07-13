@@ -21,7 +21,6 @@
 result = yyextra->readBytes(buf, max_size);
 
 #define SAVE_TOKEN yylval->string = new std::string(yytext, yyleng)
-#define TOKEN(t) (yylval->token = t)
 
 using namespace staple;
 
@@ -37,47 +36,54 @@ using namespace staple;
 <comment>"*"+[^*/\n]*   /* eat up '*'s not followed by '/'s */
 <comment>\n             yycolumn = 1;
 <comment>"*"+"/"        BEGIN(INITIAL);
+"//"[^\n]*              ;
 
 [ \t]                   ;
 \n                      { yycolumn = 1; }
-"package"               return TOKEN(TPACKAGE);
-"extern"                return TOKEN(TEXTERN);
-"class"                 return TOKEN(TCLASS);
-"if"                    return TOKEN(TIF);
-"else"                  return TOKEN(TELSE);
-"return"                return TOKEN(TRETURN);
-"for"                   return TOKEN(TFOR);
-"@"                     return TOKEN(TAT);
-"new"                   return TOKEN(TNEW);
-"sizeof"                return TOKEN(TSIZEOF);
-"import"               return TOKEN(TIMPORT);
-"extends"               return TOKEN(TEXTENDS);
+"package"               return TPACKAGE;
+"extern"                return TEXTERN;
+"class"                 return TCLASS;
+"if"                    return TIF;
+"else"                  return TELSE;
+"return"                return TRETURN;
+"for"                   return TFOR;
+"@"                     return TAT;
+"new"                   return TNEW;
+"sizeof"                return TSIZEOF;
+"import"                return TIMPORT;
+"extends"               return TEXTENDS;
 \"([^\\\"]|\\.)*\"      SAVE_TOKEN; return TSTRINGLIT;
+0x[0-9a-fA-F]+          yylval->ival = std::stoul(yytext, 0, 16); return TINTEGER;
+0b[01]+                 yylval->ival = std::stoul(yytext, 0, 2); return TINTEGER;
+[0-9]+                  yylval->ival = std::stoul(yytext, 0, 10); return TINTEGER;
+[0-9]+\.[0-9]*          yylval->fval = std::stod(yytext); return TFLOAT;
+INF                     yylval->fval = std::stod(yytext); return TFLOAT;
+NAN                     yylval->fval = std::stod(yytext); return TFLOAT;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TIDENTIFIER;
-[0-9]+\.[0-9]*          SAVE_TOKEN; return TDOUBLE;
-[0-9]+                  SAVE_TOKEN; return TINTEGER;
-"="                     return TOKEN(TEQUAL);
-"=="                    return TOKEN(TCEQ);
-"!="                    return TOKEN(TCNE);
-"<"                     return TOKEN(TCLT);
-"<="                    return TOKEN(TCLE);
-">"                     return TOKEN(TCGT);
-">="                    return TOKEN(TCGE);
-"("                     return TOKEN(TLPAREN);
-")"                     return TOKEN(TRPAREN);
-"{"                     return TOKEN(TLBRACE);
-"}"                     return TOKEN(TRBRACE);
-"["                     return TOKEN(TLBRACKET);
-"]"                     return TOKEN(TRBRACKET);
-"."                     return TOKEN(TDOT);
-","                     return TOKEN(TCOMMA);
-"+"                     return TOKEN(TPLUS);
-"-"                     return TOKEN(TMINUS);
-"*"                     return TOKEN(TMUL);
-"/"                     return TOKEN(TDIV);
-";"                     return TOKEN(TSEMI);
-"!"                     return TOKEN(TNOT);
-"..."                   return TOKEN(TELLIPSIS);
+
+
+"="                     return TEQUAL;
+"=="                    return TCEQ;
+"!="                    return TCNE;
+"<"                     return TCLT;
+"<="                    return TCLE;
+">"                     return TCGT;
+">="                    return TCGE;
+"("                     return TLPAREN;
+")"                     return TRPAREN;
+"{"                     return TLBRACE;
+"}"                     return TRBRACE;
+"["                     return TLBRACKET;
+"]"                     return TRBRACKET;
+"."                     return TDOT;
+","                     return TCOMMA;
+"+"                     return TPLUS;
+"-"                     return TMINUS;
+"*"                     return TMUL;
+"/"                     return TDIV;
+";"                     return TSEMI;
+"!"                     return TNOT;
+"..."                   return TELLIPSIS;
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%

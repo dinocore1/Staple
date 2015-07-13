@@ -16,59 +16,7 @@ namespace staple {
 #define CONTAINS(x, container) (container.find(x) != container.end())
 
 
-    set<string> Pass1ClassVisitor::mPass1VisitedPaths;
-
     void Pass1ClassVisitor::visit(NCompileUnit* compileUnit) {
-
-        mCompileUnit = compileUnit;
-
-        for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
-            const string fqFunctionName = functionPrototype->name;
-
-            if(CONTAINS(fqFunctionName, mContext->mRootScope.table)) {
-                mContext->logError(functionPrototype->location, "redefination of function '%'", functionPrototype->name.c_str());
-            } else {
-                StapleFunction* function = new StapleFunction(fqFunctionName);
-                mContext->mRootScope.table[fqFunctionName] = function;
-                mFQFunctions.insert(fqFunctionName);
-            }
-
-        }
-
-        for(NFunction* functionDecl : compileUnit->functions) {
-            string fqFunctionName;
-            if(mContext->mCompileUnit == mCompileUnit && functionDecl->name.compare("main") == 0){
-                fqFunctionName = "main";
-            } else {
-                fqFunctionName = !compileUnit->package.empty() ? (compileUnit->package + "." + functionDecl->name)
-                                                               : functionDecl->name;
-            }
-
-            if(CONTAINS(fqFunctionName, mContext->mRootScope.table)) {
-                mContext->logError(functionDecl->location, "redefination of function '%'", functionDecl->name.c_str());
-            } else {
-                StapleFunction* function = new StapleFunction(fqFunctionName);
-                mContext->mRootScope.table[fqFunctionName] = function;
-                mFQFunctions.insert(fqFunctionName);
-            }
-        }
-
-        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
-            string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
-
-            if(CONTAINS(fqClassName, mContext->mRootScope.table)) {
-                mContext->logError(classDeclaration->location, "redefination of class '%'", classDeclaration->name.c_str());
-            } else {
-                StapleClass *stpClass = new StapleClass(fqClassName);
-                if(mSetImport) {
-                    stpClass->setImport();
-                }
-                mContext->mRootScope.table[fqClassName] = stpClass;
-                mFQClasses.insert(fqClassName);
-            }
-        }
-
-
 
         for(string import : compileUnit->includes) {
             string importPath = import;
@@ -82,18 +30,21 @@ namespace staple {
                         ifstream inputFileStream(srcFilePath);
                         if (!inputFileStream) {
                             fprintf(stderr, "cannot open file: %s", srcFilePath.c_str());
-                        } else if (!CONTAINS(srcFilePath, mPass1VisitedPaths)) {
-
-                            mPass1VisitedPaths.insert(srcFilePath);
+                        } else if (!CONTAINS(srcFilePath, mContext->mFilesParsed)) {
 
                             ParserContext parserContext(&inputFileStream);
                             yyparse(&parserContext);
 
-                            Pass1ClassVisitor* visitor = new Pass1ClassVisitor(mContext, true);
+                            mContext->mFilesParsed.insert(srcFilePath);
 
-                            mImportVisitors.push_back(unique_ptr<Pass1ClassVisitor>(visitor));
+                            size_t pos = import.find_last_of('.');
+                            compileUnit->usingNamespaces.insert(import.substr(0, pos));
 
-                            visitor->visit(parserContext.compileUnit);
+                            Pass1ClassVisitor pass1(mContext);
+                            pass1.visit(parserContext.compileUnit);
+
+                            Pass2ClassVisitor pass2(mContext);
+                            pass2.visit(parserContext.compileUnit);
 
                         }
                         break;
@@ -101,6 +52,45 @@ namespace staple {
                 }
             }
         }
+
+        for(NFunctionPrototype* functionPrototype : compileUnit->externFunctions) {
+            const string fqFunctionName = functionPrototype->name;
+
+            if(CONTAINS(fqFunctionName, mContext->mRootScope.table)) {
+                mContext->logError(functionPrototype->location, "redefination of function '%s'", functionPrototype->name.c_str());
+            } else {
+                StapleFunction* function = new StapleFunction(fqFunctionName);
+                mContext->mRootScope.table[fqFunctionName] = function;
+                mFQFunctions.insert(fqFunctionName);
+            }
+
+        }
+
+        for(NFunction* functionDecl : compileUnit->functions) {
+            string fqFunctionName = !compileUnit->package.empty() ? (compileUnit->package + "." + functionDecl->name)
+                                                           : functionDecl->name;
+
+            if(CONTAINS(fqFunctionName, mContext->mRootScope.table)) {
+                mContext->logError(functionDecl->location, "redefination of function '%s'", functionDecl->name.c_str());
+            } else {
+                StapleFunction* function = new StapleFunction(fqFunctionName);
+                mContext->mRootScope.table[fqFunctionName] = function;
+                mFQFunctions.insert(fqFunctionName);
+            }
+        }
+
+        for(NClassDeclaration* classDeclaration : compileUnit->classes) {
+            string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
+
+            if(CONTAINS(fqClassName, mContext->mRootScope.table)) {
+                mContext->logError(classDeclaration->location, "redefination of class '%s'", classDeclaration->name.c_str());
+            } else {
+                StapleClass *stpClass = new StapleClass(fqClassName);
+                mContext->mRootScope.table[fqClassName] = stpClass;
+                mFQClasses.insert(fqClassName);
+            }
+        }
+
 
     }
 
@@ -169,37 +159,6 @@ if(type == NULL) { \
             }
         }
 
-
-
-        for(string import : compileUnit->includes) {
-            string importPath = import;
-            replace(importPath.begin(), importPath.end(), '.', path_sep);
-
-            for (string searchPath : mContext->searchPaths) {
-                if (sys::fs::is_directory(searchPath)) {
-
-                    string srcFilePath = searchPath + path_sep + importPath + ".stp";
-                    if (sys::fs::is_regular_file(srcFilePath)) {
-                        ifstream inputFileStream(srcFilePath);
-                        if (!inputFileStream) {
-                            fprintf(stderr, "cannot open file: %s", srcFilePath.c_str());
-                        } else if (!CONTAINS(srcFilePath, mPass2VisitedPaths)) {
-
-                            mPass2VisitedPaths.insert(srcFilePath);
-
-                            ParserContext parserContext(&inputFileStream);
-                            yyparse(&parserContext);
-
-                            Pass2ClassVisitor visitor(mContext);
-                            visitor.visit(parserContext.compileUnit);
-
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-
     }
 
     void Pass2ClassVisitor::visit(NFunctionPrototype* functionPrototype) {
@@ -217,20 +176,12 @@ if(type == NULL) { \
         CheckType(returnType, functionPrototype->returnType.location, functionPrototype->returnType.name,
                   function->setReturnType(returnType);)
 
-
-        if(mContext->mCompileUnit == mCompileUnit) {
-            mContext->typeTable[functionPrototype] = function;
-        }
+        mContext->typeTable[functionPrototype] = function;
     }
 
     void Pass2ClassVisitor::visit(NFunction* functionDecl) {
-        string fqFunctionName;
-        if(mContext->mCompileUnit == mCompileUnit && functionDecl->name.compare("main") == 0){
-            fqFunctionName = "main";
-        } else {
-            fqFunctionName = !mCompileUnit->package.empty() ? (mCompileUnit->package + "." + functionDecl->name)
-                                                           : functionDecl->name;
-        }
+        string fqFunctionName = !mCompileUnit->package.empty() ? (mCompileUnit->package + "." + functionDecl->name)
+                                                                             : functionDecl->name;
         StapleFunction* function = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
 
         std::vector<StapleType*> args;
@@ -245,9 +196,7 @@ if(type == NULL) { \
         CheckType(returnType, functionDecl->returnType.location, functionDecl->returnType.name,
                   function->setReturnType(returnType);)
 
-        if(mContext->mCompileUnit == mCompileUnit) {
-            mContext->typeTable[functionDecl] = function;
-        }
+        mContext->typeTable[functionDecl] = function;
     }
 
     void Pass2ClassVisitor::visit(NMethodFunction* methodFunction) {

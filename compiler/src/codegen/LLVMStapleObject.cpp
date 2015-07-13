@@ -202,6 +202,7 @@ namespace staple {
             string functionName = codeGenerator->createClassSymbolName(mClassType) + "_kill";
             mKillFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
 
+            /*
             if(!mClassType->isImport()) {
                 BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mKillFunction);
                 IRBuilder<> irBuilder(bblock);
@@ -236,6 +237,7 @@ namespace staple {
 
                 irBuilder.CreateRetVoid();
             }
+             */
 
         }
         return mKillFunction;
@@ -253,6 +255,7 @@ namespace staple {
             string functionName = codeGenerator->createClassSymbolName(mClassType) + "_init";
             mInitFunction = Function::Create(functionType, Function::LinkageTypes::ExternalLinkage, functionName, &codeGenerator->mModule);
 
+            /*
             if(!mClassType->isImport()) {
 
                 BasicBlock *bblock = BasicBlock::Create(getGlobalContext(), "entry", mInitFunction);
@@ -288,6 +291,7 @@ namespace staple {
 
                 irBuilder.CreateRetVoid();
             }
+             */
         }
 
         return mInitFunction;

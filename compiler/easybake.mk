@@ -9,12 +9,21 @@ $(LOCAL_PATH)src/parser.hpp: $(LOCAL_PATH)src/parser.cpp
 $(LOCAL_PATH)src/tokens.cpp: $(LOCAL_PATH)src/tokens.l $(LOCAL_PATH)src/parser.hpp
 	lex -o $@ $^
 
+.PHONY: parser
+
+define parserrule
+parser:
+	lex -o $(LOCAL_PATH)src/tokens.cpp $(LOCAL_PATH)src/tokens.l
+	bison -d -o $(LOCAL_PATH)src/parser.cpp $(LOCAL_PATH)src/parser.y
+endef
+
+$(eval $(parserrule))
 
 include $(DEFINE_MODULE)
 CC := gcc
 CXX := g++
 MODULE := stp
-LOCAL_CXXFLAGS := -std=c++11 $(shell llvm-config --cxxflags)
+LOCAL_CXXFLAGS := -std=c++11 -I$(LOCAL_PATH)src/ $(shell llvm-config-3.5 --cxxflags)
 LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
@@ -23,6 +32,8 @@ LOCAL_SRCS := \
 	src/types/stapletype.cpp \
 	src/codegen/LLVMCodeGenerator.cpp \
 	src/codegen/LLVMStapleObject.cpp \
+	src/importpass.cpp \
+	src/stringutils.cpp \
 	src/main.cpp 
 
 LOCAL_CLEAN := \
@@ -30,7 +41,7 @@ LOCAL_CLEAN := \
 	src/parser.hpp \
 	src/tokens.cpp
 	
-LOCAL_LIBS := $(shell llvm-config --ldflags --libs) -ltinfo -ldl
+LOCAL_LIBS := $(shell llvm-config-3.5 --ldflags --libs) -ltinfo -ldl -pthread
 include $(BUILD_EXE)
 
 $(LOCAL_CPP_SOURCES): $(LOCAL_PATH)src/tokens.cpp $(LOCAL_PATH)src/parser.hpp $(LOCAL_PATH)src/parser.cpp

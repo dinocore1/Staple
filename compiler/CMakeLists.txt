@@ -2,7 +2,7 @@
 set(CMAKE_CXX_COMPILER "g++")
 
 
-execute_process(COMMAND llvm-config --cxxflags
+execute_process(COMMAND llvm-config-3.5 --cxxflags
         OUTPUT_VARIABLE llvm_cxxflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -61,21 +61,24 @@ set(SOURCE_FILES
     src/codegen/LLVMCodeGenerator.cpp
     src/codegen/LLVMStapleObject.cpp
     src/importpass.cpp
+    src/stringutils.cpp
     )
+
+include_directories("/usr/lib/llvm-3.5/include")
 
 add_executable(stp ${FlexOutput} ${BisonOutput} ${SOURCE_FILES})
 
 
-execute_process(COMMAND llvm-config --libs
+execute_process(COMMAND llvm-config-3.5 --libs
         OUTPUT_VARIABLE llvm_libs
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-execute_process(COMMAND llvm-config --ldflags
+execute_process(COMMAND llvm-config-3.5 --ldflags
         OUTPUT_VARIABLE llvm_ldflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
 
 # Link against LLVM libraries
-target_link_libraries(stp "${llvm_ldflags} ${llvm_libs} -ltinfo -ldl")
+target_link_libraries(stp "${llvm_ldflags} ${llvm_libs} -ltinfo -ldl -lpthread")

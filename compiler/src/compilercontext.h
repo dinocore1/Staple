@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 
 #include "scope.h"
 #include "node.h"
@@ -26,6 +27,8 @@ namespace staple {
         string outputFilename;
         bool debugSymobols;
         vector<string> searchPaths;
+
+        set<string> mFilesParsed;
 
         NCompileUnit* mCompileUnit;
         Scope mRootScope;

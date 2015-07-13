@@ -315,7 +315,7 @@ namespace staple {
         }
 
         void visit(NStringLiteral* strLiteral) {
-            Value* retval = mCodeGen->mIRBuilder.CreateGlobalStringPtr(strLiteral->str.c_str());
+            Value* retval = mCodeGen->mIRBuilder.CreateGlobalStringPtr(strLiteral->mValue.c_str());
             mValues[strLiteral] = retval;
         }
 
@@ -518,8 +518,7 @@ namespace staple {
         }
 
         void visit(NIntLiteral* intLiteral) {
-            int value = atoi(intLiteral->str.c_str());
-            mValues[intLiteral] = mCodeGen->mIRBuilder.getInt(APInt(intLiteral->width, value));
+            mValues[intLiteral] = mCodeGen->mIRBuilder.getInt(APInt(intLiteral->width, intLiteral->mValue));
         }
 
         void visit(NNew* newnode) {
@@ -592,25 +591,35 @@ namespace staple {
             Value* retval = nullptr;
 
             switch (binaryOperator->op) {
-                case TPLUS: 	retval = mCodeGen->mIRBuilder.CreateAdd(l, r);
+                case NBinaryOperator::Operator::Add:
+                    retval = mCodeGen->mIRBuilder.CreateAdd(l, r);
                     break;
-                case TMINUS: 	retval = mCodeGen->mIRBuilder.CreateSub(l, r);
+                case NBinaryOperator::Operator::Sub:
+                    retval = mCodeGen->mIRBuilder.CreateSub(l, r);
                     break;
-                case TMUL: 		retval = mCodeGen->mIRBuilder.CreateMul(l, r);
+                case NBinaryOperator::Operator::Mul:
+                    retval = mCodeGen->mIRBuilder.CreateMul(l, r);
                     break;
-                case TDIV: 		retval = mCodeGen->mIRBuilder.CreateSDiv(l, r);
+                case NBinaryOperator::Operator::Div:
+                    retval = mCodeGen->mIRBuilder.CreateSDiv(l, r);
                     break;
-                case TCEQ:		retval = mCodeGen->mIRBuilder.CreateICmpEQ(l, r);
+                case NBinaryOperator::Operator::Equal:
+                    retval = mCodeGen->mIRBuilder.CreateICmpEQ(l, r);
                     break;
-                case TCNE:		retval = mCodeGen->mIRBuilder.CreateICmpNE(l, r);
+                case NBinaryOperator::Operator::NotEqual:
+                    retval = mCodeGen->mIRBuilder.CreateICmpNE(l, r);
                     break;
-                case TCGT:		retval = mCodeGen->mIRBuilder.CreateICmpSGT(l, r);
+                case NBinaryOperator::Operator::GreaterThan:
+                    retval = mCodeGen->mIRBuilder.CreateICmpSGT(l, r);
                     break;
-                case TCLT:		retval = mCodeGen->mIRBuilder.CreateICmpSLT(l, r);
+                case NBinaryOperator::Operator::LessThan:
+                    retval = mCodeGen->mIRBuilder.CreateICmpSLT(l, r);
                     break;
-                case TCGE:		retval = mCodeGen->mIRBuilder.CreateICmpSGE(l, r);
+                case NBinaryOperator::Operator::GreaterThanEqual:
+                    retval = mCodeGen->mIRBuilder.CreateICmpSGE(l, r);
                     break;
-                case TCLE:		retval = mCodeGen->mIRBuilder.CreateICmpSLE(l, r);
+                case NBinaryOperator::Operator::LessThanEqual:
+                    retval = mCodeGen->mIRBuilder.CreateICmpSLE(l, r);
                     break;
 
             }

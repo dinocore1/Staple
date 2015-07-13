@@ -14,17 +14,13 @@ namespace staple {
     using ASTVisitor::visit;
     private:
         CompilerContext* mContext;
-        NCompileUnit *mCompileUnit;
-        static set<string> mPass1VisitedPaths;
-        bool mSetImport;
 
     public:
         set<string> mFQFunctions;
         set<string> mFQClasses;
-        vector<unique_ptr<Pass1ClassVisitor>> mImportVisitors;
 
-        Pass1ClassVisitor(CompilerContext* context, bool setImport) : mContext(context), mSetImport(setImport)
-        { }
+        Pass1ClassVisitor(CompilerContext* context)
+        : mContext(context) { }
 
         void visit(NCompileUnit* compileUnit);
     };
