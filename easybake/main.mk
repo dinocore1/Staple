@@ -61,6 +61,8 @@ $(eval $(call make-intermediate-dir))
 $(eval $(call compile))
 endef
 
+######## LLVM COMPILE #######
+
 define llvm_compile
 $(OBJ): $(SRC)
 	$(SILENT) mkdir -p $(intermediateDir)
@@ -77,6 +79,32 @@ $(eval LOCAL_OBJS += $(OBJ))
 
 $(eval $(call make-intermediate-dir))
 $(eval $(call llvm_compile))
+endef
+
+######### STAPLE ##########
+
+define stp_compile
+$(LLVM_SRC): $(SRC)
+	$(SILENT) mkdir -p $(intermediateDir)
+	$(COMPILER) $(stpflags) -o $(LLVM_SRC) $(SRC)
+
+$(OBJ): $(LLVM_SRC)
+	$(SILENT) mkdir -p $(intermediateDir)
+	$(LLC) -filetype=obj -o $(OBJ) $(LLVM_SRC)
+
+endef
+
+define stp_template
+$(eval intermediateDir := $(BUILDDIR)/$(MODULE)/$(dir $(1)))
+$(eval COMPILER := $(STPC))
+$(eval SRC := $(LOCAL_PATH)$(1))
+$(eval LLVM_SRC := $(BUILDDIR)/$(MODULE)/$(1:.stp=.ll))
+$(eval OBJ := $(BUILDDIR)/$(MODULE)/$(1:.stp=.o))
+$(eval LOCAL_OBJS += $(OBJ))
+
+$(eval $(call make-intermediate-dir))
+$(eval $(call stp_compile))
+
 endef
 
 ################################################

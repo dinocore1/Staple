@@ -101,6 +101,7 @@ public:
         for(NClassDeclaration* classDeclaration : compileUnit->classes) {
             string fqClassName = !compileUnit->package.empty() ? (compileUnit->package + "." + classDeclaration->name) : classDeclaration->name;
             mCurrentClass = cast<StapleClass>(sempass->ctx->mRootScope.table[fqClassName]);
+            sempass->ctx->typeTable[classDeclaration] = mCurrentClass;
 
             for(NMethodFunction* methodFunction : classDeclaration->functions) {
                 methodFunction->accept(this);

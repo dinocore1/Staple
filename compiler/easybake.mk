@@ -7,7 +7,7 @@ $(LOCAL_PATH)src/parser.cpp: $(LOCAL_PATH)src/parser.y
 $(LOCAL_PATH)src/parser.hpp: $(LOCAL_PATH)src/parser.cpp
 
 $(LOCAL_PATH)src/tokens.cpp: $(LOCAL_PATH)src/tokens.l $(LOCAL_PATH)src/parser.hpp
-	lex -o $@ $^
+	flex -o $@ $^
 
 .PHONY: parser
 
@@ -34,7 +34,7 @@ LOCAL_SRCS := \
 	src/codegen/LLVMStapleObject.cpp \
 	src/importpass.cpp \
 	src/stringutils.cpp \
-	src/main.cpp 
+	src/main.cpp
 
 LOCAL_CLEAN := \
 	src/parser.cpp \
