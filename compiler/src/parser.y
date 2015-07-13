@@ -180,6 +180,8 @@ header
 
 package
         : TPACKAGE namespace { context->compileUnit->package = *$2; delete $2; }
+        |
+        ;
 
 includes
         : includes import

@@ -1,4 +1,3 @@
-package
 
 
 extern int printf(uint8*, ...)

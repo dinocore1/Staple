@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     context.debugSymobols = DebugSymbols;
     context.searchPaths = IncludePaths;
 
-    yydebug = 1;
+    //yydebug = 1;
 
     ifstream inputFileStream(context.inputFilename.c_str());
     if (!inputFileStream) {
