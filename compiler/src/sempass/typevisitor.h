@@ -64,6 +64,47 @@ namespace staple {
     class Pass3TypeVisitor : public ASTVisitor {
         using ASTVisitor::visit;
 
+    private:
+        CompilerContext* mContext;
+        NCompileUnit* mCompileUnit;
+        StapleFunction* mCurrentFunctionType;
+        StapleClass *mCurrentClass;
+        Scope* scope;
+
+        void push();
+        void pop();
+        void define(const string& name, StapleType* type);
+        StapleType* resolve(const string& name);
+        StapleType* getType(ASTNode* node);
+
+    public:
+        Pass3TypeVisitor(CompilerContext* ctx);
+
+        void visit(NCompileUnit* compileUnit) override;
+        void visit(NFunction* functionDecl) override;
+        void visit(NArgument* argument) override;
+        void visit(NType* type) override;
+        void visit(NField* field) override;
+        void visit(NExpressionStatement* expressionStatement) override;
+        void visit(NMethodFunction* methodFunction) override;
+        void visit(NReturn* returnexp) override;
+        void visit(NVariableDeclaration* variableDeclaration) override;
+        void visit(NIntLiteral* intLiteral) override;
+        void visit(NStringLiteral* literal) override;
+        void visit(NAssignment* assignment) override;
+        void visit(NSizeOf* nsizeOf) override;
+        void visit(NNew* newNode) override;
+        void visit(NIdentifier* identifier) override;
+        void visit(NArrayElementPtr* arrayElementPtr) override;
+        void visit(NMemberAccess* memberAccess) override;
+        void visit(NIfStatement* ifStatement) override;
+        void visit(NForLoop* forLoop) override;
+        void visit(NBinaryOperator* binaryOperator) override;
+        void visit(NMethodCall* methodCall) override;
+        void visit(NFunctionCall* functionCall) override;
+        void visit(NLoad* load) override;
+        void visit(NBlock* block) override;
+
     };
 
 }
