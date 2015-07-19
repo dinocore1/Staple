@@ -28,7 +28,7 @@ namespace staple {
         bool debugSymobols;
         vector<string> searchPaths;
 
-        set<string> mFilesParsed;
+        map<string, NCompileUnit*> mFilesParsed;
 
         NCompileUnit* mCompileUnit;
         Scope mRootScope;

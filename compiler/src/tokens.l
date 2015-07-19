@@ -36,7 +36,7 @@ using namespace staple;
 <comment>"*"+[^*/\n]*   /* eat up '*'s not followed by '/'s */
 <comment>\n             yycolumn = 1;
 <comment>"*"+"/"        BEGIN(INITIAL);
-"//"[^\n]*              ;
+"//"[^\n]*              /* eat up line comment */
 
 [ \t]                   ;
 \n                      { yycolumn = 1; }
@@ -80,6 +80,9 @@ NAN                     yylval->fval = std::stod(yytext); return TFLOAT;
 "+"                     return TPLUS;
 "-"                     return TMINUS;
 "*"                     return TMUL;
+"&"                     return TREF;
+"||"                    return TOR;
+"&&"                    return TAND;
 "/"                     return TDIV;
 ";"                     return TSEMI;
 "!"                     return TNOT;
@@ -88,14 +91,12 @@ NAN                     yylval->fval = std::stod(yytext); return TFLOAT;
 
 %%
 
-void ParserContext::init_scanner()
-{
-   yylex_init(&scanner);
-   yyset_extra(this, scanner);
+void ParserContext::init_scanner() {
+   yylex_init(&mScanner);
+   yyset_extra(this, mScanner);
 }
 
-void ParserContext::destroy_scanner()
-{
-   yylex_destroy(scanner);
+void ParserContext::destroy_scanner() {
+   yylex_destroy(mScanner);
 }
 

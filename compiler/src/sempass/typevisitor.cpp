@@ -28,16 +28,10 @@ namespace staple {
                 if (sys::fs::is_directory(searchPath)) {
 
                     string srcFilePath = searchPath + path_sep + importPath + ".stp";
-                    if (sys::fs::is_regular_file(srcFilePath)) {
-                        ifstream inputFileStream(srcFilePath);
-                        if (!inputFileStream) {
-                            fprintf(stderr, "cannot open file: %s", srcFilePath.c_str());
-                        } else if (!CONTAINS(srcFilePath, mContext->mFilesParsed)) {
-
-                            ParserContext parserContext(&inputFileStream);
-                            yyparse(&parserContext);
-
-                            mContext->mFilesParsed.insert(srcFilePath);
+                    if (sys::fs::is_regular_file(srcFilePath) && !CONTAINS(srcFilePath, mContext->mFilesParsed)) {
+                        ParserContext parserContext;
+                        if(parserContext.parse(srcFilePath)) {
+                            mContext->mFilesParsed[srcFilePath] = parserContext.compileUnit;
 
                             size_t pos = import.find_last_of('.');
                             compileUnit->usingNamespaces.insert(import.substr(0, pos));
@@ -47,8 +41,8 @@ namespace staple {
 
                             Pass2TypeVisitor pass2(mContext);
                             pass2.visit(parserContext.compileUnit);
-
                         }
+
                         break;
                     }
                 }
@@ -249,11 +243,7 @@ if(type == NULL) { \
     void Pass3TypeVisitor::visit(NCompileUnit* compileUnit) {
         mCompileUnit = compileUnit;
 
-
-
         push();
-
-
 
         //collect symbols in used namespaces
         for(string namespaceName : mCompileUnit->usingNamespaces) {

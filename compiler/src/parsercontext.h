@@ -3,8 +3,10 @@
 #ifndef STAPLE_PARSERCONTEXT_H
 #define STAPLE_PARSERCONTEXT_H
 
-
+#include <string>
 #include <iostream>
+#include <bits/unique_ptr.h>
+
 using namespace std;
 
 namespace staple {
@@ -12,25 +14,23 @@ namespace staple {
     class NCompileUnit;
 
     class ParserContext {
+    private:
+        std::istream* mInputStream;
+        std::string mStreamName;
+        bool mSuccess;
+
     public:
-        void* scanner;
-        istream* is;
+        void* mScanner;
         NCompileUnit* compileUnit;
 
-        ParserContext(istream* is) : scanner(nullptr), is(is), compileUnit(nullptr) {
-            init_scanner();
+        ParserContext();
+        virtual ~ParserContext();
 
-        }
+        bool parse(const std::string& filePath);
+        bool parse(const std::string& streamName, std::istream& is);
+        void parseError(const int line, const int column, const char* errMsg);
 
-        virtual ~ParserContext() {
-            destroy_scanner();
-        }
-
-        int readBytes(char* buf, const int max) {
-            is->read(buf, max);
-            int bytesRead = is->gcount();
-            return bytesRead;
-        }
+        int readBytes(char* buf, const int max);
 
     protected:
         void init_scanner();

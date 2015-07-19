@@ -5,6 +5,7 @@
 
 extern int yydebug;
 
+#include <memory>
 
 #include "compilercontext.h"
 #include "node.h"
@@ -40,14 +41,10 @@ int main(int argc, char **argv)
 
     //yydebug = 1;
 
-    ifstream inputFileStream(context.inputFilename.c_str());
-    if (!inputFileStream) {
-        fprintf(stderr, "cannot open file: %s", context.inputFilename.c_str());
+    ParserContext parserContext;
+    if(!parserContext.parse(context.inputFilename)){
         return -1;
     }
-
-    ParserContext parserContext(&inputFileStream);
-    yyparse(&parserContext);
 
     context.mCompileUnit = parserContext.compileUnit;
 

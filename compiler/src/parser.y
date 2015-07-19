@@ -3,11 +3,12 @@
 %locations
 %defines
 %error-verbose
-%parse-param { staple::ParserContext* context }
+%parse-param { staple::ParserContext* ctx }
 %lex-param { void* scanner  }
 
 %{
 #include <iostream>
+#include <fstream>
 #include <sstream>
 
 #define YYDEBUG 1
@@ -102,7 +103,7 @@ typedef std::vector<NVariableDeclaration*> VariableList;
 %token <fval> TFLOAT
 %token <string> TIDENTIFIER TSTRINGLIT
 %token TPACKAGE TCLASS TRETURN TSEMI TEXTERN TELLIPSIS TIMPORT TEXTENDS
-%token TIF TELSE TAT TNEW TSIZEOF TNOT
+%token TIF TELSE TAT TNEW TSIZEOF TNOT TREF TAND TOR
 %token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token TPLUS TMINUS TMUL TDIV TFOR
@@ -114,7 +115,7 @@ typedef std::vector<NVariableDeclaration*> VariableList;
  */
 %type <type> type
 %type <stmtlist> stmts
-%type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 lvalue callable arrayindex
+%type <expr> expr compexpr multexpr addexpr ident literal unaryexpr primary p_1 lvalue arrayindex
 %type <exprvec> expr_list
 %type <stmt> stmt block var_decl exprstmt
 %type <nodelist> class_members
@@ -137,12 +138,9 @@ typedef std::vector<NVariableDeclaration*> VariableList;
 #include "node.h"
 int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, void* scanner);
 
-void yyerror(YYLTYPE* locp, ParserContext* context, const char* err)
-{
-  cout << locp->first_line << ":" << err << endl;
-}
+void yyerror(YYLTYPE* locp, ParserContext* context, const char* err);
 
-#define scanner context->scanner
+#define scanner ctx->mScanner
 
 
 NType* NType::GetPointerType(const std::string& name, int numPtrs)
@@ -170,7 +168,7 @@ NType* NType::GetArrayType(const std::string& name, int size)
 %%
 
 compileUnit
-        : { context->compileUnit = new NCompileUnit(); }
+        : { ctx->compileUnit = new NCompileUnit(); }
           header program
         ;
 
@@ -179,7 +177,7 @@ header
         ;
 
 package
-        : TPACKAGE namespace { context->compileUnit->package = *$2; delete $2; }
+        : TPACKAGE namespace { ctx->compileUnit->package = *$2; delete $2; }
         |
         ;
 
@@ -189,7 +187,7 @@ includes
         ;
 
 import
-        : TIMPORT namespace { context->compileUnit->includes.push_back(*$2); delete $2; }
+        : TIMPORT namespace { ctx->compileUnit->includes.push_back(*$2); delete $2; }
         ;
 
 namespace
@@ -198,9 +196,9 @@ namespace
         ;
 
 program
-        : program class_decl { context->compileUnit->classes.push_back($2); }
-        | program global_func { context->compileUnit->functions.push_back($2); }
-        | program proto_func { context->compileUnit->externFunctions.push_back($2); }
+        : program class_decl { ctx->compileUnit->classes.push_back($2); }
+        | program global_func { ctx->compileUnit->functions.push_back($2); }
+        | program proto_func { ctx->compileUnit->externFunctions.push_back($2); }
         |
         ;
 
@@ -274,7 +272,6 @@ stmts
 /// a statement is something that does not return a value. For example, var decalaration, if, for, while, etc...
 
 stmt    : exprstmt TSEMI { $$ = $1; }
-        | callable TSEMI { $$ = new NExpressionStatement($1); }
         | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @1; }
         | TIF TLPAREN expr TRPAREN stmt { $$ = new NIfStatement($3, $5, NULL); $$->location = @$; } %prec ELSE
         | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStatement($3, $5, $7); $$->location = @$; }
@@ -285,6 +282,8 @@ stmt    : exprstmt TSEMI { $$ = $1; }
 exprstmt
         : lvalue TEQUAL expr { $$ = new NAssignment($1, $3); $$->location = @$; }
         | var_decl
+        | TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); $$->location = @$; delete $1; delete $3; }
+        | lvalue TDOT TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NMethodCall(new NLoad($1), *$3, *$5); delete $3; delete $5; $$->location = @$; }
         ;
 
 var_decl : type TIDENTIFIER { $$ = new NVariableDeclaration($1, *$2); delete $2; $$->location = @2; }
@@ -350,10 +349,6 @@ p_1
         | ident
         ;
 
-callable
-        : TIDENTIFIER TLPAREN expr_list TRPAREN { $$ = new NFunctionCall(*$1, *$3); $$->location = @$; delete $1; delete $3; }
-        | lvalue
-        ;
 
 lvalue
         : ident
@@ -388,6 +383,45 @@ arrayindex
 
 %%
 
+void yyerror(YYLTYPE* locp, ParserContext* context, const char* err) {
+  context->parseError(locp->first_line, locp->first_column, err);
+}
 
+ParserContext::ParserContext()
+: mScanner(nullptr), mInputStream(nullptr), compileUnit(nullptr) {
 
+}
+
+int ParserContext::readBytes(char* buf, const int max) {
+    mInputStream->read(buf, max);
+    int bytesRead = mInputStream->gcount();
+    return bytesRead;
+}
+
+ParserContext::~ParserContext() {
+}
+
+bool ParserContext::parse(const std::string& filePath) {
+  ifstream inputFileStream(filePath.c_str(), std::ifstream::in);
+  if (!inputFileStream) {
+      fprintf(stderr, "cannot open file: %s", filePath.c_str());
+      return false;
+  }
+  return parse(filePath, inputFileStream);
+}
+
+bool ParserContext::parse(const std::string& streamName, std::istream& is) {
+  mSuccess = true;
+  mStreamName = streamName;
+  mInputStream = &is;
+  init_scanner();
+  yyparse(this);
+  destroy_scanner();
+  return mSuccess;
+}
+
+void ParserContext::parseError(const int line, const int column, const char* errMsg) {
+  mSuccess = false;
+  fprintf(stderr, "%s:%d: %s", mStreamName.c_str(), line, errMsg);
+}
 

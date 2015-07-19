@@ -107,11 +107,11 @@ public:
 
 };
 
-class NExpression : public ASTNode {
-};
-
 
 class NStatement : public ASTNode {
+};
+
+class NExpression : public NStatement {
 };
 
 class NClassDeclaration : public NStatement {
