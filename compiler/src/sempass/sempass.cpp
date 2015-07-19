@@ -1,11 +1,11 @@
 
-#include "node.h"
-#include "types/stapletype.h"
+#include "../node.h"
+#include "../types/stapletype.h"
 
 #include "sempass.h"
-#include "typehelper.h"
-#include "importpass.h"
-#include "stringutils.h"
+#include "../typehelper.h"
+#include "typevisitor.h"
+#include "../stringutils.h"
 
 namespace staple {
 
@@ -64,10 +64,10 @@ public:
     virtual void visit(NCompileUnit* compileUnit) {
         mCompileUnit = compileUnit;
 
-        Pass1ClassVisitor p1ClassVisitor(mContext);
+        Pass1TypeVisitor p1ClassVisitor(mContext);
         p1ClassVisitor.visit(compileUnit);
 
-        Pass2ClassVisitor pass2ClassVisitor(mContext);
+        Pass2TypeVisitor pass2ClassVisitor(mContext);
         pass2ClassVisitor.visit(compileUnit);
 
         push();

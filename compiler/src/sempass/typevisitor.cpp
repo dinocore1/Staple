@@ -1,8 +1,9 @@
 
 #include <fstream>
 
-#include "importpass.h"
-#include "typehelper.h"
+#include "../compilercontext.h"
+#include "typevisitor.h"
+#include "../typehelper.h"
 
 #include <llvm/Support/FileSystem.h>
 
@@ -16,7 +17,7 @@ namespace staple {
 #define CONTAINS(x, container) (container.find(x) != container.end())
 
 
-    void Pass1ClassVisitor::visit(NCompileUnit* compileUnit) {
+    void Pass1TypeVisitor::visit(NCompileUnit* compileUnit) {
 
         for(string import : compileUnit->includes) {
             string importPath = import;
@@ -40,10 +41,10 @@ namespace staple {
                             size_t pos = import.find_last_of('.');
                             compileUnit->usingNamespaces.insert(import.substr(0, pos));
 
-                            Pass1ClassVisitor pass1(mContext);
+                            Pass1TypeVisitor pass1(mContext);
                             pass1.visit(parserContext.compileUnit);
 
-                            Pass2ClassVisitor pass2(mContext);
+                            Pass2TypeVisitor pass2(mContext);
                             pass2.visit(parserContext.compileUnit);
 
                         }
@@ -94,7 +95,7 @@ namespace staple {
 
     }
 
-    ///// Pass2ClassVisitor ////
+    ///// Pass2TypeVisitor ////
 
 #define CheckType(type, location, name, positive) \
 if(type == NULL) { \
@@ -103,9 +104,7 @@ if(type == NULL) { \
     positive \
 }
 
-    set<string> Pass2ClassVisitor::mPass2VisitedPaths;
-
-    void Pass2ClassVisitor::visit(NField* field) {
+    void Pass2TypeVisitor::visit(NField* field) {
         StapleType* stpType = getType(&field->type);
         CheckType(stpType, field->location, field->name,
                   StapleField* stpField = mCurrentClass->addField(field->name, stpType);
@@ -116,7 +115,7 @@ if(type == NULL) { \
         )
     }
 
-    void Pass2ClassVisitor::visit(NArgument* argument) {
+    void Pass2TypeVisitor::visit(NArgument* argument) {
         StapleType* stpType = getType(&argument->type);
         if(stpType != nullptr) {
             mType[argument] = stpType;
@@ -126,7 +125,7 @@ if(type == NULL) { \
         }
     }
 
-    void Pass2ClassVisitor::visit(NType* type) {
+    void Pass2TypeVisitor::visit(NType* type) {
         StapleType* retType = getStapleType(type, mContext, mCompileUnit, mContext->mRootScope);
         mType[type] = retType;
         if(mContext->mCompileUnit == mCompileUnit){
@@ -134,7 +133,7 @@ if(type == NULL) { \
         }
     }
 
-    void Pass2ClassVisitor::visit(NCompileUnit* compileUnit) {
+    void Pass2TypeVisitor::visit(NCompileUnit* compileUnit) {
 
         mCompileUnit = compileUnit;
 
@@ -161,7 +160,7 @@ if(type == NULL) { \
 
     }
 
-    void Pass2ClassVisitor::visit(NFunctionPrototype* functionPrototype) {
+    void Pass2TypeVisitor::visit(NFunctionPrototype* functionPrototype) {
         string fqFunctionName = functionPrototype->name;
         StapleFunction* function = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
 
@@ -179,7 +178,7 @@ if(type == NULL) { \
         mContext->typeTable[functionPrototype] = function;
     }
 
-    void Pass2ClassVisitor::visit(NFunction* functionDecl) {
+    void Pass2TypeVisitor::visit(NFunction* functionDecl) {
         string fqFunctionName = !mCompileUnit->package.empty() ? (mCompileUnit->package + "." + functionDecl->name)
                                                                              : functionDecl->name;
         StapleFunction* function = cast<StapleFunction>(mContext->mRootScope.table[fqFunctionName]);
@@ -199,7 +198,7 @@ if(type == NULL) { \
         mContext->typeTable[functionDecl] = function;
     }
 
-    void Pass2ClassVisitor::visit(NMethodFunction* methodFunction) {
+    void Pass2TypeVisitor::visit(NMethodFunction* methodFunction) {
 
         std::vector<StapleType*> args;
         for(NArgument* arg : methodFunction->arguments){

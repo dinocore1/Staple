@@ -2,8 +2,8 @@
 #ifndef SEMPASS_H_
 #define SEMPASS_H_
 
-#include "scope.h"
-#include "compilercontext.h"
+#include "../scope.h"
+#include "../compilercontext.h"
 
 namespace staple {
 

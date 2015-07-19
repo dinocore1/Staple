@@ -2,7 +2,6 @@
 #include <fstream>
 
 #include "compilercontext.h"
-#include "importpass.h"
 
 #include <llvm/Support/FileSystem.h>
 

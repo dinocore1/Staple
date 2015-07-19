@@ -9,7 +9,7 @@ extern int yydebug;
 #include "compilercontext.h"
 #include "node.h"
 #include "parsercontext.h"
-#include "sempass.h"
+#include "sempass/sempass.h"
 #include "codegen/LLVMCodeGenerator.h"
 
 #include <llvm/Support/FileSystem.h>

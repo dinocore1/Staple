@@ -52,7 +52,7 @@ set(SOURCE_FILES
     src/compilercontext.cpp
     src/compilercontext.h
     src/main.cpp
-    src/sempass.cpp
+    src/sempass/sempass.cpp
     src/node.h
     src/codegen/pointerscopepass.cpp
     src/codegen/pointerscopepass.h
@@ -60,7 +60,7 @@ set(SOURCE_FILES
     src/types/stapletype.cpp
     src/codegen/LLVMCodeGenerator.cpp
     src/codegen/LLVMStapleObject.cpp
-    src/importpass.cpp
+    src/sempass/typevisitor.cpp
     src/stringutils.cpp
     )
 

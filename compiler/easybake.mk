@@ -27,12 +27,12 @@ LOCAL_CXXFLAGS := -std=c++11 -I$(LOCAL_PATH)src/ $(shell llvm-config-3.5 --cxxfl
 LOCAL_SRCS := \
 	src/tokens.cpp \
 	src/parser.cpp \
-	src/sempass.cpp \
+	src/sempass/sempass.cpp \
 	src/compilercontext.cpp \
 	src/types/stapletype.cpp \
 	src/codegen/LLVMCodeGenerator.cpp \
 	src/codegen/LLVMStapleObject.cpp \
-	src/importpass.cpp \
+	src/sempass/typevisitor.cpp \
 	src/stringutils.cpp \
 	src/main.cpp
 
