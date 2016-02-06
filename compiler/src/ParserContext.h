@@ -1,6 +1,6 @@
 
-#ifndef PARSER_CONTEXT_H
-#define PARSER_CONTEXT_H
+#ifndef PARSER_CONTEXT_H_
+#define PARSER_CONTEXT_H_
 
 namespace staple {
 	
@@ -14,4 +14,4 @@ class ParserContext {
 } // namespace staple
 
 
-#endif // PARSER_CONTEXT_H
+#endif // PARSER_CONTEXT_H_

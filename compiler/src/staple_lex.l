@@ -24,10 +24,11 @@ result = yyextra->readBytes(buf, max_size);
 
 %%
 
-[ \t]                   ;
+[ \t]                   /* eat whitespace */;
 \n                      { yycolumn = 1; }
 "if"					return TIF;
 "else"					return TELSE;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TID;
+.                       printf("Unknown token!\n"); yyterminate();
 
 %%

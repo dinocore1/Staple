@@ -17,7 +17,8 @@ LOCAL_EXE := $(MODULE)
 
 define exec_template
 $(LOCAL_EXE): $(LOCAL_OBJS) $(LOCAL_SHARED_LIBS)
-	$(CXX) -o $(LOCAL_EXE) $(LOCAL_OBJS) $(LOCAL_LIBS)
+	$(SILENT) echo "linking $(MODULE)"
+	$(SILENT) $(CXX) -o $(LOCAL_EXE) $(LOCAL_OBJS) $(LOCAL_LIBS)
 
 $(MODULE)_clean:
 	$(foreach file,$(LOCAL_CLEAN),rm -rf $(LOCAL_PATH)$(file))

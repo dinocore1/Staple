@@ -27,12 +27,13 @@ endef
 
 define compile
 $(OBJ): $(SRC)
+	$(SILENT) echo "$(MODULE) <== $(SRC)"
 	$(SILENT) mkdir -p $(intermediateDir)
-	$(COMPILER) -c -o $(OBJ) $(cflags) $(SRC)
+	$(SILENT) $(COMPILER) -c -o $(OBJ) $(cflags) $(SRC)
 
 $(DEPEND): $(SRC)
 	$(SILENT) mkdir -p $(intermediateDir)
-	$(SILENT) $(COMPILER) -MMD -c -o $(OBJ) $(cflags) $(SRC) &> /dev/null
+	$(SILENT) $(COMPILER) -MM -MT $(OBJ) -o $(DEPEND) $(cflags) $(SRC)
 
 -include $(DEPEND)
 
@@ -65,8 +66,9 @@ endef
 
 define llvm_compile
 $(OBJ): $(SRC)
+	$(SILENT) echo "$(MODULE) <== $(SRC)"
 	$(SILENT) mkdir -p $(intermediateDir)
-	$(COMPILER) $(cflags) -o $(OBJ) $(SRC)
+	$(SILENT) $(COMPILER) $(cflags) -o $(OBJ) $(SRC)
 
 endef
 
