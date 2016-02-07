@@ -28,7 +28,7 @@ result = yyextra->readBytes(buf, max_size);
 "else"					        return TELSE;
 "return"				        return TRETURN;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TID;
-
+[0-9]+                  return TINT;
 
 "="                     return TEQUAL;
 "=="                    return TCEQ;

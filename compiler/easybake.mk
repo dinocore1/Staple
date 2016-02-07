@@ -2,7 +2,7 @@
 LOCAL_PATH := $(call my-dir)
 
 $(LOCAL_PATH)src/staple_parser.cpp: $(LOCAL_PATH)src/staple_parser.y
-	bison -d -o $@ $<
+	bison -Werror -d -o $@ $<
 
 $(LOCAL_PATH)src/staple_parser.hpp: $(LOCAL_PATH)src/staple_parser.cpp
 
@@ -14,7 +14,8 @@ $(LOCAL_PATH)src/staple_lex.cpp: $(LOCAL_PATH)src/staple_lex.l $(LOCAL_PATH)src/
 define parserrule
 parser:
 	flex -o $(LOCAL_PATH)src/staple_lex.cpp $(LOCAL_PATH)src/staple_lex.l
-	bison -d -o $(LOCAL_PATH)src/staple_parser.cpp $(LOCAL_PATH)src/staple_parser.y
+	bison -v -Werror -d -o $(LOCAL_PATH)src/staple_parser.cpp $(LOCAL_PATH)src/staple_parser.y
+
 endef
 
 $(eval $(parserrule))
@@ -31,7 +32,6 @@ LOCAL_CLEAN := \
 	src/staple_lex.cpp \
 	src/staple_parser.hpp \
 	src/staple_parser.cpp
-	
+
 LOCAL_LIBS := $(shell llvm-config-3.5 --ldflags --libs) -ltinfo -ldl -pthread
 include $(BUILD_EXE)
-

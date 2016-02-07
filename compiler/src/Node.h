@@ -49,6 +49,14 @@ public:
 
 };
 
+class Call : public Expr {
+public:
+	Call(const std::string& name)
+	 : mName(name) {}
+
+	const std::string mName;
+};
+
 class Id : public Expr {
 public:
 	Id(const std::string& name)

@@ -26,8 +26,9 @@
 %token TELLIPSIS
 %token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR
 %token <string> TID
+%token TINT
 
-%type <expr> expr cmpexpr addexpr mulexpr unaryexpr primary
+%type <expr> expr cmpexpr addexpr mulexpr unaryexpr primary funcall methodcall fieldref arrayref
 
 %right ELSE TELSE
 
@@ -43,18 +44,24 @@ void yyerror(YYLTYPE* locp, staple::ParserContext* context, const char* err);
 using namespace staple;
 %}
 
-
 %%
-
 
 
 stmt
 	: expr TEQUAL expr TSEMI
+	| funcall TSEMI
+	| methodcall TSEMI
+	| vardecl TSEMI
 	| TIF TLPAREN expr TRPAREN stmt %prec ELSE
 	| TIF TLPAREN expr TRPAREN stmt TELSE stmt
 	| TFOR TLPAREN stmt stmt stmt TRPAREN stmt
 	| TRETURN expr TSEMI
 	| block
+	;
+
+vardecl
+	: TID TID
+	| TID TID TLBRACKET TINT TRBRACKET
 	;
 
 block
@@ -76,14 +83,14 @@ cmpexpr
 	;
 
 addexpr
-	: mulexpr TPLUS mulexpr
-	| mulexpr TMINUS mulexpr
+	: mulexpr TPLUS mulexpr { $$ = new Op(Op::Type::ADD, $1, $3); }
+	| mulexpr TMINUS mulexpr { $$ = new Op(Op::Type::SUB, $1, $3); }
 	| mulexpr
 	;
 
 mulexpr
 	: unaryexpr TMUL unaryexpr { $$ = new Op(Op::Type::MUL, $1, $3); }
-	| unaryexpr TDIV unaryexpr
+	| unaryexpr TDIV unaryexpr { $$ = new Op(Op::Type::DIV, $1, $3); }
 	| unaryexpr
 	;
 
@@ -95,5 +102,32 @@ unaryexpr
 
 primary
 	: TLPAREN expr TRPAREN { $$ = $2; }
+	| TINT { $$ = new IntLiteral(); }
 	| TID { $$ = new Id(*$1); delete $1; }
+	| fieldref
+	| arrayref
+	| funcall
+	| methodcall
+	;
+
+funcall
+	: TID TLPAREN arglist TRPAREN { $$ = new Call(*$1); delete $1; }
+	;
+
+methodcall
+	: primary TDOT TID TLPAREN arglist TRPAREN
+	;
+
+arrayref
+	: primary TLBRACKET expr TRBRACKET
+	;
+
+fieldref
+	: primary TDOT TID
+	;
+
+arglist
+	: expr
+	| arglist TCOMMA expr
+	|
 	;
