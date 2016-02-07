@@ -17,6 +17,8 @@ class ParserContext {
 	bool parse(const std::string& streamName, std::istream& is);
 	void parseError(const int line, const int column, const char* errMsg);
 
+	Node* rootNode;
+
 protected:
   void init_scanner();
   void destroy_scanner();

@@ -3,12 +3,20 @@
 
 namespace staple {
 
+class IfStmt;
+class Assign;
+class Return;
+class Block;
+
+#define VISIT(x) virtual void visit(x*){};
 class Visitor {
 public:
 	virtual ~Visitor() {}
 	virtual void visit(Node* node);
-
-
+	VISIT(IfStmt)
+	VISIT(Assign)
+	VISIT(Return)
+	VISIT(Block)
 
 };
 

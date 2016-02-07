@@ -7,5 +7,9 @@ int main(int argc, char** argv) {
 
     ParserContext ctx;
 
-    ctx.parse(argv[1]);
+    printf("parse: %d", ctx.parse(argv[1]));
+    ILGenerator ilGenerator;
+    ilGenerator.visit(ctx.rootNode);
+
+
 }

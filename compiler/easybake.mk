@@ -28,6 +28,7 @@ LOCAL_SRCS := \
 	src/staple_parser.cpp \
 	src/FileUtils.cpp \
 	src/Node.cpp \
+	src/ILGenerator.cpp \
 	src/main.cpp
 
 LOCAL_CLEAN := \

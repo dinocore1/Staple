@@ -1,9 +1,10 @@
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(SOURCE_FILES
-  src/FileUtils.cpp
+  src/FileUtils.cpp src/FileUtils.h
   src/staple_parser.cpp
   src/staple_lex.cpp
-  src/Node.cpp
+  src/Node.cpp src/Node.h
+  src/ILGenerator.cpp src/ILGenerator.h
   src/main.cpp
   )
 

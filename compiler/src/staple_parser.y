@@ -77,7 +77,7 @@ vardecl
 	;
 
 block
-	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
+	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); ctx->rootNode = $$; }
 	;
 
 expr
