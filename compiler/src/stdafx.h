@@ -1,8 +1,23 @@
 #ifndef STDAFX_H_
 #define STDAFX_H_
 
-#include "ParserContext.h"
+#include <string>
+
+namespace staple {
+
+class Node;
+class Expr;
+class Not;
+class Neg;
+class Id;
+
+class ParserContext;
+
+} //namespace staple
+
 #include "staple_parser.hpp"
+
+#include "ParserContext.h"
 #include "Node.h"
 
 

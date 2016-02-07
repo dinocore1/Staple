@@ -7,10 +7,8 @@
 
 
 %{
-#include <string>
 
-#include "ParserContext.h"
-#include "staple_parser.hpp"
+#include "stdafx.h"
 
 #define YY_EXTRA_TYPE staple::ParserContext*
 
@@ -26,9 +24,9 @@ result = yyextra->readBytes(buf, max_size);
 
 [ \t]                   /* eat whitespace */;
 \n                      { yycolumn = 1; }
-"if"					return TIF;
-"else"					return TELSE;
-"return"				return TRETURN;
+"if"					          return TIF;
+"else"					        return TELSE;
+"return"				        return TRETURN;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TID;
 
 
@@ -52,6 +50,8 @@ result = yyextra->readBytes(buf, max_size);
 "*"                     return TMUL;
 "||"                    return TOR;
 "&&"                    return TAND;
+"&"                     return TBITAND;
+"|"                     return TBITOR;
 "/"                     return TDIV;
 ";"                     return TSEMI;
 "!"                     return TNOT;
