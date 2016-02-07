@@ -5,7 +5,7 @@
 #include <sstream>
 
 #ifdef _WIN32
-  static const char PATH_SEP = '\';
+  static const char PATH_SEP = '\\';
   #include <direct.h>
   #define getcwd _getcwd
 #else
@@ -22,13 +22,19 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
   size_t i;
   size_t pos = 0;
   while( (i = filepath.find_first_of(PATH_SEP, pos)) != string::npos) {
-    string part = filepath.substr(pos+1, i - pos);
-    if(part.compare("..") == 0) {
-      pathParts.pop_back();
-    } else {
-      pathParts.push_back(part);
+    string part = filepath.substr(pos, i - pos);
+    if(part.length() > 0) {
+      if(part.compare("..") == 0) {
+        pathParts.pop_back();
+      } else {
+        pathParts.push_back(part);
+      }
     }
     pos = i+1;
+  }
+  string part = filepath.substr(pos, strLen - pos);
+  if(part.length() > 0) {
+    pathParts.push_back(part);
   }
 }
 
@@ -47,7 +53,11 @@ File::File(const std::string& filepath)
   processPath(filepath, mPathParts);
 }
 
-string File::getAbsolutePath() const {
+std::string File::getFilename() const {
+  return mPathParts.back();
+}
+
+std::string File::getAbsolutePath() const {
   stringbuf buf;
   ostream os (&buf);
 

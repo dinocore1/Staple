@@ -27,6 +27,7 @@ LOCAL_SRCS := \
 	src/staple_lex.cpp \
 	src/staple_parser.cpp \
 	src/FileUtils.cpp \
+	src/Node.cpp \
 	src/main.cpp
 
 LOCAL_CLEAN := \

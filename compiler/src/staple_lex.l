@@ -62,3 +62,12 @@ result = yyextra->readBytes(buf, max_size);
 .                       printf("Unknown token!\n"); yyterminate();
 
 %%
+
+void staple::ParserContext::init_scanner() {
+  yylex_init(&mScanner);
+  yyset_extra(this, mScanner);
+}
+
+void staple::ParserContext::destroy_scanner() {
+   yylex_destroy(mScanner);
+}

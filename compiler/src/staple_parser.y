@@ -142,3 +142,56 @@ arglist
 	: arglist TCOMMA expr { $1->push_back($3); }
 	| { $$ = new ExprList(); }
 	;
+
+%%
+
+void yyerror(YYLTYPE* locp, staple::ParserContext* context, const char* err) {
+  context->parseError(locp->first_line, locp->first_column, err);
+}
+
+ParserContext::ParserContext()
+: mScanner(nullptr), mInputStream(nullptr) {
+
+}
+
+int ParserContext::readBytes(char* buf, const int max) {
+    mInputStream->read(buf, max);
+    int bytesRead = mInputStream->gcount();
+    return bytesRead;
+}
+
+ParserContext::~ParserContext() {
+}
+
+bool ParserContext::parse(const staple::File& file) {
+  std::ifstream inputFileStream(file.getAbsolutePath(), std::ifstream::in);
+  if (!inputFileStream) {
+      fprintf(stderr, "cannot open file: %s", file.getAbsolutePath().c_str());
+      return false;
+  }
+  return parse(file.getFilename(), inputFileStream);
+}
+
+bool ParserContext::parse(const std::string& filepath) {
+   std::ifstream inputFileStream(filepath.c_str(), std::ifstream::in);
+     if (!inputFileStream) {
+         fprintf(stderr, "cannot open file: %s", filepath.c_str());
+         return false;
+     }
+     return parse(filepath.c_str(), inputFileStream);
+}
+
+bool ParserContext::parse(const std::string& streamName, std::istream& is) {
+  mSuccess = true;
+  mStreamName = streamName;
+  mInputStream = &is;
+  init_scanner();
+  yyparse(this);
+  destroy_scanner();
+  return mSuccess;
+}
+
+void ParserContext::parseError(const int line, const int column, const char* errMsg) {
+  mSuccess = false;
+  fprintf(stderr, "%s:%d: %s", mStreamName.c_str(), line, errMsg);
+}

@@ -2,10 +2,16 @@
 #define STDAFX_H_
 
 #include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
+
+#include "FileUtils.h"
 
 namespace staple {
 
+class Visitor;
 class Node;
 class Stmt;
 class Expr;

@@ -12,7 +12,9 @@ public:
 
   bool isDirectory() const;
   bool isFile() const;
+  std::string getFilename() const;
   std::string getAbsolutePath() const;
+
 
 private:
   std::vector<std::string> mPathParts;
