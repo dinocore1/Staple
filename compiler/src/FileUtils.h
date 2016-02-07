@@ -10,6 +10,8 @@ public:
   File(const File& root, const std::string& filepath);
   File(const std::string& filepath);
 
+  bool isDirectory() const;
+  bool isFile() const;
   std::string getAbsolutePath() const;
 
 private:
