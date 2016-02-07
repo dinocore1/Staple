@@ -26,6 +26,7 @@ LOCAL_CXXFLAGS := -std=c++11 -I$(LOCAL_PATH)src/ $(shell llvm-config-3.5 --cxxfl
 LOCAL_SRCS := \
 	src/staple_lex.cpp \
 	src/staple_parser.cpp \
+	src/FileUtils.cpp \
 	src/main.cpp
 
 LOCAL_CLEAN := \

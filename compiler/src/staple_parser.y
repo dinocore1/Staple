@@ -6,18 +6,22 @@
 %lex-param { void* scanner  }
 
 %{
-#include <string>
-
 #include "stdafx.h"
 %}
 
 %code requires {
 #include "stdafx.h"
+typedef std::vector<staple::Expr*> ExprList;
+typedef std::vector<staple::Stmt*> StmtList;
 }
 
 %union {
+  int ival;
 	std::string* string;
+	staple::Stmt* stmt;
 	staple::Expr* expr;
+	StmtList* stmtlist;
+	ExprList* exprlist;
 }
 
 %token TIF TELSE TNOT TSEMI TRETURN TFOR
@@ -26,9 +30,12 @@
 %token TELLIPSIS
 %token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR
 %token <string> TID
-%token TINT
+%token <ival> TINT
 
+%type <stmt> stmt vardecl block
 %type <expr> expr cmpexpr addexpr mulexpr unaryexpr primary funcall methodcall fieldref arrayref
+%type <stmtlist> stmtlist
+%type <exprlist> arglist
 
 %right ELSE TELSE
 
@@ -48,24 +55,29 @@ using namespace staple;
 
 
 stmt
-	: expr TEQUAL expr TSEMI
-	| funcall TSEMI
-	| methodcall TSEMI
-	| vardecl TSEMI
-	| TIF TLPAREN expr TRPAREN stmt %prec ELSE
-	| TIF TLPAREN expr TRPAREN stmt TELSE stmt
-	| TFOR TLPAREN stmt stmt stmt TRPAREN stmt
-	| TRETURN expr TSEMI
+	: expr TEQUAL expr error TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
+	| funcall error TSEMI { $$ = new StmtExpr($1); }
+	| methodcall error TSEMI { $$ = new StmtExpr($1); }
+	| vardecl error TSEMI
+	| TRETURN expr error TSEMI { $$ = new Return($2); $$->location = @$; }
+	| TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
+	| TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
+	| TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}
 	| block
 	;
 
+stmtlist
+	: stmtlist stmt { $1->push_back($2); }
+	| { $$ = new StmtList(); }
+	;
+
 vardecl
-	: TID TID
-	| TID TID TLBRACKET TINT TRBRACKET
+	: TID TID {}
+	| TID TID TLBRACKET TINT TRBRACKET {}
 	;
 
 block
-	: TLBRACE stmt TRBRACE
+	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
 	;
 
 expr
@@ -83,27 +95,27 @@ cmpexpr
 	;
 
 addexpr
-	: mulexpr TPLUS mulexpr { $$ = new Op(Op::Type::ADD, $1, $3); }
-	| mulexpr TMINUS mulexpr { $$ = new Op(Op::Type::SUB, $1, $3); }
+	: mulexpr TPLUS mulexpr { $$ = new Op(Op::Type::ADD, $1, $3); $$->location = @$; }
+	| mulexpr TMINUS mulexpr { $$ = new Op(Op::Type::SUB, $1, $3); $$->location = @$; }
 	| mulexpr
 	;
 
 mulexpr
-	: unaryexpr TMUL unaryexpr { $$ = new Op(Op::Type::MUL, $1, $3); }
-	| unaryexpr TDIV unaryexpr { $$ = new Op(Op::Type::DIV, $1, $3); }
+	: unaryexpr TMUL unaryexpr { $$ = new Op(Op::Type::MUL, $1, $3); $$->location = @$; }
+	| unaryexpr TDIV unaryexpr { $$ = new Op(Op::Type::DIV, $1, $3); $$->location = @$; }
 	| unaryexpr
 	;
 
 unaryexpr
-	: TNOT primary { $$ = new Not($2); }
-	| TMINUS primary { $$ = new Neg($2); }
+	: TNOT primary { $$ = new Not($2); $$->location = @$; }
+	| TMINUS primary { $$ = new Neg($2); $$->location = @$; }
 	| primary
 	;
 
 primary
 	: TLPAREN expr TRPAREN { $$ = $2; }
-	| TINT { $$ = new IntLiteral(); }
-	| TID { $$ = new Id(*$1); delete $1; }
+	| TINT { $$ = new IntLiteral($1); $$->location = @$; }
+	| TID { $$ = new Id(*$1); delete $1; $$->location = @$; }
 	| fieldref
 	| arrayref
 	| funcall
@@ -111,7 +123,7 @@ primary
 	;
 
 funcall
-	: TID TLPAREN arglist TRPAREN { $$ = new Call(*$1); delete $1; }
+	: TID TLPAREN arglist TRPAREN { $$ = new Call(*$1, $3); delete $1; $$->location = @$; }
 	;
 
 methodcall
@@ -127,7 +139,6 @@ fieldref
 	;
 
 arglist
-	: expr
-	| arglist TCOMMA expr
-	|
+	: arglist TCOMMA expr { $1->push_back($3); }
+	| { $$ = new ExprList(); }
 	;

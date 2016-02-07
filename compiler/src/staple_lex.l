@@ -28,7 +28,9 @@ result = yyextra->readBytes(buf, max_size);
 "else"					        return TELSE;
 "return"				        return TRETURN;
 [a-zA-Z_][a-zA-Z0-9_]*  SAVE_TOKEN; return TID;
-[0-9]+                  return TINT;
+[0-9]+                  yylval->ival = std::stoul(yytext, 0, 10); return TINT;
+0x[0-9a-fA-F]+          yylval->ival = std::stoul(yytext, 0, 16); return TINT;
+0b[01]+                 yylval->ival = std::stoul(yytext, 0, 2); return TINT;
 
 "="                     return TEQUAL;
 "=="                    return TCEQ;

@@ -2,10 +2,12 @@
 #define STDAFX_H_
 
 #include <string>
+#include <vector>
 
 namespace staple {
 
 class Node;
+class Stmt;
 class Expr;
 class Not;
 class Neg;
