@@ -5,7 +5,9 @@ set(SOURCE_FILES
   src/staple_lex.cpp
   src/Node.cpp src/Node.h
   src/ILGenerator.cpp src/ILGenerator.h
+  src/CompilerContext.cpp src/CompilerContext.h
+  src/VarCollector.cpp src/VarCollector.h
   src/main.cpp
-        src/CompilerContext.cpp src/CompilerContext.h)
+  )
 
 add_executable(stp ${SOURCE_FILES})

@@ -16,6 +16,8 @@ class ArrayDecl;
 class Visitor {
 public:
 	virtual ~Visitor() {}
+
+	void visitChildren(Node* node);
 	virtual void visit(Node* node);
 	VISIT(IfStmt)
 	VISIT(Assign)
@@ -29,19 +31,32 @@ public:
 
 class Node {
 public:
+
+	enum Type {
+		Unknown,
+		VarDecl
+	};
+
 	YYLTYPE location;
 	std::vector<Node*> children;
 
 	virtual void accept(Visitor*) = 0;
+	virtual Type getType() = 0;
 };
 
 class Stmt : public Node {
 public:
 
+	Type getType() {
+		return Type::Unknown;
+	}
 };
 
 class Expr : public Node {
-
+public:
+	Type getType() {
+		return Type::Unknown;
+	}
 };
 
 class IfStmt : public Stmt {
@@ -100,12 +115,12 @@ public:
 class Block : public Stmt {
 public:
 	Block(StmtList* stmts)
-	 : mStmts(stmts) {
-		children.insert(children.end(), mStmts->begin(), mStmts->end());
+	 : mStmts(*stmts) {
+		children.insert(children.end(), mStmts.begin(), mStmts.end());
 	}
 
 	ACCEPT
-	StmtList* mStmts;
+	StmtList mStmts;
 };
 
 class VarDecl : public Stmt {
@@ -113,19 +128,25 @@ public:
 	VarDecl(const std::string& type, const std::string& name)
 	 : mType(type), mName(name) { };
 
+	 Type getType() {
+	 	return Type::VarDecl;
+	 }
+
 	ACCEPT
 	std::string mType;
 	std::string mName;
 };
 
-class ArrayDecl : public Stmt {
+class ArrayDecl : public VarDecl {
 public:
 	ArrayDecl(const std::string& type, const std::string& name, uint32_t size)
-	 : mType(type), mName(name), mSize(size) { };
+	 : VarDecl(type, name), mSize(size) { };
+
+	 Type getType() {
+	 	return Type::VarDecl;
+	 }
 
 	ACCEPT
-	std::string mType;
-	std::string mName;
 	uint32_t mSize;
 };
 

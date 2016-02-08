@@ -28,6 +28,7 @@ class ParserContext;
 #include "ParserContext.h"
 #include "Node.h"
 #include "CompilerContext.h"
+#include "VarCollector.h"
 #include "ILGenerator.h"
 
 
