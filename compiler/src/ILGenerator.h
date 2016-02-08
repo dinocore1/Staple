@@ -2,16 +2,17 @@
 #ifndef STAPLE_ILGENERATOR_H
 #define STAPLE_ILGENERATOR_H
 
-#include "stdafx.h"
 
 namespace staple {
 
-class ILGenerator : public Visitor {
+class ILGenerator {
 public:
-    using Visitor::visit;
 
-    virtual void visit(Assign*);
+    ILGenerator(Node* rootNode);
+    void generate();
 
+private:
+    Node* mRootNode;
 };
 
 }

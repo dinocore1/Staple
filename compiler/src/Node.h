@@ -3,10 +3,12 @@
 
 namespace staple {
 
+class Node;
 class IfStmt;
 class Assign;
 class Return;
 class Block;
+class Op;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -17,6 +19,7 @@ public:
 	VISIT(Assign)
 	VISIT(Return)
 	VISIT(Block)
+	VISIT(Op);
 
 };
 
@@ -119,9 +122,9 @@ public:
 	}
 
 	ACCEPT
-	const Type mOp;
-	const Expr* mLeft;
-	const Expr* mRight;
+	Type mOp;
+	Expr* mLeft;
+	Expr* mRight;
 };
 
 class Not : public Expr {
@@ -132,7 +135,7 @@ public:
 	}
 
 	ACCEPT
-	const Expr* mExpr;
+	Expr* mExpr;
 };
 
 class Neg : public Expr {
@@ -143,7 +146,7 @@ public:
 	}
 
 	ACCEPT
-	const Expr* mExpr;
+	Expr* mExpr;
 
 };
 

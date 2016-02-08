@@ -29,6 +29,7 @@ LOCAL_SRCS := \
 	src/FileUtils.cpp \
 	src/Node.cpp \
 	src/ILGenerator.cpp \
+	src/CompilerContext.cpp \
 	src/main.cpp
 
 LOCAL_CLEAN := \
