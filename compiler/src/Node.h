@@ -9,6 +9,8 @@ class Assign;
 class Return;
 class Block;
 class Op;
+class VarDecl;
+class ArrayDecl;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -106,6 +108,27 @@ public:
 	StmtList* mStmts;
 };
 
+class VarDecl : public Stmt {
+public:
+	VarDecl(const std::string& type, const std::string& name)
+	 : mType(type), mName(name) { };
+
+	ACCEPT
+	std::string mType;
+	std::string mName;
+};
+
+class ArrayDecl : public Stmt {
+public:
+	ArrayDecl(const std::string& type, const std::string& name, uint32_t size)
+	 : mType(type), mName(name), mSize(size) { };
+
+	ACCEPT
+	std::string mType;
+	std::string mName;
+	uint32_t mSize;
+};
+
 class Op : public Expr {
 public:
 	enum Type {
@@ -174,11 +197,11 @@ public:
 
 class IntLiteral : public Expr {
 public:
-	IntLiteral(int value)
+	IntLiteral(int64_t value)
 	 : mValue(value) {}
 
 	ACCEPT
-	const int mValue;
+	const int64_t mValue;
 };
 
 } // namespace staple

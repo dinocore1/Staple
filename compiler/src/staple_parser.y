@@ -72,8 +72,8 @@ stmtlist
 	;
 
 vardecl
-	: TID TID {}
-	| TID TID TLBRACKET TINT TRBRACKET {}
+	: TID TID { $$ = new VarDecl(*$1, *$2); delete $1; delete $2; $$->location = @$; }
+	| TID TID TLBRACKET TINT TRBRACKET { $$ = new ArrayDecl(*$1, *$2, $4); delete $1; delete $2; $$->location = @$; }
 	;
 
 block

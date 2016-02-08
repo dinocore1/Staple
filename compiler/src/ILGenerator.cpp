@@ -12,6 +12,10 @@ class Location {
 
 class IntConstant : public Location {
 public:
+  IntConstant(int64_t value)
+   : mValue(value) {};
+
+  int64_t mValue;
 
 };
 
@@ -54,23 +58,30 @@ public:
         return mScope->createTemp();
     }
 
+    void set(Node* n, Location* l) {
+      mScope->table[n] = l;
+    }
+
     Location* gen(Node* n) {
         visit(n);
         return mScope->table[n];
     }
 
     virtual void visit(IntLiteral* lit) {
-        return new IntConstant(lit->mValue);
+      set(lit, new IntConstant(lit->mValue));
     }
 
     virtual void visit(Op* op) {
         Location* lleft = gen(op->mLeft);
         Location* lright = gen(op->mRight);
         Location* result = createTemp();
+
+        set(op, result);
     }
 
     virtual void visit(Assign* assign) {
         Location* lright = gen(assign->mRight);
+        Location* lleft = gen(assign->mLeft);
 
     }
 
@@ -87,5 +98,3 @@ void ILGenerator::generate() {
 }
 
 } // namespace staple
-
-
