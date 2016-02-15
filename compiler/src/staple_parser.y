@@ -55,11 +55,11 @@ using namespace staple;
 
 
 stmt
-	: expr TEQUAL expr error TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
-	| funcall error TSEMI { $$ = new StmtExpr($1); }
-	| methodcall error TSEMI { $$ = new StmtExpr($1); }
-	| vardecl error TSEMI
-	| TRETURN expr error TSEMI { $$ = new Return($2); $$->location = @$; }
+	: expr TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
+	| funcall TSEMI { $$ = new StmtExpr($1); }
+	| methodcall TSEMI { $$ = new StmtExpr($1); }
+	| vardecl TSEMI
+	| TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
 	| TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}

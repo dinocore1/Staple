@@ -8,6 +8,14 @@ namespace staple {
 
 class CompilerContext {
 public:
+    CompilerContext();
+    ParserContext parserContext;
+    File inputFile;
+    Node* rootNode;
+    bool generateDebugSymobols;
+
+    void setInputFile(const File&);
+    bool parse();
 
 
 };

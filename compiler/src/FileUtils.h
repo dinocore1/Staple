@@ -9,6 +9,7 @@ public:
   File();
   File(const File& root, const std::string& filepath);
   File(const std::string& filepath);
+  File(const char*);
 
   bool isDirectory() const;
   bool isFile() const;

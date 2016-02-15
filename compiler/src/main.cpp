@@ -5,11 +5,14 @@ using namespace staple;
 
 int main(int argc, char** argv) {
 
-    ParserContext ctx;
 
-    printf("parse: %d", ctx.parse(argv[1]));
+    CompilerContext ctx;
+    //ctx.generateDebugSymobols = true;
+    ctx.setInputFile(argv[1]);
 
-    ILGenerator ilGenerator(ctx.rootNode);
+    ctx.parse();
+
+    ILGenerator ilGenerator(&ctx);
     ilGenerator.generate();
 
 

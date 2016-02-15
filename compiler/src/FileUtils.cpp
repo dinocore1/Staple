@@ -53,6 +53,11 @@ File::File(const std::string& filepath)
   processPath(filepath, mPathParts);
 }
 
+File::File(const char* filepath)
+ : File() {
+  processPath(filepath, mPathParts);
+}
+
 std::string File::getFilename() const {
   return mPathParts.back();
 }

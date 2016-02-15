@@ -13,23 +13,21 @@ namespace staple {
 
 class Location {
 public:
-    Value* llvmValue;
+    virtual llvm::Value* getValue() = 0;
 
 };
 
-class IntConstant : public Location {
+class LLVMValue : public Location {
 public:
-  IntConstant(int64_t value)
-   : mValue(value) {
+    LLVMValue(llvm::Value* value)
+    : mValue(value) {}
 
-  };
+    llvm::Value* getValue() {
+        return mValue;
+    }
 
-  int64_t mValue;
-};
-
-class Temp : public Location {
-public:
-    Temp() {};
+protected:
+    llvm::Value* mValue;
 };
 
 class Scope {
@@ -40,13 +38,6 @@ public:
      : mParent(scope) { }
 
     map<Node*, unique_ptr<Location>> table;
-    vector<unique_ptr<Location>> temps;
-
-    Location* createTemp() {
-        Temp* retval = new Temp();
-        temps.push_back(unique_ptr<Location>(retval));
-        return retval;
-    }
 
 
 };
@@ -55,8 +46,10 @@ class ILGenVisitor : public Visitor {
 public:
     using Visitor::visit;
     Scope* mScope;
+    ILGenerator* mILGen;
 
-    ILGenVisitor() {
+    ILGenVisitor(ILGenerator *generator)
+    : mILGen(generator) {
         push();
     }
 
@@ -70,10 +63,6 @@ public:
         delete top;
     }
 
-    Location* createTemp() {
-        return mScope->createTemp();
-    }
-
     void set(Node* n, Location* l) {
       mScope->table[n] = unique_ptr<Location>(l);
     }
@@ -84,19 +73,40 @@ public:
     }
 
     virtual void visit(Block* block) {
+
+        std::vector<llvm::Type*> argTypes;
+        argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+
+        FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
+        Function* blah = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "main", &mILGen->mModule);
+
         push();
+
+        BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
+        mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+
         visitChildren(block);
         pop();
+
+        set(block, new LLVMValue(basicBlock));
     }
 
     virtual void visit(IntLiteral* lit) {
-      set(lit, new IntConstant(lit->mValue));
+        llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
+      set(lit, new LLVMValue(value));
     }
 
     virtual void visit(Op* op) {
         Location* lleft = gen(op->mLeft);
         Location* lright = gen(op->mRight);
-        Location* result = createTemp();
+
+        Location* result;
+
+        switch(op->mOp) {
+            case Op::Type::ADD:
+                result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lleft->getValue(), lright->getValue()));
+                break;
+        }
 
         set(op, result);
     }
@@ -105,18 +115,32 @@ public:
         Location* lright = gen(assign->mRight);
         Location* lleft = gen(assign->mLeft);
 
+
     }
 
 };
 
-ILGenerator::ILGenerator(Node *rootNode)
- : mRootNode(rootNode) {
-
+ILGenerator::ILGenerator(CompilerContext* ctx)
+ : mCtx(ctx),
+   mIRBuilder(getGlobalContext()),
+   mModule(ctx->inputFile.getAbsolutePath().c_str(), getGlobalContext())
+{
+    if(ctx->generateDebugSymobols) {
+        mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
+        mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
+        mDIBuider = new DIBuilder(mModule);
+    }
 }
 
 void ILGenerator::generate() {
-    ILGenVisitor visitor;
-    mRootNode->accept(&visitor);
+    ILGenVisitor visitor(this);
+    mCtx->rootNode->accept(&visitor);
+
+    if(mCtx->generateDebugSymobols) {
+        mDIBuider->finalize();
+    }
+
+    mModule.dump();
 }
 
 } // namespace staple
