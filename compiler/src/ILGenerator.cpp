@@ -1,22 +1,35 @@
 #include "stdafx.h"
 
 #include <map>
+#include <memory>
 
 using namespace std;
+
+#include <llvm/IR/IRBuilder.h>
+
+using namespace llvm;
 
 namespace staple {
 
 class Location {
+public:
+    Value* llvmValue;
 
 };
 
 class IntConstant : public Location {
 public:
   IntConstant(int64_t value)
-   : mValue(value) {};
+   : mValue(value) {
+
+  };
 
   int64_t mValue;
+};
 
+class Temp : public Location {
+public:
+    Temp() {};
 };
 
 class Scope {
@@ -26,10 +39,13 @@ public:
     Scope(Scope* scope)
      : mParent(scope) { }
 
-    map<Node*, Location*> table;
+    map<Node*, unique_ptr<Location>> table;
+    vector<unique_ptr<Location>> temps;
 
     Location* createTemp() {
-        return new Location();
+        Temp* retval = new Temp();
+        temps.push_back(unique_ptr<Location>(retval));
+        return retval;
     }
 
 
@@ -59,12 +75,18 @@ public:
     }
 
     void set(Node* n, Location* l) {
-      mScope->table[n] = l;
+      mScope->table[n] = unique_ptr<Location>(l);
     }
 
     Location* gen(Node* n) {
-        visit(n);
-        return mScope->table[n];
+        n->accept(this);
+        return mScope->table[n].get();
+    }
+
+    virtual void visit(Block* block) {
+        push();
+        visitChildren(block);
+        pop();
     }
 
     virtual void visit(IntLiteral* lit) {
@@ -94,7 +116,7 @@ ILGenerator::ILGenerator(Node *rootNode)
 
 void ILGenerator::generate() {
     ILGenVisitor visitor;
-    visitor.visit(mRootNode);
+    mRootNode->accept(&visitor);
 }
 
 } // namespace staple

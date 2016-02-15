@@ -6,7 +6,6 @@ set(SOURCE_FILES
   src/Node.cpp src/Node.h
   src/ILGenerator.cpp src/ILGenerator.h
   src/CompilerContext.cpp src/CompilerContext.h
-  src/VarCollector.cpp src/VarCollector.h
   src/main.cpp
   )
 

@@ -11,6 +11,7 @@ class Block;
 class Op;
 class VarDecl;
 class ArrayDecl;
+class IntLiteral;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -23,7 +24,8 @@ public:
 	VISIT(Assign)
 	VISIT(Return)
 	VISIT(Block)
-	VISIT(Op);
+	VISIT(Op)
+	VISIT(IntLiteral)
 
 };
 
