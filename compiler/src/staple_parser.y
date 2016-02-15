@@ -169,7 +169,7 @@ bool ParserContext::parse(const staple::File& file) {
       fprintf(stderr, "cannot open file: %s", file.getAbsolutePath().c_str());
       return false;
   }
-  return parse(file.getFilename(), inputFileStream);
+  return parse(file.getName(), inputFileStream);
 }
 
 bool ParserContext::parse(const std::string& filepath) {

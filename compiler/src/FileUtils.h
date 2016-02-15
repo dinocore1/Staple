@@ -13,12 +13,16 @@ public:
 
   bool isDirectory() const;
   bool isFile() const;
-  std::string getFilename() const;
+  std::string getName() const;
+  const std::string& getPath() const;
   std::string getAbsolutePath() const;
+  std::string getCanonicalPath() const;
 
 
 private:
-  std::vector<std::string> mPathParts;
+  std::string mParent;
+  std::string mPath;
+
 
 };
 

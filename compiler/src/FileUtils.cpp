@@ -38,37 +38,57 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
   }
 }
 
-File::File() {
+File::File()
+: mParent("") {
   char pathBuf[FILENAME_MAX];
-  processPath(getcwd(pathBuf, FILENAME_MAX), mPathParts);
+  mPath = getcwd(pathBuf, FILENAME_MAX);
 }
 
-File::File(const File& root, const std::string& filepath) {
-  mPathParts = root.mPathParts;
-  processPath(filepath, mPathParts);
+File::File(const File& root, const std::string& filepath)
+: mParent(root.getPath()), mPath(filepath) {
 }
 
-File::File(const std::string& filepath)
- : File() {
-  processPath(filepath, mPathParts);
+File::File(const std::string& filepath) {
+  char pathBuf[FILENAME_MAX];
+  mParent = getcwd(pathBuf, FILENAME_MAX);
+  mPath = filepath;
 }
 
-File::File(const char* filepath)
- : File() {
-  processPath(filepath, mPathParts);
+File::File(const char* filepath) {
+  char pathBuf[FILENAME_MAX];
+  mParent = getcwd(pathBuf, FILENAME_MAX);
+  mPath = filepath;
 }
 
-std::string File::getFilename() const {
-  return mPathParts.back();
+std::string File::getName() const {
+  size_t i = mPath.find_last_of(PATH_SEP);
+  if(i == string::npos) {
+    return mPath;
+  } else {
+    const size_t strLen = mPath.length();
+    return mPath.substr(i + i, strLen - i);
+  }
+}
+
+const std::string& File::getPath() const {
+  return mPath;
 }
 
 std::string File::getAbsolutePath() const {
+  return mParent + PATH_SEP + mPath;
+}
+
+std::string File::getCanonicalPath() const {
+  std::vector<std::string> pathParts;
+  processPath(mParent, pathParts);
+  processPath(mPath, pathParts);
+
   stringbuf buf;
   ostream os (&buf);
 
-  for(size_t i=0;i<mPathParts.size();i++) {
+  for(size_t i=0;i<pathParts.size();i++) {
     os << PATH_SEP;
-    os << mPathParts[i];
+    os << pathParts[i];
   }
 
   return buf.str();
