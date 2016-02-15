@@ -29,8 +29,8 @@ define compile
 $(OBJ): $(SRC)
 	$(SILENT) echo "$(MODULE) <== $(SRC)"
 	$(SILENT) mkdir -p $(intermediateDir)
-	$(SILENT) $(COMPILER) -MM -MT $(OBJ) -o $(DEPEND) $(cflags) $(SRC) &> /dev/null
 	$(SILENT) $(COMPILER) -c -o $(OBJ) $(cflags) $(SRC)
+	$(SILENT) $(COMPILER) -MM -MT $(OBJ) -o $(DEPEND) $(cflags) $(SRC) &> /dev/null
 
 -include $(DEPEND)
 
