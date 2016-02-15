@@ -8,9 +8,46 @@
   static const char PATH_SEP = '\\';
   #include <direct.h>
   #define getcwd _getcwd
+
+  static inline bool isDir(const char* path) {
+    DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+         (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+  }
+
+  static inline bool isFile(const char* path) {
+    DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+         !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+  }
+
 #else
   static const char PATH_SEP = '/';
   #include <unistd.h>
+  #include <dirent.h>
+  #include <sys/types.h>
+  #include <sys/stat.h>
+
+  static inline bool isDir(const char* path) {
+    struct stat statinfo;
+    int rc = stat(path, &statinfo);
+    if(rc == 0) {
+      return S_ISDIR(statinfo.st_mode);
+    } else {
+      return false;
+    }
+  }
+
+  static inline bool isFile(const char* path) {
+    struct stat statinfo;
+    int rc = stat(path, &statinfo);
+    if(rc == 0) {
+      return S_ISREG(statinfo.st_mode);
+    } else {
+      return false;
+    }
+  }
+
 #endif
 
 using namespace std;
@@ -58,6 +95,16 @@ File::File(const char* filepath) {
   char pathBuf[FILENAME_MAX];
   mParent = getcwd(pathBuf, FILENAME_MAX);
   mPath = filepath;
+}
+
+bool File::isDirectory() const {
+  std::string path = getCanonicalPath();
+  return ::isDir(path.c_str());
+}
+
+bool File::isFile() const {
+  std::string path = getCanonicalPath();
+  return ::isFile(path.c_str());
 }
 
 std::string File::getName() const {
