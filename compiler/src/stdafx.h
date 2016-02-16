@@ -13,6 +13,8 @@ namespace staple {
 
 class Visitor;
 class Node;
+class Type;
+class Param;
 class Stmt;
 class Expr;
 class Not;

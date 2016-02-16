@@ -13,33 +13,42 @@
 #include "stdafx.h"
 typedef std::vector<staple::Expr*> ExprList;
 typedef std::vector<staple::Stmt*> StmtList;
+typedef std::vector<staple::Param*> ParamList;
+typedef std::vector<std::string> FQPath;
 }
 
 %union {
   int ival;
 	std::string* string;
+  staple::Type* type;
 	staple::Stmt* stmt;
 	staple::Expr* expr;
 	StmtList* stmtlist;
 	ExprList* exprlist;
+  ParamList* paramlist;
+  FQPath* fqpath;
 }
 
-%token TIF TELSE TNOT TSEMI TRETURN TFOR
+%token TPACKAGE TCLASS TIF TELSE TNOT TSEMI TRETURN TFOR TNAMESEP
 %token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token TELLIPSIS
-%token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR
+%token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR TTWIDLE TCARET
 %token <string> TID
 %token <ival> TINT
 
-%type <stmt> stmt vardecl block
-%type <expr> expr cmpexpr addexpr mulexpr unaryexpr primary funcall methodcall fieldref arrayref
+%type <stmt> stmt block
+%type <expr> expr lvalue fieldref funcall methodcall relationexpr logicexpr
+%type <expr> primary addexpr mulexpr bitexpr unaryexpr
+%type <fqpath> fqpath
 %type <stmtlist> stmtlist
 %type <exprlist> arglist
+%type <paramlist> paramlist
+%type <type> type
 
 %right ELSE TELSE
 
-%start stmt
+%start compileunit
 
 %{
 int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, void* scanner);
@@ -53,12 +62,55 @@ using namespace staple;
 
 %%
 
+compileunit
+  : package class
+  ;
+
+package
+  : TPACKAGE fqpath
+  |
+  ;
+
+fqpath
+  : TID { $$ = new FQPath(); $$->push_back(*$1); delete $1; }
+  | fqpath TNAMESEP TID { $$->push_back(*$3); delete $3; }
+  ;
+
+class
+  : TCLASS TID TLBRACE classparts TRBRACE
+  ;
+
+classparts
+  : field
+  | method
+  |
+  ;
+
+field
+  : type TID TSEMI
+  ;
+
+method
+  : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
+  ;
+
+paramlist
+  : type TID { }
+  | paramlist TCOMMA type TID { }
+  | { $$ = new ParamList(); }
+  ;
+
+type
+  : fqpath {}
+  | fqpath TCARET {}
+  | fqpath TMUL {}
+  ;
 
 stmt
-	: expr TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
-	| funcall TSEMI { $$ = new StmtExpr($1); }
-	| methodcall TSEMI { $$ = new StmtExpr($1); }
-	| vardecl TSEMI
+	: lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
+  | funcall TSEMI {}
+  | methodcall TSEMI {}
+  | vardecl {}
 	| TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
@@ -71,77 +123,90 @@ stmtlist
 	| { $$ = new StmtList(); }
 	;
 
-vardecl
-	: TID TID { $$ = new VarDecl(*$1, *$2); delete $1; delete $2; $$->location = @$; }
-	| TID TID TLBRACKET TINT TRBRACKET { $$ = new ArrayDecl(*$1, *$2, $4); delete $1; delete $2; $$->location = @$; }
-	;
-
 block
 	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); ctx->rootNode = $$; }
 	;
 
-expr
-	: cmpexpr
-	;
-
-cmpexpr
-	: addexpr TCEQ addexpr
-	| addexpr TCNE addexpr
-	| addexpr TCLT addexpr
-	| addexpr TCLE addexpr
-	| addexpr TCGT addexpr
-	| addexpr TCGE addexpr
-	| addexpr
-	;
-
-addexpr
-	: mulexpr TPLUS mulexpr { $$ = new Op(Op::Type::ADD, $1, $3); $$->location = @$; }
-	| mulexpr TMINUS mulexpr { $$ = new Op(Op::Type::SUB, $1, $3); $$->location = @$; }
-	| mulexpr
-	;
-
-mulexpr
-	: unaryexpr TMUL unaryexpr { $$ = new Op(Op::Type::MUL, $1, $3); $$->location = @$; }
-	| unaryexpr TDIV unaryexpr { $$ = new Op(Op::Type::DIV, $1, $3); $$->location = @$; }
-	| unaryexpr
-	;
-
-unaryexpr
-	: TNOT primary { $$ = new Not($2); $$->location = @$; }
-	| TMINUS primary { $$ = new Neg($2); $$->location = @$; }
-	| primary
-	;
-
-primary
-	: TLPAREN expr TRPAREN { $$ = $2; }
-	| TINT { $$ = new IntLiteral($1); $$->location = @$; }
-	| TID { $$ = new Id(*$1); delete $1; $$->location = @$; }
-	| fieldref
-	| arrayref
-	| funcall
-	| methodcall
-	;
-
-funcall
-	: TID TLPAREN arglist TRPAREN { $$ = new Call(*$1, $3); delete $1; $$->location = @$; }
-	;
-
-methodcall
-	: primary TDOT TID TLPAREN arglist TRPAREN
-	;
-
-arrayref
-	: primary TLBRACKET expr TRBRACKET
-	;
+lvalue
+  : TID {}
+  | funcall
+  | fieldref
+  | methodcall
+  ;
 
 fieldref
-	: primary TDOT TID
-	;
+  : lvalue TDOT TID
+  ;
+
+funcall
+  : TID TLPAREN arglist TRPAREN {}
+  ;
 
 arglist
 	: arglist TCOMMA expr { $1->push_back($3); }
+  | expr { $$->push_back($1); }
 	| { $$ = new ExprList(); }
 	;
+
+methodcall
+  : lvalue TDOT TID TLPAREN arglist TRPAREN
+  ;
+
+vardecl
+  : type TID TSEMI
+  ;
+
+expr
+  : relationexpr
+  ;
+
+relationexpr
+  : logicexpr TCEQ logicexpr
+  | logicexpr TCNE logicexpr
+  | logicexpr TCLT logicexpr
+  | logicexpr TCLE logicexpr
+  | logicexpr TCGT logicexpr
+  | logicexpr TCGE logicexpr
+  | logicexpr
+  ;
+
+logicexpr
+  : addexpr TAND addexpr
+  | addexpr TOR addexpr
+  | addexpr
+  ;
+
+addexpr
+  : mulexpr TPLUS mulexpr
+  | mulexpr TMINUS mulexpr
+  | mulexpr
+  ;
+
+mulexpr
+  : bitexpr TMUL bitexpr
+  | bitexpr TDIV bitexpr
+  | bitexpr
+  ;
+
+bitexpr
+  : unaryexpr TBITAND unaryexpr
+  | unaryexpr TBITOR unaryexpr
+  | unaryexpr TCARET unaryexpr
+  | unaryexpr
+  ;
+
+unaryexpr
+  : TNOT primary {}
+  | TMINUS primary {}
+  | TTWIDLE primary {}
+  | primary
+  ;
+
+primary
+  : TLPAREN expr TRPAREN { $$ = $2; }
+  | TINT {} // int literal
+  | lvalue
+  ;
 
 %%
 

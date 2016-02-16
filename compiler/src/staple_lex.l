@@ -24,6 +24,8 @@ result = yyextra->readBytes(buf, max_size);
 
 [ \t]                   /* eat whitespace */;
 \n                      { yycolumn = 1; }
+"package"               return TPACKAGE;
+"class"                 return TCLASS;
 "if"					          return TIF;
 "else"					        return TELSE;
 "return"				        return TRETURN;
@@ -32,7 +34,9 @@ result = yyextra->readBytes(buf, max_size);
 0x[0-9a-fA-F]+          yylval->ival = std::stoul(yytext, 0, 16); return TINT;
 0b[01]+                 yylval->ival = std::stoul(yytext, 0, 2); return TINT;
 
+"::"                    return TNAMESEP;
 "="                     return TEQUAL;
+"~"                     return TTWIDLE;
 "=="                    return TCEQ;
 "!="                    return TCNE;
 "<"                     return TCLT;
@@ -50,6 +54,7 @@ result = yyextra->readBytes(buf, max_size);
 "+"                     return TPLUS;
 "-"                     return TMINUS;
 "*"                     return TMUL;
+"^"                     return TCARET;
 "||"                    return TOR;
 "&&"                    return TAND;
 "&"                     return TBITAND;

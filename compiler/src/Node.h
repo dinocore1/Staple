@@ -46,6 +46,16 @@ public:
 	virtual Type getType() = 0;
 };
 
+class Type : public Node {
+public:
+
+};
+
+class Param : public Node {
+public:
+
+};
+
 class Stmt : public Node {
 public:
 
