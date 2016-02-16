@@ -18,7 +18,10 @@ class Block;
 class Op;
 class NLocalVar;
 class NArrayDecl;
-class IntLiteral;
+class NNot;
+class NNeg;
+class NSymbolRef;
+class NIntLiteral;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -40,7 +43,8 @@ public:
 	VISIT(Return)
 	VISIT(Block)
 	VISIT(Op)
-	VISIT(IntLiteral)
+	VISIT(NSymbolRef)
+	VISIT(NIntLiteral)
 
 };
 
@@ -284,9 +288,9 @@ public:
 	Expr* mRight;
 };
 
-class Not : public Expr {
+class NNot : public Expr {
 public:
-	Not(Expr* expr)
+	NNot(Expr* expr)
 	 : mExpr(expr) {
 		children.push_back(expr);
 	}
@@ -295,9 +299,9 @@ public:
 	Expr* mExpr;
 };
 
-class Neg : public Expr {
+class NNeg : public Expr {
 public:
-	Neg(Expr* expr)
+	NNeg(Expr* expr)
 	 : mExpr(expr) {
 		children.push_back(expr);
 	}
@@ -319,9 +323,9 @@ public:
 	ExprList mArgList;
 };
 
-class Id : public Expr {
+class NSymbolRef : public Expr {
 public:
-	Id(const std::string& name)
+	NSymbolRef(const std::string& name)
 	 : mName(name) {}
 
 	ACCEPT
@@ -329,9 +333,9 @@ public:
 
 };
 
-class IntLiteral : public Expr {
+class NIntLiteral : public Expr {
 public:
-	IntLiteral(int64_t value)
+	NIntLiteral(int64_t value)
 	 : mValue(value) {}
 
 	ACCEPT

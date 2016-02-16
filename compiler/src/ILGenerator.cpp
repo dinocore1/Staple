@@ -85,7 +85,7 @@ public:
       set(block, new LLVMValue(basicBlock));
     }
 
-    virtual void visit(IntLiteral* lit) {
+    virtual void visit(NIntLiteral* lit) {
       llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
       set(lit, new LLVMValue(value));
     }
@@ -108,8 +108,7 @@ public:
     virtual void visit(Assign* assign) {
         Location* lright = gen(assign->mRight);
         Location* lleft = gen(assign->mLeft);
-
-
+        
     }
 
     void visit(NFunction* function) {

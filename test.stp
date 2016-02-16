@@ -1,5 +1,4 @@
 
 int main(int argv) {
-  int i;
   i = argv + 5;
 }

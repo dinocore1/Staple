@@ -167,7 +167,7 @@ block
 	;
 
 lvalue
-  : TID {}
+  : TID { $$ = new NSymbolRef(*$1); delete $1; }
   | funcall
   | fieldref
   | methodcall
@@ -235,15 +235,15 @@ bitexpr
   ;
 
 unaryexpr
-  : TNOT primary {}
-  | TMINUS primary {}
+  : TNOT primary { $$ = new NNot($2); }
+  | TMINUS primary { $$ = new NNeg($2); }
   | TTWIDLE primary {}
   | primary
   ;
 
 primary
   : TLPAREN expr TRPAREN { $$ = $2; }
-  | TINT {} // int literal
+  | TINT { $$ = new NIntLiteral($1); }
   | lvalue
   ;
 
