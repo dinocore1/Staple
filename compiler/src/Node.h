@@ -15,7 +15,7 @@ class IfStmt;
 class Assign;
 class Return;
 class Block;
-class Op;
+class NOperation;
 class NLocalVar;
 class NArrayDecl;
 class NNot;
@@ -42,7 +42,7 @@ public:
 	VISIT(Assign)
 	VISIT(Return)
 	VISIT(Block)
-	VISIT(Op)
+	VISIT(NOperation)
 	VISIT(NSymbolRef)
 	VISIT(NIntLiteral)
 
@@ -267,7 +267,7 @@ public:
 	uint32_t mSize;
 };
 
-class Op : public Expr {
+class NOperation : public Expr {
 public:
 	enum Type {
 		ADD,
@@ -276,10 +276,10 @@ public:
 		DIV
 	};
 
-	Op(Type type, Expr* left, Expr* right)
+	NOperation(Type type, Expr* left, Expr* right)
 	 : mOp(type), mLeft(left), mRight(right) {
-		children.push_back(left);
-		children.push_back(right);
+		add(left);
+		add(right);
 	}
 
 	ACCEPT

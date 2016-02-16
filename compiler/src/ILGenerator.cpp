@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include <map>
+#include <set>
 #include <memory>
 
 using namespace std;
@@ -14,6 +15,7 @@ namespace staple {
 class Location {
 public:
     virtual llvm::Value* getValue() = 0;
+    virtual bool isAddress() = 0;
 
 };
 
@@ -26,8 +28,29 @@ public:
         return mValue;
     }
 
+    bool isAddress() {
+        return false;
+    }
+
 protected:
     llvm::Value* mValue;
+};
+
+class LLVMAddress : public Location {
+public:
+    LLVMAddress(llvm::Value* address)
+    : mAddress(address) {}
+
+    llvm::Value* getValue() {
+        return mAddress;
+    }
+
+    bool isAddress() {
+        return true;
+    }
+
+protected:
+    llvm::Value* mAddress;
 };
 
 class Scope {
@@ -37,7 +60,30 @@ public:
     Scope(Scope* scope)
      : mParent(scope) { }
 
-    map<Node*, unique_ptr<Location>> table;
+    ~Scope() {
+        for(Location* l : managedLocations) {
+            delete l;
+        }
+    }
+
+
+    void defineSymbol(const std::string& symbolName, Location* l) {
+        symbolTable[symbolName] = l;
+        managedLocations.insert(l);
+    }
+
+    Location* lookup(const std::string& symbolName) {
+        auto it = symbolTable.find(symbolName);
+        if(it == symbolTable.end() && mParent != nullptr) {
+            return mParent->lookup(symbolName);
+        } else {
+            return (*it).second;
+        }
+    }
+
+    map<Node*, Location*> locationTable;
+    map<const std::string, Location*> symbolTable;
+    set<Location*> managedLocations;
 
 
 };
@@ -49,7 +95,7 @@ public:
     ILGenerator* mILGen;
 
     ILGenVisitor(ILGenerator *generator)
-    : mILGen(generator) {
+    : mScope(nullptr), mILGen(generator) {
         push();
     }
 
@@ -64,15 +110,16 @@ public:
     }
 
     void set(Node* n, Location* l) {
-      mScope->table[n] = unique_ptr<Location>(l);
+      mScope->locationTable[n] = l;
+        mScope->managedLocations.insert(l);
     }
 
     Location* gen(Node* n) {
         n->accept(this);
-        return mScope->table[n].get();
+        return mScope->locationTable[n];
     }
 
-    virtual void visit(Block* block) {
+    void visit(Block* block) {
       push();
 
       BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
@@ -85,20 +132,32 @@ public:
       set(block, new LLVMValue(basicBlock));
     }
 
+    void visit(NSymbolRef* symbolRef) {
+        Location* l = mScope->lookup(symbolRef->mName);
+        set(symbolRef, l);
+    }
+
     virtual void visit(NIntLiteral* lit) {
       llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
       set(lit, new LLVMValue(value));
     }
 
-    virtual void visit(Op* op) {
+    llvm::Value* getValue(Location* l) {
+        return l->isAddress() ? mILGen->mIRBuilder.CreateLoad(l->getValue()) : l->getValue();
+    }
+
+    virtual void visit(NOperation* op) {
         Location* lleft = gen(op->mLeft);
         Location* lright = gen(op->mRight);
+
+        llvm::Value* lvalue = getValue(lleft);
+        llvm::Value* rvalue = getValue(lright);
 
         Location* result;
 
         switch(op->mOp) {
-            case Op::Type::ADD:
-                result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lleft->getValue(), lright->getValue()));
+            case NOperation::Type::ADD:
+                result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lvalue, rvalue));
                 break;
         }
 
@@ -108,13 +167,19 @@ public:
     virtual void visit(Assign* assign) {
         Location* lright = gen(assign->mRight);
         Location* lleft = gen(assign->mLeft);
-        
+
+        mILGen->mIRBuilder.CreateStore(getValue(lright), lleft->getValue());
     }
 
     void visit(NFunction* function) {
 
       std::vector<llvm::Type*> argTypes;
-      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+
+        for(NParam* param : *function->mParams) {
+            //TODO: replace this with actual types not just ints
+            argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+        }
+
       FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
 
       llvm::Function* ilfunction = Function::Create(ftype,
@@ -123,8 +188,21 @@ public:
 
       if(function->mStmts != NULL) {
         push();
-        BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", ilfunction);
-        mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+
+          BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", ilfunction);
+          mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+
+          Function::arg_iterator AI = ilfunction->arg_begin();
+          const size_t numArgs = function->mParams->size();
+          for(size_t i=0;i<numArgs;i++,++AI) {
+              NParam* param = function->mParams->at(i);
+              llvm::Type* type = AI->getType();
+              AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
+              mILGen->mIRBuilder.CreateStore(AI, alloc);
+              mScope->defineSymbol(param->mName, new LLVMAddress(alloc));
+          }
+
+
         for(Stmt* stmt : *function->mStmts) {
           stmt->accept(this);
         }

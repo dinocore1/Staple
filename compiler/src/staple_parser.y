@@ -133,7 +133,7 @@ method
 
 paramlist
   : type TID
-    { $$->push_back(new NParam(*$2, $1)); delete $2; }
+    { $$ = new ParamList(); $$->push_back(new NParam(*$2, $1)); delete $2; }
   | paramlist TCOMMA type TID
     { $$->push_back(new NParam(*$4, $3)); delete $4; }
   | { $$ = new ParamList(); }
@@ -216,14 +216,14 @@ logicexpr
   ;
 
 addexpr
-  : mulexpr TPLUS mulexpr
-  | mulexpr TMINUS mulexpr
+  : mulexpr TPLUS mulexpr { $$ = new NOperation(NOperation::Type::ADD, $1, $3); }
+  | mulexpr TMINUS mulexpr { $$ = new NOperation(NOperation::Type::SUB, $1, $3); }
   | mulexpr
   ;
 
 mulexpr
-  : bitexpr TMUL bitexpr
-  | bitexpr TDIV bitexpr
+  : bitexpr TMUL bitexpr { $$ = new NOperation(NOperation::Type::MUL, $1, $3); }
+  | bitexpr TDIV bitexpr { $$ = new NOperation(NOperation::Type::DIV, $1, $3); }
   | bitexpr
   ;
 
