@@ -26,6 +26,8 @@ result = yyextra->readBytes(buf, max_size);
 \n                      { yycolumn = 1; }
 "package"               return TPACKAGE;
 "class"                 return TCLASS;
+"extends"               return TEXTENDS;
+"implements"            return TIMPLEMENTS;
 "if"					          return TIF;
 "else"					        return TELSE;
 "return"				        return TRETURN;

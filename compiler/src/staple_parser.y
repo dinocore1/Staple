@@ -20,6 +20,8 @@ typedef std::vector<std::string> FQPath;
 %union {
   int ival;
 	std::string* string;
+  staple::Field* field;
+  staple::Method* method;
   staple::Type* type;
 	staple::Stmt* stmt;
 	staple::Expr* expr;
@@ -29,7 +31,8 @@ typedef std::vector<std::string> FQPath;
   FQPath* fqpath;
 }
 
-%token TPACKAGE TCLASS TIF TELSE TNOT TSEMI TRETURN TFOR TNAMESEP
+%token TPACKAGE TCLASS TEXTENDS TIMPLEMENTS TNAMESEP
+%token TIF TELSE TNOT TSEMI TRETURN TFOR
 %token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token TELLIPSIS
@@ -37,6 +40,8 @@ typedef std::vector<std::string> FQPath;
 %token <string> TID
 %token <ival> TINT
 
+%type <field> field
+%type <method> method
 %type <stmt> stmt block
 %type <expr> expr lvalue fieldref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
@@ -56,6 +61,7 @@ int yylex(YYSTYPE* lvalp, YYLTYPE* llocp, void* scanner);
 void yyerror(YYLTYPE* locp, staple::ParserContext* context, const char* err);
 
 #define scanner ctx->mScanner
+#define currentClass ctx->mCurrentClass
 
 using namespace staple;
 %}
@@ -78,20 +84,28 @@ fqpath
 
 class
   : TCLASS TID TLBRACE classparts TRBRACE
+  | TCLASS TID TEXTENDS fqpath TLBRACE classparts TRBRACE
+  | TCLASS TID TEXTENDS fqpath TIMPLEMENTS classlist TLBRACE classparts TRBRACE
+  ;
+
+classlist
+  : fqpath
+  | classlist TCOMMA fqpath
   ;
 
 classparts
-  : field
-  | method
+  : field { currentClass->addField($1); }
+  | method { currentClass->addMethod($1); }
   |
   ;
 
 field
-  : type TID TSEMI
+  : type TID TSEMI { $$ = new Field(*$2); delete $2; }
   ;
 
 method
   : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
+   { $$ = new Method(); }
   ;
 
 paramlist

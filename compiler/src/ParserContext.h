@@ -8,8 +8,9 @@ class ParserContext {
 	public:
 	ParserContext();
 	virtual ~ParserContext();
-	
+
 	void* mScanner;
+	Class* mCurrentClass;
 	int readBytes(char* buf, const int max);
 
 	bool parse(const File& file);

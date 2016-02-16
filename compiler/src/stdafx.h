@@ -13,6 +13,9 @@ namespace staple {
 
 class Visitor;
 class Node;
+class Class;
+class Field;
+class Method;
 class Type;
 class Param;
 class Stmt;

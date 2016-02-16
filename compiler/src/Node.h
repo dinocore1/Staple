@@ -20,6 +20,9 @@ public:
 
 	void visitChildren(Node* node);
 	virtual void visit(Node* node);
+	VISIT(Class)
+	VISIT(Field)
+	VISIT(Method)
 	VISIT(IfStmt)
 	VISIT(Assign)
 	VISIT(Return)
@@ -44,6 +47,53 @@ public:
 
 	virtual void accept(Visitor*) = 0;
 	virtual Type getType() = 0;
+};
+
+
+class Field : public Node {
+public:
+
+	Field(const std::string& name)
+	: mName(name) {
+
+	}
+
+	ACCEPT
+
+	Type getType() {
+		return Type::Unknown;
+	}
+
+	std::string mName;
+
+};
+
+class Method : public Node {
+public:
+
+	ACCEPT
+
+	Type getType() {
+		return Type::Unknown;
+	}
+};
+
+class Class : public Node {
+public:
+
+	void addField(Field* field) {
+		children.push_back(field);
+	}
+
+	void addMethod(Method* method) {
+		children.push_back(method);
+	}
+
+	ACCEPT
+
+	Type getType() {
+		return Type::Unknown;
+	}
 };
 
 class Type : public Node {
