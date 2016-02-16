@@ -73,26 +73,20 @@ public:
     }
 
     virtual void visit(Block* block) {
+      push();
 
-        std::vector<llvm::Type*> argTypes;
-        argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+      BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
+      mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
-        FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
-        Function* blah = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "main", &mILGen->mModule);
+      visitChildren(block);
 
-        push();
+      pop();
 
-        BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
-        mILGen->mIRBuilder.SetInsertPoint(basicBlock);
-
-        visitChildren(block);
-        pop();
-
-        set(block, new LLVMValue(basicBlock));
+      set(block, new LLVMValue(basicBlock));
     }
 
     virtual void visit(IntLiteral* lit) {
-        llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
+      llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
       set(lit, new LLVMValue(value));
     }
 
@@ -118,6 +112,30 @@ public:
 
     }
 
+    void visit(NFunction* function) {
+
+      std::vector<llvm::Type*> argTypes;
+      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+      FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
+
+      llvm::Function* ilfunction = Function::Create(ftype,
+        Function::LinkageTypes::ExternalLinkage,
+        function->mName, &mILGen->mModule);
+
+      if(function->mStmts != NULL) {
+        push();
+        BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", ilfunction);
+        mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+        for(Stmt* stmt : *function->mStmts) {
+          stmt->accept(this);
+        }
+        pop();
+      }
+
+
+
+    }
+
 };
 
 ILGenerator::ILGenerator(CompilerContext* ctx)
@@ -139,6 +157,14 @@ void ILGenerator::generate() {
     if(mCtx->generateDebugSymobols) {
         mDIBuider->finalize();
     }
+
+/*
+    std::vector<llvm::Type*> argTypes;
+    argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+
+    FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
+    Function* blah = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "main", &mILGen->mModule);
+*/
 
     mModule.dump();
 }

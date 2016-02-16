@@ -12,12 +12,14 @@
 namespace staple {
 
 class Visitor;
+class NCompileUnit;
 class Node;
-class Class;
-class Field;
-class Method;
-class Type;
-class Param;
+class NClass;
+class NField;
+class NMethod;
+class NType;
+class NParam;
+class NLocalVar;
 class Stmt;
 class Expr;
 class Not;

@@ -13,16 +13,17 @@
 #include "stdafx.h"
 typedef std::vector<staple::Expr*> ExprList;
 typedef std::vector<staple::Stmt*> StmtList;
-typedef std::vector<staple::Param*> ParamList;
+typedef std::vector<staple::NParam*> ParamList;
 typedef std::vector<std::string> FQPath;
 }
 
 %union {
   int ival;
 	std::string* string;
-  staple::Field* field;
-  staple::Method* method;
-  staple::Type* type;
+  staple::Node* node;
+  staple::NField* field;
+  staple::NMethod* method;
+  staple::NType* type;
 	staple::Stmt* stmt;
 	staple::Expr* expr;
 	StmtList* stmtlist;
@@ -40,9 +41,10 @@ typedef std::vector<std::string> FQPath;
 %token <string> TID
 %token <ival> TINT
 
+%type <node> class functiondecl globalfunction
 %type <field> field
 %type <method> method
-%type <stmt> stmt block
+%type <stmt> stmt localvar block
 %type <expr> expr lvalue fieldref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
 %type <fqpath> fqpath
@@ -69,12 +71,30 @@ using namespace staple;
 %%
 
 compileunit
-  : package class
+  : { ctx->rootNode = new NCompileUnit(); }
+    package body
   ;
 
 package
-  : TPACKAGE fqpath
+  : TPACKAGE fqpath { ctx->rootNode->setPackage(*$2); delete $2; }
   |
+  ;
+
+body
+  : body class { ctx->rootNode->add($2); }
+  | body functiondecl { ctx->rootNode->add($2); }
+  | body globalfunction { ctx->rootNode->add($2); }
+  |
+  ;
+
+functiondecl
+  : type TID TLPAREN paramlist TRPAREN TSEMI
+    { $$ = new NFunction(*$2, $1, $4); delete $2; }
+  ;
+
+globalfunction
+  : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
+    { $$ = new NFunction(*$2, $1, $4, $7); delete $2; }
   ;
 
 fqpath
@@ -84,8 +104,11 @@ fqpath
 
 class
   : TCLASS TID TLBRACE classparts TRBRACE
+    { $$ = new NClass(*$2); delete $2; }
   | TCLASS TID TEXTENDS fqpath TLBRACE classparts TRBRACE
+    { $$ = new NClass(*$2); delete $2; }
   | TCLASS TID TEXTENDS fqpath TIMPLEMENTS classlist TLBRACE classparts TRBRACE
+    { $$ = new NClass(*$2); delete $2; }
   ;
 
 classlist
@@ -94,23 +117,25 @@ classlist
   ;
 
 classparts
-  : field { currentClass->addField($1); }
-  | method { currentClass->addMethod($1); }
+  : field { currentClass->add($1); }
+  | method { currentClass->add($1); }
   |
   ;
 
 field
-  : type TID TSEMI { $$ = new Field(*$2); delete $2; }
+  : type TID TSEMI { $$ = new NField(*$2); delete $2; }
   ;
 
 method
   : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
-   { $$ = new Method(); }
+   { $$ = new NMethod(*$2); delete $2; }
   ;
 
 paramlist
-  : type TID { }
-  | paramlist TCOMMA type TID { }
+  : type TID
+    { $$->push_back(new NParam(*$2, $1)); delete $2; }
+  | paramlist TCOMMA type TID
+    { $$->push_back(new NParam(*$4, $3)); delete $4; }
   | { $$ = new ParamList(); }
   ;
 
@@ -124,7 +149,7 @@ stmt
 	: lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
   | funcall TSEMI {}
   | methodcall TSEMI {}
-  | vardecl {}
+  | localvar
 	| TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
 	| TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
@@ -138,7 +163,7 @@ stmtlist
 	;
 
 block
-	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); ctx->rootNode = $$; }
+	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
 	;
 
 lvalue
@@ -166,8 +191,8 @@ methodcall
   : lvalue TDOT TID TLPAREN arglist TRPAREN
   ;
 
-vardecl
-  : type TID TSEMI
+localvar
+  : type TID TSEMI { $$ = new NLocalVar(*$2, $1); delete $2; }
   ;
 
 expr

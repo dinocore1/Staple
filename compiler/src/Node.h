@@ -4,13 +4,20 @@
 namespace staple {
 
 class Node;
+class NCompileUnit;
+class NFunction;
+class NClass;
+class NMethod;
+class NField;
+class NParam;
+class NType;
 class IfStmt;
 class Assign;
 class Return;
 class Block;
 class Op;
-class VarDecl;
-class ArrayDecl;
+class NLocalVar;
+class NArrayDecl;
 class IntLiteral;
 
 #define VISIT(x) virtual void visit(x*){};
@@ -20,9 +27,14 @@ public:
 
 	void visitChildren(Node* node);
 	virtual void visit(Node* node);
-	VISIT(Class)
-	VISIT(Field)
-	VISIT(Method)
+	VISIT(NFunction)
+	VISIT(NClass)
+	VISIT(NField)
+	VISIT(NMethod)
+	VISIT(NParam)
+	VISIT(NType)
+	VISIT(NLocalVar)
+	VISIT(NArrayDecl)
 	VISIT(IfStmt)
 	VISIT(Assign)
 	VISIT(Return)
@@ -34,91 +46,138 @@ public:
 
 #define ACCEPT void accept(Visitor* visitor) { visitor->visit(this); }
 
+enum TypeId {
+	Function,
+	Class,
+	Field,
+	Method,
+	Unknown
+};
+
 class Node {
 public:
 
-	enum Type {
-		Unknown,
-		VarDecl
-	};
+	Node(TypeId type = TypeId::Unknown)
+	: mType(type) {};
 
 	YYLTYPE location;
 	std::vector<Node*> children;
 
+	void add(Node* child) {
+		children.push_back(child);
+	}
+
 	virtual void accept(Visitor*) = 0;
-	virtual Type getType() = 0;
+
+	const TypeId mType;
+
+	static inline bool classof(const Node* T) {
+		return true;
+	}
 };
 
-
-class Field : public Node {
+class NCompileUnit : public Node {
 public:
 
-	Field(const std::string& name)
-	: mName(name) {
-
+	void setPackage(const FQPath& package) {
+		mPackage = package;
 	}
+
+	FQPath mPackage;
+
+	ACCEPT
+};
+
+class NFunction : public Node {
+public:
+	NFunction(const std::string& name, NType* returnType,
+		ParamList* params, StmtList* stmtList = NULL)
+	: Node(TypeId::Function), mName(name), mReturnType(returnType),
+	mParams(params), mStmts(stmtList) { }
+
+	std::string mName;
+	NType* mReturnType;
+	ParamList* mParams;
+	StmtList* mStmts;
 
 	ACCEPT
 
-	Type getType() {
-		return Type::Unknown;
+	static inline bool classof(const Node* T) {
+			return T->mType == TypeId::Function;
 	}
+
+};
+
+class NField : public Node {
+public:
+
+	NField(const std::string& name)
+	: Node(TypeId::Field), mName(name) { }
 
 	std::string mName;
 
+	ACCEPT
+
+	static inline bool classof(const Node* T) {
+			return T->mType == TypeId::Field;
+	}
+
 };
 
-class Method : public Node {
+class NMethod : public Node {
 public:
+	NMethod(const std::string& name)
+	: Node(TypeId::Method), mName(name) {}
+
+	std::string mName;
 
 	ACCEPT
 
-	Type getType() {
-		return Type::Unknown;
+	static inline bool classof(const Node* T) {
+			return T->mType == TypeId::Method;
 	}
 };
 
-class Class : public Node {
+class NClass : public Node {
 public:
+	NClass(const std::string& name)
+	: Node(TypeId::Class), mName(name) {}
 
-	void addField(Field* field) {
-		children.push_back(field);
-	}
-
-	void addMethod(Method* method) {
-		children.push_back(method);
-	}
+	std::string mName;
 
 	ACCEPT
 
-	Type getType() {
-		return Type::Unknown;
+	static inline bool classof(const Node* T) {
+			return T->mType == TypeId::Class;
 	}
-};
-
-class Type : public Node {
-public:
 
 };
 
-class Param : public Node {
+class NType : public Node {
 public:
 
+	ACCEPT
+};
+
+class NParam : public Node {
+public:
+	NParam(const std::string& name, NType* type)
+	: mName(name), mType(type) { }
+
+	std::string mName;
+	NType* mType;
+
+	ACCEPT
 };
 
 class Stmt : public Node {
 public:
 
-	Type getType() {
-		return Type::Unknown;
-	}
 };
 
 class Expr : public Node {
 public:
-	Type getType() {
-		return Type::Unknown;
-	}
+
 };
 
 class IfStmt : public Stmt {
@@ -185,28 +244,20 @@ public:
 	StmtList mStmts;
 };
 
-class VarDecl : public Stmt {
+class NLocalVar : public Stmt {
 public:
-	VarDecl(const std::string& type, const std::string& name)
-	 : mType(type), mName(name) { };
-
-	 Type getType() {
-	 	return Type::VarDecl;
-	 }
+	NLocalVar(const std::string& name, NType* type)
+	 : mName(name), mType(type) { };
 
 	ACCEPT
-	std::string mType;
 	std::string mName;
+	NType* mType;
 };
 
-class ArrayDecl : public VarDecl {
+class NArrayDecl : public NLocalVar {
 public:
-	ArrayDecl(const std::string& type, const std::string& name, uint32_t size)
-	 : VarDecl(type, name), mSize(size) { };
-
-	 Type getType() {
-	 	return Type::VarDecl;
-	 }
+	NArrayDecl(const std::string& name, NType* type, uint32_t size)
+	 : NLocalVar(name, type), mSize(size) { };
 
 	ACCEPT
 	uint32_t mSize;
