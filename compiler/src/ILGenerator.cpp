@@ -121,7 +121,6 @@ public:
   }
 
   void visit(NIfStmt* ifStmt) {
-    bool mergeBlockNeeded = false;
     Location* lcondition = gen(ifStmt->mCondition);
 
     if(ifStmt->mElseStmt == nullptr) {
@@ -132,18 +131,14 @@ public:
 
       mILGen->mIRBuilder.SetInsertPoint(thenBB);
       ifStmt->mThenStmt->accept(this);
-
-      if (!thenBB->getTerminator()) {
+      if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
         mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeBlockNeeded = true;
       }
 
       thenBB = mILGen->mIRBuilder.GetInsertBlock();
+      mCurrentFunction->getBasicBlockList().push_back(mergeBB);
 
-      if(mergeBlockNeeded) {
-        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
-      }
+      mILGen->mIRBuilder.SetInsertPoint(mergeBB);
 
     } else {
       BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
@@ -154,28 +149,25 @@ public:
 
       mILGen->mIRBuilder.SetInsertPoint(thenBB);
       ifStmt->mThenStmt->accept(this);
-
-      if(!thenBB->getTerminator()) {
+      if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
         mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeBlockNeeded = true;
       }
 
-      //thenBB = mILGen->mIRBuilder.GetInsertBlock();
+
+      thenBB = mILGen->mIRBuilder.GetInsertBlock();
 
       mCurrentFunction->getBasicBlockList().push_back(elseBB);
       mILGen->mIRBuilder.SetInsertPoint(elseBB);
       ifStmt->mElseStmt->accept(this);
-      if(!elseBB->getTerminator()) {
+      if(elseBB->getTerminator() == nullptr || !isa<ReturnInst>(elseBB->getTerminator())) {
         mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeBlockNeeded = true;
       }
 
-      //elseBB = mILGen->mIRBuilder.GetInsertBlock();
+      elseBB = mILGen->mIRBuilder.GetInsertBlock();
 
-      if(mergeBlockNeeded) {
-        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
-      }
+
+      mCurrentFunction->getBasicBlockList().push_back(mergeBB);
+      mILGen->mIRBuilder.SetInsertPoint(mergeBB);
     }
 
 
