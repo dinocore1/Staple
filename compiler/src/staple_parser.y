@@ -183,7 +183,7 @@ funcall
 
 arglist
 	: arglist TCOMMA expr { $1->push_back($3); }
-  | expr { $$->push_back($1); }
+  | expr { $$ = new ExprList(); $$->push_back($1); }
 	| { $$ = new ExprList(); }
 	;
 
