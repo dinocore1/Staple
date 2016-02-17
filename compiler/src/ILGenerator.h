@@ -12,14 +12,14 @@ namespace staple {
 class ILGenerator {
 public:
 
-    ILGenerator(CompilerContext*);
-    void generate();
+  ILGenerator(CompilerContext*);
+  void generate();
 
 
-    CompilerContext* mCtx;
-    llvm::IRBuilder<> mIRBuilder;
-    llvm::DIBuilder* mDIBuider;
-    llvm::Module mModule;
+  CompilerContext* mCtx;
+  llvm::IRBuilder<> mIRBuilder;
+  llvm::DIBuilder* mDIBuider;
+  llvm::Module mModule;
 };
 
 }

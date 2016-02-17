@@ -26,152 +26,152 @@ class NIntLiteral;
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
 public:
-	virtual ~Visitor() {}
+  virtual ~Visitor() {}
 
-	void visitChildren(Node* node);
-	virtual void visit(Node* node);
-	VISIT(NFunction)
-	VISIT(NClass)
-	VISIT(NField)
-	VISIT(NMethod)
-	VISIT(NParam)
-	VISIT(NType)
-	VISIT(NLocalVar)
-	VISIT(NArrayDecl)
-	VISIT(IfStmt)
-	VISIT(Assign)
-	VISIT(Return)
-	VISIT(Block)
-	VISIT(NOperation)
-	VISIT(NSymbolRef)
-	VISIT(NIntLiteral)
+  void visitChildren(Node* node);
+  virtual void visit(Node* node);
+  VISIT(NFunction)
+  VISIT(NClass)
+  VISIT(NField)
+  VISIT(NMethod)
+  VISIT(NParam)
+  VISIT(NType)
+  VISIT(NLocalVar)
+  VISIT(NArrayDecl)
+  VISIT(IfStmt)
+  VISIT(Assign)
+  VISIT(Return)
+  VISIT(Block)
+  VISIT(NOperation)
+  VISIT(NSymbolRef)
+  VISIT(NIntLiteral)
 
 };
 
 #define ACCEPT void accept(Visitor* visitor) { visitor->visit(this); }
 
 enum TypeId {
-	Function,
-	Class,
-	Field,
-	Method,
-	Unknown
+  Function,
+  Class,
+  Field,
+  Method,
+  Unknown
 };
 
 class Node {
 public:
 
-	Node(TypeId type = TypeId::Unknown)
-	: mType(type) {};
+  Node(TypeId type = TypeId::Unknown)
+    : mType(type) {};
 
-	YYLTYPE location;
-	std::vector<Node*> children;
+  YYLTYPE location;
+  std::vector<Node*> children;
 
-	void add(Node* child) {
-		children.push_back(child);
-	}
+  void add(Node* child) {
+    children.push_back(child);
+  }
 
-	virtual void accept(Visitor*) = 0;
+  virtual void accept(Visitor*) = 0;
 
-	const TypeId mType;
+  const TypeId mType;
 
-	static inline bool classof(const Node* T) {
-		return true;
-	}
+  static inline bool classof(const Node* T) {
+    return true;
+  }
 };
 
 class NCompileUnit : public Node {
 public:
 
-	void setPackage(const FQPath& package) {
-		mPackage = package;
-	}
+  void setPackage(const FQPath& package) {
+    mPackage = package;
+  }
 
-	FQPath mPackage;
+  FQPath mPackage;
 
-	ACCEPT
+  ACCEPT
 };
 
 class NFunction : public Node {
 public:
-	NFunction(const std::string& name, NType* returnType,
-		ParamList* params, StmtList* stmtList = NULL)
-	: Node(TypeId::Function), mName(name), mReturnType(returnType),
-	mParams(params), mStmts(stmtList) { }
+  NFunction(const std::string& name, NType* returnType,
+            ParamList* params, StmtList* stmtList = NULL)
+    : Node(TypeId::Function), mName(name), mReturnType(returnType),
+      mParams(params), mStmts(stmtList) { }
 
-	std::string mName;
-	NType* mReturnType;
-	ParamList* mParams;
-	StmtList* mStmts;
+  std::string mName;
+  NType* mReturnType;
+  ParamList* mParams;
+  StmtList* mStmts;
 
-	ACCEPT
+  ACCEPT
 
-	static inline bool classof(const Node* T) {
-			return T->mType == TypeId::Function;
-	}
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Function;
+  }
 
 };
 
 class NField : public Node {
 public:
 
-	NField(const std::string& name)
-	: Node(TypeId::Field), mName(name) { }
+  NField(const std::string& name)
+    : Node(TypeId::Field), mName(name) { }
 
-	std::string mName;
+  std::string mName;
 
-	ACCEPT
+  ACCEPT
 
-	static inline bool classof(const Node* T) {
-			return T->mType == TypeId::Field;
-	}
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Field;
+  }
 
 };
 
 class NMethod : public Node {
 public:
-	NMethod(const std::string& name)
-	: Node(TypeId::Method), mName(name) {}
+  NMethod(const std::string& name)
+    : Node(TypeId::Method), mName(name) {}
 
-	std::string mName;
+  std::string mName;
 
-	ACCEPT
+  ACCEPT
 
-	static inline bool classof(const Node* T) {
-			return T->mType == TypeId::Method;
-	}
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Method;
+  }
 };
 
 class NClass : public Node {
 public:
-	NClass(const std::string& name)
-	: Node(TypeId::Class), mName(name) {}
+  NClass(const std::string& name)
+    : Node(TypeId::Class), mName(name) {}
 
-	std::string mName;
+  std::string mName;
 
-	ACCEPT
+  ACCEPT
 
-	static inline bool classof(const Node* T) {
-			return T->mType == TypeId::Class;
-	}
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Class;
+  }
 
 };
 
 class NType : public Node {
 public:
 
-	ACCEPT
+  ACCEPT
 };
 
 class NParam : public Node {
 public:
-	NParam(const std::string& name, NType* type)
-	: mName(name), mType(type) { }
+  NParam(const std::string& name, NType* type)
+    : mName(name), mType(type) { }
 
-	std::string mName;
-	NType* mType;
+  std::string mName;
+  NType* mType;
 
-	ACCEPT
+  ACCEPT
 };
 
 class Stmt : public Node {
@@ -186,160 +186,160 @@ public:
 
 class IfStmt : public Stmt {
 public:
-	IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = NULL)
-	 : mCondition(condition), mThenStmt(thenStmt), mElseStmt(elseStmt) {
-		children.push_back(condition);
-		children.push_back(thenStmt);
-		children.push_back(elseStmt);
-	}
+  IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = NULL)
+    : mCondition(condition), mThenStmt(thenStmt), mElseStmt(elseStmt) {
+    children.push_back(condition);
+    children.push_back(thenStmt);
+    children.push_back(elseStmt);
+  }
 
-	ACCEPT
+  ACCEPT
 
-	Expr* mCondition;
-	Stmt* mThenStmt;
-	Stmt* mElseStmt;
+  Expr* mCondition;
+  Stmt* mThenStmt;
+  Stmt* mElseStmt;
 };
 
 class Assign : public Stmt {
 public:
-	Assign(Expr* l, Expr* r)
-	: mLeft(l), mRight(r) {
-		children.push_back(l);
-		children.push_back(r);
-	}
+  Assign(Expr* l, Expr* r)
+    : mLeft(l), mRight(r) {
+    children.push_back(l);
+    children.push_back(r);
+  }
 
-	ACCEPT
+  ACCEPT
 
-	Expr* mLeft;
-	Expr* mRight;
+  Expr* mLeft;
+  Expr* mRight;
 };
 
 class StmtExpr : public Stmt {
 public:
-	StmtExpr(Expr* expr)
-	 : mExpr(expr) {
-		children.push_back(expr);
-	}
+  StmtExpr(Expr* expr)
+    : mExpr(expr) {
+    children.push_back(expr);
+  }
 
-	ACCEPT
+  ACCEPT
 
-	Expr* mExpr;
+  Expr* mExpr;
 };
 
 class Return : public Stmt {
 public:
-	Return(Expr* expr)
-	 : mExpr(expr) {
-		children.push_back(expr);
-	}
+  Return(Expr* expr)
+    : mExpr(expr) {
+    children.push_back(expr);
+  }
 
-	ACCEPT
-	Expr* mExpr;
+  ACCEPT
+  Expr* mExpr;
 };
 
 class Block : public Stmt {
 public:
-	Block(StmtList* stmts)
-	 : mStmts(*stmts) {
-		children.insert(children.end(), mStmts.begin(), mStmts.end());
-	}
+  Block(StmtList* stmts)
+    : mStmts(*stmts) {
+    children.insert(children.end(), mStmts.begin(), mStmts.end());
+  }
 
-	ACCEPT
-	StmtList mStmts;
+  ACCEPT
+  StmtList mStmts;
 };
 
 class NLocalVar : public Stmt {
 public:
-	NLocalVar(const std::string& name, NType* type)
-	 : mName(name), mType(type) { };
+  NLocalVar(const std::string& name, NType* type)
+    : mName(name), mType(type) { };
 
-	ACCEPT
-	std::string mName;
-	NType* mType;
+  ACCEPT
+  std::string mName;
+  NType* mType;
 };
 
 class NArrayDecl : public NLocalVar {
 public:
-	NArrayDecl(const std::string& name, NType* type, uint32_t size)
-	 : NLocalVar(name, type), mSize(size) { };
+  NArrayDecl(const std::string& name, NType* type, uint32_t size)
+    : NLocalVar(name, type), mSize(size) { };
 
-	ACCEPT
-	uint32_t mSize;
+  ACCEPT
+  uint32_t mSize;
 };
 
 class NOperation : public Expr {
 public:
-	enum Type {
-		ADD,
-		SUB,
-		MUL,
-		DIV
-	};
+  enum Type {
+    ADD,
+    SUB,
+    MUL,
+    DIV
+  };
 
-	NOperation(Type type, Expr* left, Expr* right)
-	 : mOp(type), mLeft(left), mRight(right) {
-		add(left);
-		add(right);
-	}
+  NOperation(Type type, Expr* left, Expr* right)
+    : mOp(type), mLeft(left), mRight(right) {
+    add(left);
+    add(right);
+  }
 
-	ACCEPT
-	Type mOp;
-	Expr* mLeft;
-	Expr* mRight;
+  ACCEPT
+  Type mOp;
+  Expr* mLeft;
+  Expr* mRight;
 };
 
 class NNot : public Expr {
 public:
-	NNot(Expr* expr)
-	 : mExpr(expr) {
-		children.push_back(expr);
-	}
+  NNot(Expr* expr)
+    : mExpr(expr) {
+    children.push_back(expr);
+  }
 
-	ACCEPT
-	Expr* mExpr;
+  ACCEPT
+  Expr* mExpr;
 };
 
 class NNeg : public Expr {
 public:
-	NNeg(Expr* expr)
-	 : mExpr(expr) {
-		children.push_back(expr);
-	}
+  NNeg(Expr* expr)
+    : mExpr(expr) {
+    children.push_back(expr);
+  }
 
-	ACCEPT
-	Expr* mExpr;
+  ACCEPT
+  Expr* mExpr;
 
 };
 
 class Call : public Expr {
 public:
-	Call(const std::string& name, ExprList* args)
-	 : mName(name), mArgList(*args) {
-		children.insert(children.end(), mArgList.begin(), mArgList.end());
-	}
+  Call(const std::string& name, ExprList* args)
+    : mName(name), mArgList(*args) {
+    children.insert(children.end(), mArgList.begin(), mArgList.end());
+  }
 
-	ACCEPT
-	const std::string mName;
-	ExprList mArgList;
+  ACCEPT
+  const std::string mName;
+  ExprList mArgList;
 };
 
 class NSymbolRef : public Expr {
 public:
-	NSymbolRef(const std::string& name)
-	 : mName(name) {}
+  NSymbolRef(const std::string& name)
+    : mName(name) {}
 
-	ACCEPT
-	const std::string mName;
+  ACCEPT
+  const std::string mName;
 
 };
 
 class NIntLiteral : public Expr {
 public:
-	NIntLiteral(int64_t value)
-	 : mValue(value) {}
+  NIntLiteral(int64_t value)
+    : mValue(value) {}
 
-	ACCEPT
-	const int64_t mValue;
+  ACCEPT
+  const int64_t mValue;
 };
 
 } // namespace staple

@@ -5,20 +5,20 @@
 namespace staple {
 
 class ParserContext {
-	public:
-	ParserContext();
-	virtual ~ParserContext();
+public:
+  ParserContext();
+  virtual ~ParserContext();
 
-	void* mScanner;
+  void* mScanner;
 
-	NCompileUnit* rootNode;
-	NClass* mCurrentClass;
-	int readBytes(char* buf, const int max);
+  NCompileUnit* rootNode;
+  NClass* mCurrentClass;
+  int readBytes(char* buf, const int max);
 
-	bool parse(const File& file);
-	bool parse(const std::string& filepath);
-	bool parse(const std::string& streamName, std::istream& is);
-	void parseError(const int line, const int column, const char* errMsg);
+  bool parse(const File& file);
+  bool parse(const std::string& filepath);
+  bool parse(const std::string& streamName, std::istream& is);
+  void parseError(const int line, const int column, const char* errMsg);
 
 
 
@@ -27,9 +27,9 @@ protected:
   void destroy_scanner();
 
 private:
-	std::istream* mInputStream;
-	std::string mStreamName;
-	bool mSuccess;
+  std::istream* mInputStream;
+  std::string mStreamName;
+  bool mSuccess;
 
 };
 

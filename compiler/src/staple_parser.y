@@ -146,25 +146,25 @@ type
   ;
 
 stmt
-	: lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
+  : lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
   | funcall TSEMI {}
   | methodcall TSEMI {}
   | localvar
-	| TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
-	| TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
-	| TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
-	| TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}
-	| block
-	;
+  | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
+  | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
+  | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
+  | TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}
+  | block
+  ;
 
 stmtlist
-	: stmtlist stmt { $1->push_back($2); }
-	| { $$ = new StmtList(); }
-	;
+  : stmtlist stmt { $1->push_back($2); }
+  | { $$ = new StmtList(); }
+  ;
 
 block
-	: TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
-	;
+  : TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
+  ;
 
 lvalue
   : TID { $$ = new NSymbolRef(*$1); delete $1; }
@@ -182,10 +182,10 @@ funcall
   ;
 
 arglist
-	: arglist TCOMMA expr { $1->push_back($3); }
+  : arglist TCOMMA expr { $1->push_back($3); }
   | expr { $$ = new ExprList(); $$->push_back($1); }
-	| { $$ = new ExprList(); }
-	;
+  | { $$ = new ExprList(); }
+  ;
 
 methodcall
   : lvalue TDOT TID TLPAREN arglist TRPAREN

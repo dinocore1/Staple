@@ -5,48 +5,48 @@
 #include <sstream>
 
 #ifdef _WIN32
-  static const char PATH_SEP = '\\';
-  #include <direct.h>
-  #define getcwd _getcwd
+static const char PATH_SEP = '\\';
+#include <direct.h>
+#define getcwd _getcwd
 
-  static inline bool isDir(const char* path) {
-    DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-         (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-  }
+static inline bool isDir(const char* path) {
+  DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
+  return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+          (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
 
-  static inline bool isFile(const char* path) {
-    DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-         !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-  }
+static inline bool isFile(const char* path) {
+  DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
+  return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
+          !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
 
 #else
-  static const char PATH_SEP = '/';
-  #include <unistd.h>
-  #include <dirent.h>
-  #include <sys/types.h>
-  #include <sys/stat.h>
+static const char PATH_SEP = '/';
+#include <unistd.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-  static inline bool isDir(const char* path) {
-    struct stat statinfo;
-    int rc = stat(path, &statinfo);
-    if(rc == 0) {
-      return S_ISDIR(statinfo.st_mode);
-    } else {
-      return false;
-    }
+static inline bool isDir(const char* path) {
+  struct stat statinfo;
+  int rc = stat(path, &statinfo);
+  if(rc == 0) {
+    return S_ISDIR(statinfo.st_mode);
+  } else {
+    return false;
   }
+}
 
-  static inline bool isFile(const char* path) {
-    struct stat statinfo;
-    int rc = stat(path, &statinfo);
-    if(rc == 0) {
-      return S_ISREG(statinfo.st_mode);
-    } else {
-      return false;
-    }
+static inline bool isFile(const char* path) {
+  struct stat statinfo;
+  int rc = stat(path, &statinfo);
+  if(rc == 0) {
+    return S_ISREG(statinfo.st_mode);
+  } else {
+    return false;
   }
+}
 
 #endif
 
@@ -58,7 +58,7 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
   const size_t strLen = filepath.length();
   size_t i;
   size_t pos = 0;
-  while( (i = filepath.find_first_of(PATH_SEP, pos)) != string::npos) {
+  while((i = filepath.find_first_of(PATH_SEP, pos)) != string::npos) {
     string part = filepath.substr(pos, i - pos);
     if(part.length() > 0) {
       if(part.compare("..") == 0) {
@@ -76,13 +76,13 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
 }
 
 File::File()
-: mParent("") {
+  : mParent("") {
   char pathBuf[FILENAME_MAX];
   mPath = getcwd(pathBuf, FILENAME_MAX);
 }
 
 File::File(const File& root, const std::string& filepath)
-: mParent(root.getPath()), mPath(filepath) {
+  : mParent(root.getPath()), mPath(filepath) {
 }
 
 File::File(const std::string& filepath) {
@@ -131,9 +131,9 @@ std::string File::getCanonicalPath() const {
   processPath(mPath, pathParts);
 
   stringbuf buf;
-  ostream os (&buf);
+  ostream os(&buf);
 
-  for(size_t i=0;i<pathParts.size();i++) {
+  for(size_t i=0; i<pathParts.size(); i++) {
     os << PATH_SEP;
     os << pathParts[i];
   }
