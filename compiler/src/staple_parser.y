@@ -19,15 +19,15 @@ typedef std::vector<std::string> FQPath;
 
 %union {
   int ival;
-	std::string* string;
+  std::string* string;
   staple::Node* node;
   staple::NField* field;
   staple::NMethod* method;
   staple::NType* type;
-	staple::Stmt* stmt;
-	staple::Expr* expr;
-	StmtList* stmtlist;
-	ExprList* exprlist;
+  staple::Stmt* stmt;
+  staple::Expr* expr;
+  StmtList* stmtlist;
+  ExprList* exprlist;
   ParamList* paramlist;
   FQPath* fqpath;
 }
@@ -151,8 +151,8 @@ stmt
   | methodcall TSEMI {}
   | localvar
   | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
-  | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new IfStmt($3, $5); $$->location = @$; }
-  | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new IfStmt($3, $5, $7); $$->location = @$; }
+  | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new NIfStmt($3, $5); $$->location = @$; }
+  | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStmt($3, $5, $7); $$->location = @$; }
   | TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}
   | block
   ;
@@ -200,7 +200,7 @@ expr
   ;
 
 relationexpr
-  : logicexpr TCEQ logicexpr
+  : logicexpr TCEQ logicexpr { $$ = new NOperation(NOperation::Type::CMPEQ, $1, $3); }
   | logicexpr TCNE logicexpr
   | logicexpr TCLT logicexpr
   | logicexpr TCLE logicexpr

@@ -93,6 +93,7 @@ public:
   using Visitor::visit;
   Scope* mScope;
   ILGenerator* mILGen;
+  llvm::Function* mCurrentFunction;
 
   ILGenVisitor(ILGenerator* generator)
     : mScope(nullptr), mILGen(generator) {
@@ -117,6 +118,73 @@ public:
   Location* gen(Node* n) {
     n->accept(this);
     return mScope->locationTable[n];
+  }
+
+  void visit(NIfStmt* ifStmt) {
+    bool mergeBlockNeeded = false;
+    Location* lcondition = gen(ifStmt->mCondition);
+
+    if(ifStmt->mElseStmt == nullptr) {
+      BasicBlock *thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
+      BasicBlock *mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
+
+      mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, mergeBB);
+
+      mILGen->mIRBuilder.SetInsertPoint(thenBB);
+      ifStmt->mThenStmt->accept(this);
+
+      if (!thenBB->getTerminator()) {
+        mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeBlockNeeded = true;
+      }
+
+      thenBB = mILGen->mIRBuilder.GetInsertBlock();
+
+      if(mergeBlockNeeded) {
+        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
+        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      }
+
+    } else {
+      BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
+      BasicBlock* elseBB = BasicBlock::Create(getGlobalContext(), "if.else");
+      BasicBlock* mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
+
+      mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, elseBB);
+
+      mILGen->mIRBuilder.SetInsertPoint(thenBB);
+      ifStmt->mThenStmt->accept(this);
+
+      if(!thenBB->getTerminator()) {
+        mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeBlockNeeded = true;
+      }
+
+      //thenBB = mILGen->mIRBuilder.GetInsertBlock();
+
+      mCurrentFunction->getBasicBlockList().push_back(elseBB);
+      mILGen->mIRBuilder.SetInsertPoint(elseBB);
+      ifStmt->mElseStmt->accept(this);
+      if(!elseBB->getTerminator()) {
+        mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeBlockNeeded = true;
+      }
+
+      //elseBB = mILGen->mIRBuilder.GetInsertBlock();
+
+      if(mergeBlockNeeded) {
+        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
+        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      }
+    }
+
+
+
+  }
+
+  void visit(Return* returnStmt) {
+    Location* expr = gen(returnStmt->mExpr);
+    mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
 
   void visit(Block* block) {
@@ -159,6 +227,10 @@ public:
     case NOperation::Type::ADD:
       result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lvalue, rvalue));
       break;
+
+    case NOperation::Type::CMPEQ:
+      result = new LLVMValue(mILGen->mIRBuilder.CreateICmpEQ(lvalue, rvalue));
+      break;
     }
 
     set(op, result);
@@ -182,17 +254,17 @@ public:
 
     FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
 
-    llvm::Function* ilfunction = Function::Create(ftype,
+    mCurrentFunction = Function::Create(ftype,
                                  Function::LinkageTypes::ExternalLinkage,
                                  function->mName, &mILGen->mModule);
 
     if(function->mStmts != NULL) {
       push();
 
-      BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", ilfunction);
+      BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", mCurrentFunction);
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
-      Function::arg_iterator AI = ilfunction->arg_begin();
+      Function::arg_iterator AI = mCurrentFunction->arg_begin();
       const size_t numArgs = function->mParams->size();
       for(size_t i=0; i<numArgs; i++,++AI) {
         NParam* param = function->mParams->at(i);

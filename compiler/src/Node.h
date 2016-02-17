@@ -11,7 +11,7 @@ class NMethod;
 class NField;
 class NParam;
 class NType;
-class IfStmt;
+class NIfStmt;
 class Assign;
 class Return;
 class Block;
@@ -38,7 +38,7 @@ public:
   VISIT(NType)
   VISIT(NLocalVar)
   VISIT(NArrayDecl)
-  VISIT(IfStmt)
+  VISIT(NIfStmt)
   VISIT(Assign)
   VISIT(Return)
   VISIT(Block)
@@ -184,13 +184,15 @@ public:
 
 };
 
-class IfStmt : public Stmt {
+class NIfStmt : public Stmt {
 public:
-  IfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = NULL)
+  NIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr)
     : mCondition(condition), mThenStmt(thenStmt), mElseStmt(elseStmt) {
-    children.push_back(condition);
-    children.push_back(thenStmt);
-    children.push_back(elseStmt);
+    add(condition);
+    add(thenStmt);
+    if(elseStmt != nullptr) {
+      add(elseStmt);
+    }
   }
 
   ACCEPT
@@ -273,7 +275,8 @@ public:
     ADD,
     SUB,
     MUL,
-    DIV
+    DIV,
+    CMPEQ
   };
 
   NOperation(Type type, Expr* left, Expr* right)
