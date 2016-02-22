@@ -235,6 +235,10 @@ public:
     mILGen->mIRBuilder.CreateStore(getValue(lright), lleft->getValue());
   }
 
+  void visit(NCall* call) {
+
+  }
+
   void visit(NFunction* function) {
 
     std::vector<llvm::Type*> argTypes;

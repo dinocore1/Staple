@@ -11,6 +11,7 @@ class NMethod;
 class NField;
 class NParam;
 class NType;
+class NCall;
 class NIfStmt;
 class Assign;
 class Return;
@@ -36,6 +37,7 @@ public:
   VISIT(NMethod)
   VISIT(NParam)
   VISIT(NType)
+  VISIT(NCall)
   VISIT(NLocalVar)
   VISIT(NArrayDecl)
   VISIT(NIfStmt)
@@ -314,9 +316,9 @@ public:
 
 };
 
-class Call : public Expr {
+class NCall : public Expr {
 public:
-  Call(const std::string& name, ExprList* args)
+  NCall(const std::string& name, ExprList* args)
     : mName(name), mArgList(*args) {
     children.insert(children.end(), mArgList.begin(), mArgList.end());
   }

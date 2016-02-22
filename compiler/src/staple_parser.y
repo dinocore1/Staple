@@ -147,8 +147,8 @@ type
 
 stmt
   : lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
-  | funcall TSEMI {}
-  | methodcall TSEMI {}
+  | funcall TSEMI { $$ = (Stmt*)$1; }
+  | methodcall TSEMI { $$ = (Stmt*)$1; }
   | localvar
   | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new NIfStmt($3, $5); $$->location = @$; }
@@ -178,7 +178,7 @@ fieldref
   ;
 
 funcall
-  : TID TLPAREN arglist TRPAREN {}
+  : TID TLPAREN arglist TRPAREN { $$ = new NCall(*$1, $3); delete $1;}
   ;
 
 arglist
