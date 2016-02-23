@@ -14,6 +14,7 @@ namespace staple {
 
 class Location {
 public:
+  virtual ~Location() {};
   virtual llvm::Value* getValue() = 0;
   virtual bool isAddress() = 0;
 
@@ -220,6 +221,10 @@ public:
       result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lvalue, rvalue));
       break;
 
+    case NOperation::Type::SUB:
+      result = new LLVMValue(mILGen->mIRBuilder.CreateSub(lvalue, rvalue));
+      break;
+
     case NOperation::Type::CMPEQ:
       result = new LLVMValue(mILGen->mIRBuilder.CreateICmpEQ(lvalue, rvalue));
       break;
@@ -237,6 +242,16 @@ public:
 
   void visit(NCall* call) {
 
+    llvm::Function* func = mILGen->mModule.getFunction(call->mName);
+    std::vector<llvm::Value*> args;
+    for(Expr* argExp : call->mArgList) {
+      Location* argLoc = gen(argExp);
+      args.push_back(getValue(argLoc));
+    }
+
+    Location* result = new LLVMValue(mILGen->mIRBuilder.CreateCall(func, args));
+    set(call, result);
+
   }
 
   void visit(NFunction* function) {
@@ -248,7 +263,7 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
+    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes, false);
 
     mCurrentFunction = Function::Create(ftype,
                                  Function::LinkageTypes::ExternalLinkage,
