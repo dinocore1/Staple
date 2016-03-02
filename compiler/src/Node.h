@@ -57,6 +57,7 @@ enum TypeId {
   Class,
   Field,
   Method,
+  Block,
   Unknown
 };
 
@@ -243,13 +244,19 @@ public:
 
 class Block : public Stmt {
 public:
+  StmtList mStmts;
+
   Block(StmtList* stmts)
-    : mStmts(*stmts) {
+    : Node(TypeId::Block), mStmts(*stmts) {
     children.insert(children.end(), mStmts.begin(), mStmts.end());
   }
 
   ACCEPT
-  StmtList mStmts;
+
+
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Block;
+  }
 };
 
 class NLocalVar : public Stmt {
