@@ -12,6 +12,7 @@ class NField;
 class NParam;
 class NType;
 class NCall;
+class NStmt;
 class NIfStmt;
 class Assign;
 class Return;
@@ -177,9 +178,16 @@ public:
   ACCEPT
 };
 
-class Stmt : public Node {
+class NStmt : public Node {
 public:
 
+  NStmt(){}
+  NStmt(TypeId type)
+    : Node(type) {}
+
+  static inline bool classof(const Node* T) {
+    return true;
+  }
 };
 
 class Expr : public Node {
@@ -187,9 +195,9 @@ public:
 
 };
 
-class NIfStmt : public Stmt {
+class NIfStmt : public NStmt {
 public:
-  NIfStmt(Expr* condition, Stmt* thenStmt, Stmt* elseStmt = nullptr)
+  NIfStmt(Expr* condition, NStmt* thenStmt, NStmt* elseStmt = nullptr)
     : mCondition(condition), mThenStmt(thenStmt), mElseStmt(elseStmt) {
     add(condition);
     add(thenStmt);
@@ -201,11 +209,11 @@ public:
   ACCEPT
 
   Expr* mCondition;
-  Stmt* mThenStmt;
-  Stmt* mElseStmt;
+  NStmt* mThenStmt;
+  NStmt* mElseStmt;
 };
 
-class Assign : public Stmt {
+class Assign : public NStmt {
 public:
   Assign(Expr* l, Expr* r)
     : mLeft(l), mRight(r) {
@@ -219,7 +227,7 @@ public:
   Expr* mRight;
 };
 
-class StmtExpr : public Stmt {
+class StmtExpr : public NStmt {
 public:
   StmtExpr(Expr* expr)
     : mExpr(expr) {
@@ -231,7 +239,7 @@ public:
   Expr* mExpr;
 };
 
-class Return : public Stmt {
+class Return : public NStmt {
 public:
   Return(Expr* expr)
     : mExpr(expr) {
@@ -242,24 +250,20 @@ public:
   Expr* mExpr;
 };
 
-class Block : public Stmt {
+class NBlock : public NStmt {
 public:
   StmtList mStmts;
 
-  Block(StmtList* stmts)
-    : Node(TypeId::Block), mStmts(*stmts) {
-    children.insert(children.end(), mStmts.begin(), mStmts.end());
-  }
+  NBlock(StmtList* stmts);
 
   ACCEPT
-
 
   static inline bool classof(const Node* T) {
     return T->mType == TypeId::Block;
   }
 };
 
-class NLocalVar : public Stmt {
+class NLocalVar : public NStmt {
 public:
   NLocalVar(const std::string& name, NType* type)
     : mName(name), mType(type) { };

@@ -12,7 +12,7 @@
 %code requires {
 #include "stdafx.h"
 typedef std::vector<staple::Expr*> ExprList;
-typedef std::vector<staple::Stmt*> StmtList;
+typedef std::vector<staple::NStmt*> StmtList;
 typedef std::vector<staple::NParam*> ParamList;
 typedef std::vector<std::string> FQPath;
 }
@@ -24,7 +24,7 @@ typedef std::vector<std::string> FQPath;
   staple::NField* field;
   staple::NMethod* method;
   staple::NType* type;
-  staple::Stmt* stmt;
+  staple::NStmt* stmt;
   staple::Expr* expr;
   StmtList* stmtlist;
   ExprList* exprlist;
@@ -147,8 +147,8 @@ type
 
 stmt
   : lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
-  | funcall TSEMI { $$ = (Stmt*)$1; }
-  | methodcall TSEMI { $$ = (Stmt*)$1; }
+  | funcall TSEMI { $$ = (NStmt*)$1; }
+  | methodcall TSEMI { $$ = (NStmt*)$1; }
   | localvar
   | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new NIfStmt($3, $5); $$->location = @$; }
@@ -163,7 +163,7 @@ stmtlist
   ;
 
 block
-  : TLBRACE stmtlist TRBRACE { $$ = new Block($2); }
+  : TLBRACE stmtlist TRBRACE { $$ = new NBlock($2); }
   ;
 
 lvalue

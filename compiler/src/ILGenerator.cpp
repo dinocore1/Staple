@@ -121,6 +121,18 @@ public:
     return mScope->locationTable[n];
   }
 
+  BasicBlock* getBasicBlock(NBlock* block) {
+    IRBuilder<>::InsertPointGuard guard(mILGen->mIRBuilder);
+
+    push();
+    BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
+    mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+    visitChildren(block);
+    pop();
+
+    return basicBlock;
+  }
+
   void visit(NIfStmt* ifStmt) {
     Location* lcondition = gen(ifStmt->mCondition);
 
@@ -180,7 +192,7 @@ public:
     mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
 
-  void visit(Block* block) {
+  void visit(NBlock* block) {
     push();
 
     BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
@@ -263,11 +275,12 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes, false);
+    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
+                                            false);
 
     mCurrentFunction = Function::Create(ftype,
-                                 Function::LinkageTypes::ExternalLinkage,
-                                 function->mName, &mILGen->mModule);
+                                        Function::LinkageTypes::ExternalLinkage,
+                                        function->mName, &mILGen->mModule);
 
     if(function->mStmts != NULL) {
       push();
@@ -286,7 +299,7 @@ public:
       }
 
 
-      for(Stmt* stmt : *function->mStmts) {
+      for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
       }
       pop();
