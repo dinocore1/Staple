@@ -289,7 +289,12 @@ public:
     SUB,
     MUL,
     DIV,
-    CMPEQ
+    CMPEQ,
+    CMPNE,
+    CMPLT,
+    CMPLE,
+    CMPGT,
+    CMPGE
   };
 
   NOperation(Type type, Expr* left, Expr* right)

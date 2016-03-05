@@ -201,11 +201,11 @@ expr
 
 relationexpr
   : logicexpr TCEQ logicexpr { $$ = new NOperation(NOperation::Type::CMPEQ, $1, $3); }
-  | logicexpr TCNE logicexpr
-  | logicexpr TCLT logicexpr
-  | logicexpr TCLE logicexpr
-  | logicexpr TCGT logicexpr
-  | logicexpr TCGE logicexpr
+  | logicexpr TCNE logicexpr { $$ = new NOperation(NOperation::Type::CMPNE, $1, $3); }
+  | logicexpr TCLT logicexpr { $$ = new NOperation(NOperation::Type::CMPLT, $1, $3); }
+  | logicexpr TCLE logicexpr { $$ = new NOperation(NOperation::Type::CMPLE, $1, $3); }
+  | logicexpr TCGT logicexpr { $$ = new NOperation(NOperation::Type::CMPGT, $1, $3); }
+  | logicexpr TCGE logicexpr { $$ = new NOperation(NOperation::Type::CMPGE, $1, $3); }
   | logicexpr
   ;
 

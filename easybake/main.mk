@@ -112,7 +112,6 @@ ALL_CLEAN :=
 .PHONY: all clean
 
 all:
-	echo "nothing"
 
 include easybake.mk
 
