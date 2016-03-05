@@ -144,14 +144,17 @@ public:
 
       mILGen->mIRBuilder.SetInsertPoint(thenBB);
       ifStmt->mThenStmt->accept(this);
+      thenBB = mILGen->mIRBuilder.GetInsertBlock();
+      bool mergeNeeded = false;
       if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
         mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeNeeded = true;
       }
 
-      thenBB = mILGen->mIRBuilder.GetInsertBlock();
-      mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-
-      mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      if(mergeNeeded) {
+        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
+        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      }
 
     } else {
       BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
@@ -162,25 +165,27 @@ public:
 
       mILGen->mIRBuilder.SetInsertPoint(thenBB);
       ifStmt->mThenStmt->accept(this);
+      thenBB = mILGen->mIRBuilder.GetInsertBlock();
+      bool mergeNeeded = false;
       if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
         mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeNeeded = true;
       }
-
-
-      thenBB = mILGen->mIRBuilder.GetInsertBlock();
 
       mCurrentFunction->getBasicBlockList().push_back(elseBB);
       mILGen->mIRBuilder.SetInsertPoint(elseBB);
       ifStmt->mElseStmt->accept(this);
-      if(elseBB->getTerminator() == nullptr || !isa<ReturnInst>(elseBB->getTerminator())) {
-        mILGen->mIRBuilder.CreateBr(mergeBB);
-      }
-
       elseBB = mILGen->mIRBuilder.GetInsertBlock();
 
+      if(elseBB->getTerminator() == nullptr || !isa<ReturnInst>(elseBB->getTerminator())) {
+        mILGen->mIRBuilder.CreateBr(mergeBB);
+        mergeNeeded = true;
+      }
 
-      mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-      mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      if(mergeNeeded) {
+        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
+        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
+      }
     }
 
 
