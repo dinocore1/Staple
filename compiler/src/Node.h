@@ -163,7 +163,10 @@ public:
 
 class NType : public Node {
 public:
+  NType(const FQPath& name)
+    : mTypeName(name) { }
 
+  FQPath mTypeName;
   ACCEPT
 };
 

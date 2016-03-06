@@ -210,6 +210,13 @@ public:
     set(block, new LLVMValue(basicBlock));
   }
 
+  void visit(NLocalVar* localVar) {
+    llvm::Type* type = llvm::IntegerType::getInt32Ty(getGlobalContext());
+
+    AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
+    mScope->defineSymbol(localVar->mName, new LLVMAddress(alloc));
+  }
+
   void visit(NSymbolRef* symbolRef) {
     Location* l = mScope->lookup(symbolRef->mName);
     set(symbolRef, l);

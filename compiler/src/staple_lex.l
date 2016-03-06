@@ -51,6 +51,7 @@ result = yyextra->readBytes(buf, max_size);
 "}"                     return TRBRACE;
 "["                     return TLBRACKET;
 "]"                     return TRBRACKET;
+"[]"                    return TARRAYTYPE;
 "."                     return TDOT;
 ","                     return TCOMMA;
 "+"                     return TPLUS;

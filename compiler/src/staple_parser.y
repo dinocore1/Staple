@@ -36,7 +36,7 @@ typedef std::vector<std::string> FQPath;
 %token TIF TELSE TNOT TSEMI TRETURN TFOR
 %token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
-%token TELLIPSIS
+%token TELLIPSIS TARRAYTYPE
 %token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR TTWIDLE TCARET
 %token <string> TID
 %token <ival> TINT
@@ -45,7 +45,7 @@ typedef std::vector<std::string> FQPath;
 %type <field> field
 %type <method> method
 %type <stmt> stmt localvar block
-%type <expr> expr lvalue fieldref funcall methodcall relationexpr logicexpr
+%type <expr> expr lvalue fieldref arrayref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
 %type <fqpath> fqpath
 %type <stmtlist> stmtlist
@@ -140,9 +140,10 @@ paramlist
   ;
 
 type
-  : fqpath {}
-  | fqpath TCARET {}
-  | fqpath TMUL {}
+  : fqpath { $$ = new NType(*$1); }
+  | type TCARET {}
+  | type TMUL {}
+  | type TARRAYTYPE
   ;
 
 stmt
@@ -171,10 +172,15 @@ lvalue
   | funcall
   | fieldref
   | methodcall
+  | arrayref
   ;
 
 fieldref
   : lvalue TDOT TID
+  ;
+
+arrayref
+  : lvalue TLBRACKET expr TRBRACKET
   ;
 
 funcall
@@ -270,7 +276,7 @@ ParserContext::~ParserContext() {
 bool ParserContext::parse(const staple::File& file) {
   std::ifstream inputFileStream(file.getAbsolutePath(), std::ifstream::in);
   if (!inputFileStream) {
-      fprintf(stderr, "cannot open file: %s", file.getAbsolutePath().c_str());
+      fprintf(stderr, "cannot open file: %s\n", file.getAbsolutePath().c_str());
       return false;
   }
   return parse(file.getName(), inputFileStream);
@@ -279,7 +285,7 @@ bool ParserContext::parse(const staple::File& file) {
 bool ParserContext::parse(const std::string& filepath) {
    std::ifstream inputFileStream(filepath.c_str(), std::ifstream::in);
      if (!inputFileStream) {
-         fprintf(stderr, "cannot open file: %s", filepath.c_str());
+         fprintf(stderr, "cannot open file: %s\n", filepath.c_str());
          return false;
      }
      return parse(filepath.c_str(), inputFileStream);
@@ -297,5 +303,5 @@ bool ParserContext::parse(const std::string& streamName, std::istream& is) {
 
 void ParserContext::parseError(const int line, const int column, const char* errMsg) {
   mSuccess = false;
-  fprintf(stderr, "%s:%d: %s", mStreamName.c_str(), line, errMsg);
+  fprintf(stderr, "%s:%d: %s\n", mStreamName.c_str(), line, errMsg);
 }

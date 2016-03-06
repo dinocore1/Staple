@@ -72,7 +72,9 @@ int main(int argc, char** argv) {
 
     ctx.setInputFile(parse.nonOption(i));
 
-    ctx.parse();
+    if(!ctx.parse()){
+      return 1;
+    }
 
     ILGenerator ilGenerator(&ctx);
     ilGenerator.generate();
