@@ -292,7 +292,7 @@ public:
 
     std::vector<llvm::Type*> argTypes;
 
-    for(NParam* param : *function->mParams) {
+    for(NParam* param : function->mParams) {
       //TODO: replace this with actual types not just ints
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
@@ -311,9 +311,9 @@ public:
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
       Function::arg_iterator AI = mCurrentFunction->arg_begin();
-      const size_t numArgs = function->mParams->size();
+      const size_t numArgs = function->mParams.size();
       for(size_t i=0; i<numArgs; i++,++AI) {
-        NParam* param = function->mParams->at(i);
+        NParam* param = function->mParams.at(i);
         llvm::Type* type = AI->getType();
         AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
         mILGen->mIRBuilder.CreateStore(AI, alloc);
@@ -357,7 +357,7 @@ public:
   void visit(NFunctionDecl* funDecl) {
     std::vector<llvm::Type*> argTypes;
 
-    for(NParam* param : *funDecl->mParams) {
+    for(NParam* param : funDecl->mParams) {
       //TODO: replace this with actual types not just ints
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }

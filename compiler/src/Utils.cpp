@@ -41,12 +41,51 @@ static void tokenize(const std::string& str, ContainerT& tokens,
 
 namespace staple {
 
+  FileLocation FileLocation::UNKNOWN("null", -1, -1);
+
+  FileLocation::FileLocation(const File& file,
+    uint32_t line, uint32_t column)
+    : mFile(file), mLine(line), mColumn(column) { }
+
+  CompilerMessage::CompilerMessage(Type type,
+    const std::string& msg, const FileLocation& location)
+  : mType(type), mMessage(msg), mLocation(location) { }
+
+  static std::string getTypeString(CompilerMessage::Type type) {
+    switch (type) {
+      case CompilerMessage::Type::ERROR:
+      return "error";
+
+      case CompilerMessage::Type::WARNING:
+      return "warn";
+    }
+  }
+
+  std::string CompilerMessage::toString() const {
+    stringbuf buf;
+    ostream os(&buf);
+
+    os << getTypeString(mType) << " " << mLocation.mFile.getAbsolutePath();
+    os << " " << mLocation.mLine << ":" << mLocation.mColumn;
+    os << ": " << mMessage;
+
+    return buf.str();
+  }
+
   FQPath::FQPath() {}
   FQPath::FQPath(const std::vector<std::string>& parts)
   : mParts(parts) {}
 
   void FQPath::add(const std::string& part) {
     mParts.push_back(part);
+  }
+
+  size_t FQPath::getNumParts() const {
+    return mParts.size();
+  }
+
+  std::string FQPath::getSimpleName() const {
+    return mParts[mParts.size()-1];
   }
 
   std::string FQPath::getFullString() const {

@@ -22,6 +22,12 @@ public:
   void addIncludeDir(const File&);
   bool parse();
 
+  void addError(const std::string& message, uint32_t line, uint32_t column);
+  void addError(const std::string& message, const FileLocation& location = FileLocation::UNKNOWN);
+  bool hasErrors() const;
+
+  std::vector<CompilerMessage> mMessages;
+
 
 };
 

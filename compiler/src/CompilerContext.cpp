@@ -23,4 +23,24 @@ bool CompilerContext::parse() {
   return retval;
 }
 
+void CompilerContext::addError(const std::string& message, uint32_t line, uint32_t column) {
+  FileLocation location(inputFile, line, column);
+  CompilerMessage msg(CompilerMessage::Type::ERROR, message, location);
+  mMessages.push_back(msg);
+}
+
+void CompilerContext::addError(const std::string& message, const FileLocation& location) {
+  CompilerMessage msg(CompilerMessage::Type::ERROR, message, location);
+  mMessages.push_back(msg);
+}
+
+bool CompilerContext::hasErrors() const {
+  for(const CompilerMessage& msg : mMessages) {
+    if(msg.mType == CompilerMessage::Type::ERROR) {
+      return true;
+    }
+  }
+  return false;
+}
+
 } // namespace staple

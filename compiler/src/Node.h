@@ -107,11 +107,11 @@ public:
   NFunctionDecl(const std::string& name, NType* returnType,
                 ParamList* params)
     : Node(TypeId::FunctionDecl), mName(name), mReturnType(returnType),
-      mParams(params) { }
+      mParams(*params) { }
 
   std::string mName;
   NType* mReturnType;
-  ParamList* mParams;
+  ParamList mParams;
 
   ACCEPT
 
@@ -125,11 +125,11 @@ public:
   NFunction(const std::string& name, NType* returnType,
             ParamList* params, StmtList* stmtList)
     : Node(TypeId::Function), mName(name), mReturnType(returnType),
-      mParams(params), mStmts(stmtList) { }
+      mParams(*params), mStmts(stmtList) { }
 
   std::string mName;
   NType* mReturnType;
-  ParamList* mParams;
+  ParamList mParams;
   StmtList* mStmts;
 
   ACCEPT

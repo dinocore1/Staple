@@ -4,7 +4,8 @@
 namespace staple {
 
   class Type {
-
+  public:
+    Type();
   };
 
   class IntegerType : public Type {
@@ -57,10 +58,17 @@ namespace staple {
     FQPath mFQName;
   };
 
-  extern const IntegerType UInt8;
-  extern const IntegerType Int8;
-  extern const IntegerType UInt16;
-  extern const IntegerType Int16;
+  class Primitives {
+  public:
+    static const Type Void;
+    static const Type Bool;
+    static const IntegerType UInt8;
+    static const IntegerType Int8;
+    static const IntegerType UInt16;
+    static const IntegerType Int16;
+    static const IntegerType UInt32;
+    static const IntegerType Int32;
+  };
 
 }
 

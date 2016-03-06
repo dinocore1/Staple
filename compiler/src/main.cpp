@@ -81,6 +81,13 @@ int main(int argc, char** argv) {
     Sempass sempass(&ctx);
     sempass.doit();
 
+    if(ctx.hasErrors()) {
+      for(const CompilerMessage& msg : ctx.mMessages) {
+        printf("%s\n", msg.toString().c_str());
+      }
+      return 1;
+    }
+
     ILGenerator ilGenerator(&ctx);
     ilGenerator.generate();
 
