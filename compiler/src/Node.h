@@ -181,7 +181,7 @@ public:
 class NStmt : public Node {
 public:
 
-  NStmt(){}
+  NStmt() {}
   NStmt(TypeId type)
     : Node(type) {}
 

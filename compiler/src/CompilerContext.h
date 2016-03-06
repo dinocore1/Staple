@@ -11,10 +11,12 @@ public:
   CompilerContext();
   ParserContext parserContext;
   File inputFile;
+  std::vector<File> includeDirs;
   Node* rootNode;
   bool generateDebugSymobols;
 
   void setInputFile(const File&);
+  void addIncludeDir(const File&);
   bool parse();
 
 

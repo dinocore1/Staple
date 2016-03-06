@@ -13,8 +13,8 @@ void Visitor::visit(Node* node) {
   visitChildren(node);
 }
 
-NBlock::NBlock(StmtList *stmts)
- : NStmt(TypeId::Block), mStmts(*stmts) {
+NBlock::NBlock(StmtList* stmts)
+  : NStmt(TypeId::Block), mStmts(*stmts) {
   children.insert(children.end(), mStmts.begin(), mStmts.end());
 }
 

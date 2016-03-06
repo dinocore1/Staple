@@ -137,8 +137,8 @@ public:
     Location* lcondition = gen(ifStmt->mCondition);
 
     if(ifStmt->mElseStmt == nullptr) {
-      BasicBlock *thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
-      BasicBlock *mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
+      BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
+      BasicBlock* mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
 
       mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, mergeBB);
 
