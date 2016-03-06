@@ -34,6 +34,7 @@ public:
 
   void visitChildren(Node* node);
   virtual void visit(Node* node);
+  VISIT(NCompileUnit)
   VISIT(NFunction)
   VISIT(NFunctionDecl)
   VISIT(NClass)

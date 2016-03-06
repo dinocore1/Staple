@@ -6,10 +6,13 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
+#include <map>
 
 #include "FileUtils.h"
 
 namespace staple {
+
+class FQPath;
 
 class Visitor;
 class NCompileUnit;
@@ -33,7 +36,9 @@ class ParserContext;
 
 #include "staple_parser.hpp"
 
+#include "Utils.h"
 #include "ParserContext.h"
+#include "Type.h"
 #include "Node.h"
 #include "CompilerContext.h"
 #include "ILGenerator.h"

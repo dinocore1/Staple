@@ -15,6 +15,9 @@ public:
   Node* rootNode;
   bool generateDebugSymobols;
 
+  std::map<std::string, staple::ClassType*> mClasses;
+  std::map<std::string, staple::FunctionType*> mFunctions;
+
   void setInputFile(const File&);
   void addIncludeDir(const File&);
   bool parse();

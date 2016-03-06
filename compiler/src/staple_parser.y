@@ -14,7 +14,6 @@
 typedef std::vector<staple::Expr*> ExprList;
 typedef std::vector<staple::NStmt*> StmtList;
 typedef std::vector<staple::NParam*> ParamList;
-typedef std::vector<std::string> FQPath;
 }
 
 %union {
@@ -29,7 +28,7 @@ typedef std::vector<std::string> FQPath;
   StmtList* stmtlist;
   ExprList* exprlist;
   ParamList* paramlist;
-  FQPath* fqpath;
+  staple::FQPath* fqpath;
 }
 
 %token TPACKAGE TCLASS TEXTENDS TIMPLEMENTS TNAMESEP
@@ -98,8 +97,8 @@ globalfunction
   ;
 
 fqpath
-  : TID { $$ = new FQPath(); $$->push_back(*$1); delete $1; }
-  | fqpath TNAMESEP TID { $$->push_back(*$3); delete $3; }
+  : TID { $$ = new FQPath(); $$->add(*$1); delete $1; }
+  | fqpath TNAMESEP TID { $$->add(*$3); delete $3; }
   ;
 
 class

@@ -297,7 +297,7 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
+    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
                                             false);
 
     mCurrentFunction = Function::Create(ftype,
@@ -362,10 +362,10 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
+    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
                                             false);
 
-    Function::Create(ftype,
+    llvm::Function::Create(ftype,
                      Function::LinkageTypes::ExternalLinkage,
                      funDecl->mName, &mILGen->mModule);
 

@@ -27,7 +27,10 @@ LOCAL_SRCS := \
 	src/staple_lex.cpp \
 	src/staple_parser.cpp \
 	src/FileUtils.cpp \
+	src/Utils.cpp \
 	src/Node.cpp \
+	src/Type.cpp \
+	src/Sempass.cpp \
 	src/ILGenerator.cpp \
 	src/CompilerContext.cpp \
 	src/main.cpp

@@ -1,6 +1,8 @@
 
 #include "stdafx.h"
 
+#include "Sempass.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
 #include "optionparser.h"
@@ -75,6 +77,9 @@ int main(int argc, char** argv) {
     if(!ctx.parse()) {
       return 1;
     }
+
+    Sempass sempass(&ctx);
+    sempass.doit();
 
     ILGenerator ilGenerator(&ctx);
     ilGenerator.generate();
