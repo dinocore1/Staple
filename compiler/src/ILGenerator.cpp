@@ -222,6 +222,16 @@ public:
     set(symbolRef, l);
   }
 
+  void visit(NArrayRef* arrayRef) {
+    Location* base = gen(arrayRef->mBase);
+    Location* index = gen(arrayRef->mIndex);
+
+    llvm::Value* value = mILGen->mIRBuilder.CreateGEP(
+      base->getValue(), getValue(index));
+
+    set(arrayRef, new LLVMValue(value));
+  }
+
   virtual void visit(NIntLiteral* lit) {
     llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
     set(lit, new LLVMValue(value));
@@ -334,7 +344,38 @@ ILGenerator::ILGenerator(CompilerContext* ctx)
   }
 }
 
+class ForwardDeclareMethodVisitor : public Visitor {
+private:
+  ILGenerator* mILGen;
+
+public:
+  using Visitor::visit;
+
+  ForwardDeclareMethodVisitor(ILGenerator* ir)
+    : mILGen(ir) {}
+
+  void visit(NFunctionDecl* funDecl) {
+    std::vector<llvm::Type*> argTypes;
+
+    for(NParam* param : *funDecl->mParams) {
+      //TODO: replace this with actual types not just ints
+      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+    }
+
+    FunctionType* ftype = FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
+                                            false);
+
+    Function::Create(ftype,
+                     Function::LinkageTypes::ExternalLinkage,
+                     funDecl->mName, &mILGen->mModule);
+
+  }
+};
+
 void ILGenerator::generate() {
+  ForwardDeclareMethodVisitor fdv(this);
+  mCtx->rootNode->accept(&fdv);
+
   ILGenVisitor visitor(this);
   mCtx->rootNode->accept(&visitor);
 

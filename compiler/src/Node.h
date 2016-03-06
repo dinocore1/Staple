@@ -6,6 +6,7 @@ namespace staple {
 class Node;
 class NCompileUnit;
 class NFunction;
+class NFunctionDecl;
 class NClass;
 class NMethod;
 class NField;
@@ -23,6 +24,7 @@ class NArrayDecl;
 class NNot;
 class NNeg;
 class NSymbolRef;
+class NArrayRef;
 class NIntLiteral;
 
 #define VISIT(x) virtual void visit(x*){};
@@ -33,6 +35,7 @@ public:
   void visitChildren(Node* node);
   virtual void visit(Node* node);
   VISIT(NFunction)
+  VISIT(NFunctionDecl)
   VISIT(NClass)
   VISIT(NField)
   VISIT(NMethod)
@@ -47,6 +50,7 @@ public:
   VISIT(Block)
   VISIT(NOperation)
   VISIT(NSymbolRef)
+  VISIT(NArrayRef)
   VISIT(NIntLiteral)
 
 };
@@ -55,6 +59,7 @@ public:
 
 enum TypeId {
   Function,
+  FunctionDecl,
   Class,
   Field,
   Method,
@@ -96,10 +101,28 @@ public:
   ACCEPT
 };
 
+class NFunctionDecl : public Node {
+public:
+  NFunctionDecl(const std::string& name, NType* returnType,
+                ParamList* params)
+    : Node(TypeId::FunctionDecl), mName(name), mReturnType(returnType),
+      mParams(params) { }
+
+  std::string mName;
+  NType* mReturnType;
+  ParamList* mParams;
+
+  ACCEPT
+
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::FunctionDecl;
+  }
+};
+
 class NFunction : public Node {
 public:
   NFunction(const std::string& name, NType* returnType,
-            ParamList* params, StmtList* stmtList = NULL)
+            ParamList* params, StmtList* stmtList)
     : Node(TypeId::Function), mName(name), mReturnType(returnType),
       mParams(params), mStmts(stmtList) { }
 
@@ -355,6 +378,17 @@ public:
   ACCEPT
   const std::string mName;
 
+};
+
+class NArrayRef : public Expr {
+public:
+  NArrayRef(Expr* base, Expr* index)
+  : mBase(base), mIndex(index) {}
+
+  ACCEPT
+
+  Expr* mBase;
+  Expr* mIndex;
 };
 
 class NIntLiteral : public Expr {

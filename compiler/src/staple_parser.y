@@ -89,7 +89,7 @@ body
 
 functiondecl
   : type TID TLPAREN paramlist TRPAREN TSEMI
-    { $$ = new NFunction(*$2, $1, $4); delete $2; }
+    { $$ = new NFunctionDecl(*$2, $1, $4); delete $2; }
   ;
 
 globalfunction
@@ -181,6 +181,7 @@ fieldref
 
 arrayref
   : lvalue TLBRACKET expr TRBRACKET
+  { $$ = new NArrayRef($1, $3); }
   ;
 
 funcall
