@@ -44,31 +44,6 @@ public:
   SemPass2Visitor(CompilerContext& ctx)
     : SemPassBaseVisitor(ctx) {}
 
-  Type* getType(NType* n) {
-    if(n->mTypeName.getNumParts() == 1) {
-      std::string simpleName = n->mTypeName.getSimpleName();
-      if(simpleName.compare("void") == 0) {
-        return const_cast<Type*>(&Primitives::Void);
-      } else if(simpleName.compare("bool") == 0) {
-        return const_cast<Type*>(&Primitives::Bool);
-      } else if(simpleName.compare("int") == 0) {
-        return const_cast<IntegerType*>(&Primitives::Int32);
-      } else {
-        //class type
-        FQPath fqName = mCurrentPackage;
-        fqName.add(simpleName);
-
-        auto ct = mCtx.mClasses.find(fqName.getFullString());
-        if(ct != mCtx.mClasses.end()) {
-          return (*ct).second;
-        }
-      }
-    }
-
-
-    return NULL;
-  }
-
   void visit(NType* n) {
     if(n->mTypeName.getNumParts() == 1) {
       std::string simpleName = n->mTypeName.getSimpleName();
@@ -216,7 +191,10 @@ public:
 
     mCtx.mTypeTable[fun->mReturnType] = getType(fun->mReturnType);
 
-    visitChildren(fun);
+    for(NStmt* stmt : *fun->mStmts) {
+      stmt->accept(this);
+    }
+
     pop();
   }
 
