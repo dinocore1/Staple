@@ -4,11 +4,11 @@
 
 namespace staple {
 
-class SempPass1Visitor : public Visitor {
+class SemPassBaseVisitor : public Visitor {
 public:
   using Visitor::visit;
-  SempPass1Visitor(CompilerContext& ctx)
-  : mCtx(ctx) {}
+  SemPassBaseVisitor(CompilerContext& ctx)
+    : mCtx(ctx) {}
 
   CompilerContext& mCtx;
   FQPath mCurrentPackage;
@@ -17,6 +17,13 @@ public:
     mCurrentPackage = compileUnit->mPackage;
     visitChildren(compileUnit);
   }
+};
+
+class SemPass1Visitor : public SemPassBaseVisitor {
+public:
+  using Visitor::visit;
+  SemPass1Visitor(CompilerContext& ctx)
+    : SemPassBaseVisitor(ctx) {}
 
   void visit(NClass* function) {
     FQPath classFQPath = mCurrentPackage;
@@ -30,30 +37,22 @@ public:
 
 };
 
-class SempPass2Visitor : public Visitor {
+class SemPass2Visitor : public SemPassBaseVisitor {
 public:
   using Visitor::visit;
 
-  CompilerContext& mCtx;
-  FQPath mCurrentPackage;
-
-  SempPass2Visitor(CompilerContext& ctx)
-  : mCtx(ctx) { }
-
-  void visit(NCompileUnit* compileUnit) {
-    mCurrentPackage = compileUnit->mPackage;
-    visitChildren(compileUnit);
-  }
+  SemPass2Visitor(CompilerContext& ctx)
+    : SemPassBaseVisitor(ctx) {}
 
   Type* getType(NType* n) {
     if(n->mTypeName.getNumParts() == 1) {
       std::string simpleName = n->mTypeName.getSimpleName();
       if(simpleName.compare("void") == 0) {
-        return (Type*)&Primitives::Void;
+        return const_cast<Type*>(&Primitives::Void);
       } else if(simpleName.compare("bool") == 0) {
-        return (Type*)&Primitives::Bool;
+        return const_cast<Type*>(&Primitives::Bool);
       } else if(simpleName.compare("int") == 0) {
-        return (Type*)&Primitives::Int32;
+        return const_cast<IntegerType*>(&Primitives::Int32);
       } else {
         //class type
         FQPath fqName = mCurrentPackage;
@@ -66,9 +65,53 @@ public:
       }
     }
 
-    mCtx.addError("unknown type: '" + n->mTypeName.getFullString() + "'",
-      n->location.first_line, n->location.first_column);
+
     return NULL;
+  }
+
+  void visit(NType* n) {
+    if(n->mTypeName.getNumParts() == 1) {
+      std::string simpleName = n->mTypeName.getSimpleName();
+      if(simpleName.compare("void") == 0) {
+        mCtx.mTypeTable[n] = const_cast<Type*>(&Primitives::Void);
+
+      } else if(simpleName.compare("bool") == 0) {
+        mCtx.mTypeTable[n] = const_cast<Type*>(&Primitives::Bool);
+
+      } else if(simpleName.compare("int") == 0) {
+        mCtx.mTypeTable[n] = const_cast<IntegerType*>(&Primitives::Int32);
+
+      } else {
+        //class type
+        FQPath fqName = mCurrentPackage;
+        fqName.add(simpleName);
+
+        auto ct = mCtx.mClasses.find(fqName.getFullString());
+        if(ct != mCtx.mClasses.end()) {
+          mCtx.mTypeTable[n] = (*ct).second;
+        } else {
+          mCtx.addError("unknown type: '" + n->mTypeName.getFullString() + "'",
+                        n->location.first_line, n->location.first_column);
+        }
+      }
+    }
+  }
+
+  Type* getType(Node* node) {
+    auto it = mCtx.mTypeTable.find(node);
+    if(it != mCtx.mTypeTable.end()) {
+      return (*it).second;
+    }
+
+    node->accept(this);
+
+    it = mCtx.mTypeTable.find(node);
+    if(it != mCtx.mTypeTable.end()) {
+      return (*it).second;
+    } else {
+
+      return nullptr;
+    }
   }
 
   void visit(NFunction* fun) {
@@ -99,22 +142,107 @@ public:
     fqFunName.add(funDecl->mName);
 
     mCtx.mFunctions[fqFunName.getFullString()] = funType;
-
   }
 
 
 };
 
+class SemPass3Visitor : public SemPass2Visitor {
+
+  class Scope {
+  public:
+    Scope* mParent;
+    std::map<std::string, Type*> mSymbolTable;
+
+    Scope(Scope* parent)
+      : mParent(parent) {}
+
+    ~Scope() {
+    }
+
+    void defineSymbol(const std::string& symbolName, Type* type) {
+      mSymbolTable[symbolName] = type;
+    }
+
+    Type* lookup(const std::string& symbolName) {
+      auto it = mSymbolTable.find(symbolName);
+      if(it != mSymbolTable.end()) {
+        return (*it).second;
+      }
+
+      if(mParent != nullptr) {
+        return mParent->lookup(symbolName);
+      }
+
+      return nullptr;
+    }
+
+  };
+
+public:
+  using Visitor::visit;
+  using SemPass2Visitor::visit;
+
+  Scope* mScope;
+
+  SemPass3Visitor(CompilerContext& ctx)
+    : SemPass2Visitor(ctx) {
+    mScope = new Scope(nullptr);
+  }
+
+  void push() {
+    mScope = new Scope(mScope);
+  }
+
+  void pop() {
+    Scope* oldScope = mScope;
+    mScope = mScope->mParent;
+    delete oldScope;
+  }
+
+  void defineSymbol(const std::string& symbolName, Type* type) {
+    mScope->defineSymbol(symbolName, type);
+  }
+
+  void visit(NFunction* fun) {
+    push();
+    for(NParam* param : fun->mParams) {
+      Type* paramType = getType(param->mType);
+      if(paramType != nullptr) {
+        defineSymbol(param->mName, paramType);
+        mCtx.mTypeTable[param] = paramType;
+      }
+    }
+
+    mCtx.mTypeTable[fun->mReturnType] = getType(fun->mReturnType);
+
+    visitChildren(fun);
+    pop();
+  }
+
+  void visit(NFunctionDecl* funDecl) {}
+
+  void visit(Assign* assign) {
+    Type* ltype = getType(assign->mLeft);
+    Type* rtype = getType(assign->mRight);
+
+  }
+
+};
+
 
 Sempass::Sempass(CompilerContext* ctx)
- : mCtx(ctx) {}
+  : mCtx(ctx) {}
 
 void Sempass::doit() {
-  SempPass1Visitor sempass1(*mCtx);
+  SemPass1Visitor sempass1(*mCtx);
   mCtx->rootNode->accept(&sempass1);
 
-  SempPass2Visitor sempass2(*mCtx);
+  SemPass2Visitor sempass2(*mCtx);
   mCtx->rootNode->accept(&sempass2);
+
+  SemPass3Visitor sempass3(*mCtx);
+  mCtx->rootNode->accept(&sempass3);
 
 }
 

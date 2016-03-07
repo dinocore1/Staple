@@ -75,11 +75,15 @@ public:
 
   Location* lookup(const std::string& symbolName) {
     auto it = symbolTable.find(symbolName);
-    if(it == symbolTable.end() && mParent != nullptr) {
-      return mParent->lookup(symbolName);
-    } else {
+    if(it != symbolTable.end()) {
       return (*it).second;
     }
+
+    if(mParent != nullptr) {
+      return mParent->lookup(symbolName);
+    }
+
+    return nullptr;
   }
 
   map<Node*, Location*> locationTable;
@@ -227,7 +231,7 @@ public:
     Location* index = gen(arrayRef->mIndex);
 
     llvm::Value* value = mILGen->mIRBuilder.CreateGEP(
-      base->getValue(), getValue(index));
+                           base->getValue(), getValue(index));
 
     set(arrayRef, new LLVMValue(value));
   }
@@ -297,8 +301,9 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
-                                            false);
+    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
+                                  getGlobalContext()), argTypes,
+                                false);
 
     mCurrentFunction = Function::Create(ftype,
                                         Function::LinkageTypes::ExternalLinkage,
@@ -362,12 +367,13 @@ public:
       argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
     }
 
-    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(getGlobalContext()), argTypes,
-                                            false);
+    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
+                                  getGlobalContext()), argTypes,
+                                false);
 
     llvm::Function::Create(ftype,
-                     Function::LinkageTypes::ExternalLinkage,
-                     funDecl->mName, &mILGen->mModule);
+                           Function::LinkageTypes::ExternalLinkage,
+                           funDecl->mName, &mILGen->mModule);
 
   }
 };

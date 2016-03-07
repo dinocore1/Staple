@@ -17,6 +17,7 @@ public:
 
   std::map<std::string, staple::ClassType*> mClasses;
   std::map<std::string, staple::FunctionType*> mFunctions;
+  std::map<Node*, Type*> mTypeTable;
 
   void setInputFile(const File&);
   void addIncludeDir(const File&);

@@ -21,7 +21,7 @@ public:
   };
 
   CompilerMessage(Type type, const std::string& msg,
-    const FileLocation& location);
+                  const FileLocation& location);
 
   const Type mType;
   const std::string mMessage;

@@ -384,7 +384,7 @@ public:
 class NArrayRef : public Expr {
 public:
   NArrayRef(Expr* base, Expr* index)
-  : mBase(base), mIndex(index) {}
+    : mBase(base), mIndex(index) {}
 
   ACCEPT
 
