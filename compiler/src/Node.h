@@ -61,7 +61,7 @@ public:
 #define ACCEPT void accept(Visitor* visitor) { visitor->visit(this); }
 
 enum TypeId {
-  Type,
+  TypeNode,
   Function,
   FunctionDecl,
   Class,
@@ -198,10 +198,10 @@ public:
   };
 
   NType(VariantType variant)
-  : Node(TypeId::Type), mVariant(variant) {}
+    : Node(TypeId::TypeNode), mVariant(variant) {}
 
   static inline bool classof(const Node* T) {
-    return T->mType == TypeId::Type;
+    return T->mType == TypeId::TypeNode;
   }
 
   VariantType mVariant;
@@ -212,7 +212,7 @@ public:
 class NNamedType : public NType {
 public:
   NNamedType(const FQPath& path)
-  : NType(VariantType::Named), mTypeName(path) {}
+    : NType(VariantType::Named), mTypeName(path) {}
 
   FQPath mTypeName;
 
@@ -225,7 +225,7 @@ class NArrayType : public NType {
 public:
 
   NArrayType(NType* baseType)
-  : NType(NType::VariantType::Array), mBase(baseType) { }
+    : NType(NType::VariantType::Array), mBase(baseType) { }
 
   NType* mBase;
 
@@ -238,7 +238,7 @@ class NPointerType : public NType {
 public:
 
   NPointerType(NType* baseType)
-  : NType(NType::VariantType::Pointer), mBase(baseType) { }
+    : NType(NType::VariantType::Pointer), mBase(baseType) { }
 
   NType* mBase;
 

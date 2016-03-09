@@ -2,6 +2,8 @@
 
 #include "Sempass.h"
 
+using namespace llvm;
+
 namespace staple {
 
 class SemPassBaseVisitor : public Visitor {
@@ -72,8 +74,9 @@ public:
                         n->location.first_line, n->location.first_column);
         }
       }
+    }
 
-      return nullptr;
+    return nullptr;
   }
 
   Type* getType(NArrayType* arrayType) {
@@ -81,7 +84,7 @@ public:
 
   }
 
-  Type* getType(NType* type) {
+  Type* getType(NType* n) {
     if(isa<NNamedType>(n)) {
       NNamedType* namedType = cast<NNamedType>(n);
       return getType(namedType);
@@ -91,6 +94,8 @@ public:
       return new ArrayType(getType(arrayType));
 
     }
+
+    return nullptr;
   }
 
   void visit(NType* n) {
@@ -181,8 +186,6 @@ class SemPass3Visitor : public SemPass2Visitor {
 
 public:
   using Visitor::visit;
-  using SemPass2Visitor::visit;
-
   Scope* mScope;
 
   SemPass3Visitor(CompilerContext& ctx)
@@ -232,7 +235,6 @@ public:
   }
 
 };
-
 
 Sempass::Sempass(CompilerContext* ctx)
   : mCtx(ctx) {}
