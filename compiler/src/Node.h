@@ -12,6 +12,8 @@ class NMethod;
 class NField;
 class NParam;
 class NType;
+class NArrayType;
+class NPointerType;
 class NCall;
 class NStmt;
 class NIfStmt;
@@ -59,6 +61,7 @@ public:
 #define ACCEPT void accept(Visitor* visitor) { visitor->visit(this); }
 
 enum TypeId {
+  Type,
   Function,
   FunctionDecl,
   Class,
@@ -187,11 +190,61 @@ public:
 
 class NType : public Node {
 public:
-  NType(const FQPath& name)
-    : mTypeName(name) { }
+
+  enum VariantType {
+    Named,
+    Array,
+    Pointer
+  };
+
+  NType(VariantType variant)
+  : Node(TypeId::Type), mVariant(variant) {}
+
+  static inline bool classof(const Node* T) {
+    return T->mType == TypeId::Type;
+  }
+
+  VariantType mVariant;
+
+  ACCEPT
+};
+
+class NNamedType : public NType {
+public:
+  NNamedType(const FQPath& path)
+  : NType(VariantType::Named), mTypeName(path) {}
 
   FQPath mTypeName;
-  ACCEPT
+
+  static inline bool classof(const NType* T) {
+    return T->mVariant == VariantType::Named;
+  }
+};
+
+class NArrayType : public NType {
+public:
+
+  NArrayType(NType* baseType)
+  : NType(NType::VariantType::Array), mBase(baseType) { }
+
+  NType* mBase;
+
+  static inline bool classof(const NType* T) {
+    return T->mVariant == VariantType::Array;
+  }
+};
+
+class NPointerType : public NType {
+public:
+
+  NPointerType(NType* baseType)
+  : NType(NType::VariantType::Pointer), mBase(baseType) { }
+
+  NType* mBase;
+
+  static inline bool classof(const NType* T) {
+    return T->mVariant == VariantType::Pointer;
+  }
 };
 
 class NParam : public Node {

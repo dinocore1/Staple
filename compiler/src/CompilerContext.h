@@ -2,8 +2,6 @@
 #ifndef STAPLE_COMPILERCONTEXT_H
 #define STAPLE_COMPILERCONTEXT_H
 
-
-
 namespace staple {
 
 class CompilerContext {
@@ -17,7 +15,7 @@ public:
 
   std::map<std::string, staple::ClassType*> mClasses;
   std::map<std::string, staple::FunctionType*> mFunctions;
-  std::map<Node*, Type*> mTypeTable;
+  std::map<staple::Node*, staple::Type*> mTypeTable;
 
   void setInputFile(const File&);
   void addIncludeDir(const File&);

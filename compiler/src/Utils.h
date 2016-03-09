@@ -34,6 +34,7 @@ class FQPath {
 public:
   FQPath();
   FQPath(const std::vector< std::string >&);
+  FQPath(const std::string&);
 
   void add(const std::string&);
 

@@ -71,6 +71,10 @@ FQPath::FQPath() {}
 FQPath::FQPath(const std::vector<std::string>& parts)
   : mParts(parts) {}
 
+FQPath::FQPath(const std::string& str) {
+  tokenize(str, mParts, ".", true);
+}
+
 void FQPath::add(const std::string& part) {
   mParts.push_back(part);
 }

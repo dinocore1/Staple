@@ -14,4 +14,6 @@ const IntegerType Primitives::Int16(16, true);
 const IntegerType Primitives::UInt32(32, false);
 const IntegerType Primitives::Int32(32, true);
 
+const ClassType Primitives::String(FQPath("string"));
+
 } // namespace staple

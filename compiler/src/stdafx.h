@@ -13,6 +13,7 @@
 namespace staple {
 
 class FQPath;
+class Type;
 
 class Visitor;
 class NCompileUnit;
@@ -21,6 +22,8 @@ class NClass;
 class NField;
 class NMethod;
 class NType;
+class NArrayType;
+class NPointerType;
 class NParam;
 class NLocalVar;
 class NStmt;

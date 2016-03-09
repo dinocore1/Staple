@@ -44,17 +44,20 @@ public:
   SemPass2Visitor(CompilerContext& ctx)
     : SemPassBaseVisitor(ctx) {}
 
-  void visit(NType* n) {
+  Type* getType(NNamedType* n) {
     if(n->mTypeName.getNumParts() == 1) {
       std::string simpleName = n->mTypeName.getSimpleName();
       if(simpleName.compare("void") == 0) {
-        mCtx.mTypeTable[n] = const_cast<Type*>(&Primitives::Void);
+        return const_cast<Type*>(&Primitives::Void);
 
       } else if(simpleName.compare("bool") == 0) {
-        mCtx.mTypeTable[n] = const_cast<Type*>(&Primitives::Bool);
+        return const_cast<Type*>(&Primitives::Bool);
 
       } else if(simpleName.compare("int") == 0) {
-        mCtx.mTypeTable[n] = const_cast<IntegerType*>(&Primitives::Int32);
+        return const_cast<IntegerType*>(&Primitives::Int32);
+
+      } else if(simpleName.compare("string") == 0) {
+        return const_cast<ClassType*>(&Primitives::String);
 
       } else {
         //class type
@@ -63,13 +66,35 @@ public:
 
         auto ct = mCtx.mClasses.find(fqName.getFullString());
         if(ct != mCtx.mClasses.end()) {
-          mCtx.mTypeTable[n] = (*ct).second;
+          return (*ct).second;
         } else {
           mCtx.addError("unknown type: '" + n->mTypeName.getFullString() + "'",
                         n->location.first_line, n->location.first_column);
         }
       }
+
+      return nullptr;
+  }
+
+  Type* getType(NArrayType* arrayType) {
+
+
+  }
+
+  Type* getType(NType* type) {
+    if(isa<NNamedType>(n)) {
+      NNamedType* namedType = cast<NNamedType>(n);
+      return getType(namedType);
+
+    } else if(isa<NArrayType>(n)) {
+      NArrayType* arrayType = cast<NArrayType>(n);
+      return new ArrayType(getType(arrayType));
+
     }
+  }
+
+  void visit(NType* n) {
+    mCtx.mTypeTable[n] = getType(n);
   }
 
   Type* getType(Node* node) {

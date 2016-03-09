@@ -139,10 +139,10 @@ paramlist
   ;
 
 type
-  : fqpath { $$ = new NType(*$1); }
-  | type TCARET {}
-  | type TMUL {}
-  | type TARRAYTYPE
+  : fqpath { $$ = new NNamedType(*$1); }
+  | type TCARET { $$ = new NPointerType($1); }
+  | type TMUL { $$ = new NPointerType($1); }
+  | type TARRAYTYPE { $$ = new NArrayType($1); }
   ;
 
 stmt
