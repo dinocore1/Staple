@@ -80,8 +80,8 @@ public:
   }
 
   Type* getType(NArrayType* arrayType) {
-
-
+    Type* baseType = getType(arrayType->mBase);
+    return new ArrayType(baseType);
   }
 
   Type* getType(NType* n) {
