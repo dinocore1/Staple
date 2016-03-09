@@ -83,6 +83,18 @@ size_t FQPath::getNumParts() const {
   return mParts.size();
 }
 
+std::string FQPath::getPackageName() const {
+  stringbuf buf;
+  ostream os(&buf);
+
+  for(size_t i=0; i<mParts.size()-1; i++) {
+    os << ".";
+    os << mParts[i];
+  }
+
+  return buf.str();
+}
+
 std::string FQPath::getSimpleName() const {
   return mParts[mParts.size()-1];
 }

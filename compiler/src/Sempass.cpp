@@ -27,12 +27,11 @@ public:
   SemPass1Visitor(CompilerContext& ctx)
     : SemPassBaseVisitor(ctx) {}
 
-  void visit(NClass* function) {
+  void visit(NClass* clazz) {
     FQPath classFQPath = mCurrentPackage;
-    classFQPath.add(function->mName);
+    classFQPath.add(clazz->mName);
 
     ClassType* classType = new ClassType(classFQPath);
-
     mCtx.mClasses[classFQPath.getFullString()] = classType;
   }
 
@@ -50,10 +49,10 @@ public:
     if(n->mTypeName.getNumParts() == 1) {
       std::string simpleName = n->mTypeName.getSimpleName();
       if(simpleName.compare("void") == 0) {
-        return const_cast<Type*>(&Primitives::Void);
+        return const_cast<Type*>(Primitives::Void);
 
       } else if(simpleName.compare("bool") == 0) {
-        return const_cast<Type*>(&Primitives::Bool);
+        return const_cast<Type*>(Primitives::Bool);
 
       } else if(simpleName.compare("int") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int32);
@@ -125,6 +124,7 @@ public:
       paramTypes.push_back(getType(param->mType));
     }
     Type* returnType = getType(fun->mReturnType);
+    mCtx.mTypeTable[fun->mReturnType] = returnType;
 
     FunctionType* funType = new FunctionType(paramTypes, returnType);
 
@@ -140,6 +140,7 @@ public:
       paramTypes.push_back(getType(param->mType));
     }
     Type* returnType = getType(funDecl->mReturnType);
+    mCtx.mTypeTable[funDecl->mReturnType] = returnType;
 
     FunctionType* funType = new FunctionType(paramTypes, returnType);
 
@@ -211,17 +212,37 @@ public:
     return mScope->lookup(symbolName);
   }
 
-  void visit(NCall* funcall) {
-    Type* funType = lookup(funcall->mName);
-    if(funType == nullptr) {
-      mCtx.addError("undefined function: '" + funcall->mName + "'",
-          funcall->location.first_line, funcall->location.first_column);
+  void visit(NCompileUnit* compileUnit) {
+    mCurrentPackage = compileUnit->mPackage;
+
+    for(auto it : mCtx.mFunctions) {
+      FQPath funName(it.first);
+      if(mCurrentPackage.getFullString().compare(funName.getPackageName()) == 0) {
+        defineSymbol(funName.getSimpleName(), it.second);
+      }
     }
 
-    mCtx.mTypeTable[funcall] = funType;
+    visitChildren(compileUnit);
+  }
 
-    for(Expr* expr : funcall->mArgList) {
-      expr->accept(this);
+  void visit(NCall* funcall) {
+    FunctionType* funType = cast<FunctionType>(lookup(funcall->mName));
+    if(funType == nullptr) {
+      mCtx.addError("undefined function: '" + funcall->mName + "'",
+                    funcall->location.first_line, funcall->location.first_column);
+    }
+
+    mCtx.mTypeTable[funcall] = funType->mReturnType;
+
+    for(int i=0; i<funType->mParams.size(); i++) {
+      Type* declType = funType->mParams[i];
+
+      Expr* expr = funcall->mArgList[i];
+      Type* paramType = getType(expr);
+      if(!declType->isAssignableFrom(paramType)) {
+        mCtx.addError("expression cannot be assigned to type: '" + declType->toString() + "'",
+                      expr->location.first_line, expr->location.first_column);
+      }
     }
   }
 
@@ -239,34 +260,11 @@ public:
     mCtx.mTypeTable[symbolRef] = t;
   }
 
-  void visit(NFunctionDecl* funDecl) {
-    FQPath fqFunName = mCurrentPackage;
-    fqFunName.add(funDecl->mName);
-
-    Type* funType = mCtx.mFunctions[fqFunName.getFullString()];
-    defineSymbol(funDecl->mName, funType);
-  }
+  void visit(NFunctionDecl* funDecl) { }
 
   void visit(NFunction* fun) {
+
     push();
-
-    std::vector<Type*> params;
-    for(NParam* param : fun->mParams) {
-      Type* paramType = getType(param->mType);
-      if(paramType != nullptr) {
-        params.push_back(paramType);
-        defineSymbol(param->mName, paramType);
-        mCtx.mTypeTable[param] = paramType;
-      }
-    }
-
-    Type* retType = getType(fun->mReturnType);
-    mCtx.mTypeTable[fun->mReturnType] = retType;
-
-    FunctionType* funType = new FunctionType(params, retType);
-
-    mCtx.mTypeTable[fun] = funType;
-    defineSymbol(fun->mName, funType);
 
     for(NStmt* stmt : *fun->mStmts) {
       stmt->accept(this);
