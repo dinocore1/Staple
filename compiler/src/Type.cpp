@@ -100,4 +100,15 @@ std::string FunctionType::toString() const {
 
 }
 
+PointerType::PointerType(Type* baseType)
+ : Type(TypeId::Pointer), mBase(baseType) {}
+
+bool PointerType::isAssignableFrom(Type* type) const {
+
+}
+
+std::string PointerType::toString() const {
+  return mBase->toString() + "*";
+}
+
 } // namespace staple

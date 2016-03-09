@@ -61,8 +61,7 @@ public:
 
 class PointerType : public Type {
 public:
-  PointerType(Type* baseType)
-    : mBase(baseType) {}
+  PointerType(Type* baseType);
 
   bool isAssignableFrom(Type* type) const;
   std::string toString() const;

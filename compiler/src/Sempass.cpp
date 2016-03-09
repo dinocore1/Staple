@@ -260,11 +260,28 @@ public:
     mCtx.mTypeTable[symbolRef] = t;
   }
 
+  void visit(NArrayRef* arrayRef) {
+    Type* baseType = getType(arrayRef->mBase);
+    IntegerType* index = cast<IntegerType>(getType(arrayRef->mIndex));
+
+    if(index == nullptr) {
+      mCtx.addError("cannot assign array reference index to integer type",
+          arrayRef->mIndex->location.first_line, arrayRef->mIndex->location.first_column);
+    }
+
+    mCtx.mTypeTable[arrayRef] = new PointerType(baseType);
+  }
+
   void visit(NFunctionDecl* funDecl) { }
 
   void visit(NFunction* fun) {
 
     push();
+
+    for(NParam* param : fun->mParams) {
+      Type* paramType = getType(param);
+      defineSymbol(param->mName, paramType);
+    }
 
     for(NStmt* stmt : *fun->mStmts) {
       stmt->accept(this);
