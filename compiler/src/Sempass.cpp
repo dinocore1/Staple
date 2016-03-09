@@ -279,7 +279,7 @@ public:
     push();
 
     for(NParam* param : fun->mParams) {
-      Type* paramType = getType(param);
+      Type* paramType = getType(param->mType);
       defineSymbol(param->mName, paramType);
     }
 
