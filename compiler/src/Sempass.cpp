@@ -207,17 +207,66 @@ public:
     mScope->defineSymbol(symbolName, type);
   }
 
+  Type* lookup(const std::string& symbolName) {
+    return mScope->lookup(symbolName);
+  }
+
+  void visit(NCall* funcall) {
+    Type* funType = lookup(funcall->mName);
+    if(funType == nullptr) {
+      mCtx.addError("undefined function: '" + funcall->mName + "'",
+          funcall->location.first_line, funcall->location.first_column);
+    }
+
+    mCtx.mTypeTable[funcall] = funType;
+
+    for(Expr* expr : funcall->mArgList) {
+      expr->accept(this);
+    }
+  }
+
+  void visit(NLocalVar* localVar) {
+    Type* t = getType(localVar->mType);
+    defineSymbol(localVar->mName, t);
+  }
+
+  void visit(NSymbolRef* symbolRef) {
+    Type* t = lookup(symbolRef->mName);
+    if(t == nullptr) {
+      mCtx.addError("undefined symbol: '" + symbolRef->mName + "'",
+                    symbolRef->location.first_line, symbolRef->location.first_column);
+    }
+    mCtx.mTypeTable[symbolRef] = t;
+  }
+
+  void visit(NFunctionDecl* funDecl) {
+    FQPath fqFunName = mCurrentPackage;
+    fqFunName.add(funDecl->mName);
+
+    Type* funType = mCtx.mFunctions[fqFunName.getFullString()];
+    defineSymbol(funDecl->mName, funType);
+  }
+
   void visit(NFunction* fun) {
     push();
+
+    std::vector<Type*> params;
     for(NParam* param : fun->mParams) {
       Type* paramType = getType(param->mType);
       if(paramType != nullptr) {
+        params.push_back(paramType);
         defineSymbol(param->mName, paramType);
         mCtx.mTypeTable[param] = paramType;
       }
     }
 
-    mCtx.mTypeTable[fun->mReturnType] = getType(fun->mReturnType);
+    Type* retType = getType(fun->mReturnType);
+    mCtx.mTypeTable[fun->mReturnType] = retType;
+
+    FunctionType* funType = new FunctionType(params, retType);
+
+    mCtx.mTypeTable[fun] = funType;
+    defineSymbol(fun->mName, funType);
 
     for(NStmt* stmt : *fun->mStmts) {
       stmt->accept(this);
@@ -226,11 +275,11 @@ public:
     pop();
   }
 
-  void visit(NFunctionDecl* funDecl) {}
-
   void visit(Assign* assign) {
     Type* ltype = getType(assign->mLeft);
     Type* rtype = getType(assign->mRight);
+
+    //TODO: ensure that rtype can be assigned to ltype
 
   }
 
