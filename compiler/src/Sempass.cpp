@@ -118,6 +118,10 @@ public:
     }
   }
 
+  void visit(NIntLiteral* intLiteral) {
+    mCtx.mTypeTable[intLiteral] = const_cast<IntegerType*>(&Primitives::Int32);
+  }
+
   void visit(NFunction* fun) {
     std::vector<Type*> paramTypes;
     for(NParam* param : fun->mParams) {

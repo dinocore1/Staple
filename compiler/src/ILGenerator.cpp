@@ -137,6 +137,10 @@ public:
     return basicBlock;
   }
 
+  void visit(NCompileUnit* compileUnit) {
+    visitChildren(compileUnit);
+  }
+
   void visit(NIfStmt* ifStmt) {
     Location* lcondition = gen(ifStmt->mCondition);
 

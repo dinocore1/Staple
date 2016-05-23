@@ -4,14 +4,15 @@ execute_process(COMMAND llvm-config-3.5 --cxxflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${llvm_cxxflags} -O0 -g")
 set(SOURCE_FILES
-  src/FileUtils.cpp src/FileUtils.h
-  src/staple_parser.cpp
   src/staple_lex.cpp
+  src/staple_parser.cpp
+  src/FileUtils.cpp src/FileUtils.h
+  src/Utils.cpp
   src/Node.cpp src/Node.h
+  src/Type.cpp
+  src/Sempass.cpp
   src/ILGenerator.cpp src/ILGenerator.h
   src/CompilerContext.cpp src/CompilerContext.h
   src/main.cpp
