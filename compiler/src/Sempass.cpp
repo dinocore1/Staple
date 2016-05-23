@@ -57,6 +57,9 @@ public:
       } else if(simpleName.compare("int") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int32);
 
+      } else if(simpleName.compare("byte") == 0) {
+        return const_cast<IntegerType*>(&Primitives::UInt8);
+
       } else if(simpleName.compare("string") == 0) {
         return const_cast<ClassType*>(&Primitives::String);
 
@@ -78,6 +81,11 @@ public:
     return nullptr;
   }
 
+  Type* getType(NPointerType* pointerType) {
+    Type* baseType = getType(pointerType->mBase);
+    return new PointerType(baseType);
+  }
+
   Type* getType(NArrayType* arrayType) {
     Type* baseType = getType(arrayType->mBase);
     return new ArrayType(baseType);
@@ -87,6 +95,10 @@ public:
     if(isa<NNamedType>(n)) {
       NNamedType* namedType = cast<NNamedType>(n);
       return getType(namedType);
+
+    } else if(isa<NPointerType>(n)){
+      NPointerType* pointerType = cast<NPointerType>(n);
+      return new PointerType(getType(pointerType));
 
     } else if(isa<NArrayType>(n)) {
       NArrayType* arrayType = cast<NArrayType>(n);
