@@ -66,6 +66,8 @@ result = yyextra->readBytes(buf, max_size);
 ";"                     return TSEMI;
 "!"                     return TNOT;
 "..."                   return TELLIPSIS;
+'(\\.|[^\'])*'          SAVE_TOKEN; return TSTRINGLITERAL;
+L?\"(\\.|[^\\"])*\"     SAVE_TOKEN; return TSTRINGLITERAL;
 
 .                       printf("Unknown token!\n"); yyterminate();
 

@@ -37,7 +37,7 @@ typedef std::vector<staple::NParam*> ParamList;
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
 %token TELLIPSIS TARRAYTYPE
 %token TPLUS TMINUS TMUL TDIV TAND TOR TBITAND TBITOR TTWIDLE TCARET
-%token <string> TID
+%token <string> TID TSTRINGLITERAL
 %token <ival> TINT
 
 %type <node> class functiondecl globalfunction
@@ -135,6 +135,8 @@ paramlist
     { $$ = new ParamList(); $$->push_back(new NParam(*$2, $1)); delete $2; }
   | paramlist TCOMMA type TID
     { $$->push_back(new NParam(*$4, $3)); delete $4; }
+  | paramlist TCOMMA TELLIPSIS
+    { $$->push_back(new NParam("", new NType(NType::VariantType::Varg))); }
   | { $$ = new ParamList(); }
   ;
 
@@ -250,6 +252,7 @@ unaryexpr
 primary
   : TLPAREN expr TRPAREN { $$ = $2; }
   | TINT { $$ = new NIntLiteral($1); }
+  | TSTRINGLITERAL { $$ = new NStringLiteral(*$1); delete $1; }
   | lvalue
   ;
 

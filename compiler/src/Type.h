@@ -15,13 +15,14 @@ public:
     Object,
     Array,
     Pointer,
+    VArgs,
     Unknown
   };
 
   Type();
   Type(TypeId id);
 
-  virtual bool isAssignableFrom(Type* type) const = 0;
+  virtual bool isAssignableFrom(const Type* type) const = 0;
   virtual std::string toString() const = 0;
 
   TypeId mTypeId;
@@ -33,7 +34,7 @@ public:
   IntegerType(uint16_t width, int sign)
     : Type(TypeId::Integer), mWidth(width), mSigned(sign) {}
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 
   const uint16_t mWidth;
@@ -49,7 +50,7 @@ public:
   FloatType(uint16_t width)
     : Type(TypeId::Float), mWidth(width) {}
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 
   static inline bool classof(const Type* T) {
@@ -63,19 +64,27 @@ class PointerType : public Type {
 public:
   PointerType(Type* baseType);
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 
+  static inline bool classof(const Type* T) {
+      return T->mTypeId == Type::TypeId::Pointer;
+  }
+  
   Type* mBase;
 };
 
 class ArrayType : public Type {
 public:
-  ArrayType(Type* baseType)
-    : mBase(baseType) {}
+  ArrayType(const Type* baseType);
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
+  
+  static inline bool classof(const Type* T) {
+      return T->mTypeId == Type::TypeId::Array;
+  }
+  
   const Type* mBase;
 };
 
@@ -87,7 +96,7 @@ public:
   std::vector<Type*> mParams;
   Type* mReturnType;
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 };
 
@@ -98,7 +107,7 @@ public:
 
   FQPath mFQName;
 
-  bool isAssignableFrom(Type* type) const;
+  bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 };
 
@@ -106,13 +115,14 @@ class Primitives {
 public:
   static const Type* Void;
   static const Type* Bool;
+  static const Type* Vargs;
   static const IntegerType UInt8;
   static const IntegerType Int8;
   static const IntegerType UInt16;
   static const IntegerType Int16;
   static const IntegerType UInt32;
   static const IntegerType Int32;
-  static const ClassType String;
+  static const ArrayType StringLiteral;
 };
 
 } // namespace staple

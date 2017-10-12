@@ -57,11 +57,14 @@ public:
       } else if(simpleName.compare("int") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int32);
 
+      } else if(simpleName.compare("i8") == 0) {
+        return const_cast<IntegerType*>(&Primitives::Int8);
+          
+      } else if(simpleName.compare("i16") == 0) {
+        return const_cast<IntegerType*>(&Primitives::Int16);
+          
       } else if(simpleName.compare("byte") == 0) {
         return const_cast<IntegerType*>(&Primitives::UInt8);
-
-      } else if(simpleName.compare("string") == 0) {
-        return const_cast<ClassType*>(&Primitives::String);
 
       } else {
         //class type
@@ -98,12 +101,14 @@ public:
 
     } else if(isa<NPointerType>(n)){
       NPointerType* pointerType = cast<NPointerType>(n);
-      return new PointerType(getType(pointerType));
+      return new PointerType(getType(pointerType->mBase));
 
     } else if(isa<NArrayType>(n)) {
       NArrayType* arrayType = cast<NArrayType>(n);
-      return new ArrayType(getType(arrayType));
+      return new ArrayType(getType(arrayType->mBase));
 
+    } else if(n->mVariant == NType::VariantType::Varg) {
+        return const_cast<Type*>(Primitives::Vargs);
     }
 
     return nullptr;
@@ -132,6 +137,10 @@ public:
 
   void visit(NIntLiteral* intLiteral) {
     mCtx.mTypeTable[intLiteral] = const_cast<IntegerType*>(&Primitives::Int32);
+  }
+  
+  void visit(NStringLiteral* strLiteral) {
+      mCtx.mTypeTable[strLiteral] = const_cast<ArrayType*>(&Primitives::StringLiteral);
   }
 
   void visit(NFunction* fun) {

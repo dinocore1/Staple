@@ -28,6 +28,7 @@ class NNeg;
 class NSymbolRef;
 class NArrayRef;
 class NIntLiteral;
+class NStringLiteral;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -55,6 +56,7 @@ public:
   VISIT(NSymbolRef)
   VISIT(NArrayRef)
   VISIT(NIntLiteral)
+  VISIT(NStringLiteral)
 
 };
 
@@ -194,7 +196,8 @@ public:
   enum VariantType {
     Named,
     Array,
-    Pointer
+    Pointer,
+    Varg
   };
 
   NType(VariantType variant)
@@ -452,6 +455,15 @@ public:
 
   ACCEPT
   const int64_t mValue;
+};
+
+class NStringLiteral : public Expr {
+public:
+    NStringLiteral(const std::string& value)
+     : mStr(value) {}
+   
+     ACCEPT
+     const std::string mStr;
 };
 
 } // namespace staple
