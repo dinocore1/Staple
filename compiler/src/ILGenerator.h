@@ -4,7 +4,7 @@
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
-#include <llvm/PassManager.h>
+//#include <llvm/PassManager.h>
 #include <llvm/IR/DIBuilder.h>
 
 namespace staple {

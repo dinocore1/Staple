@@ -7,6 +7,8 @@
 using namespace std;
 
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/BasicBlock.h>
 
 using namespace llvm;
 
@@ -99,6 +101,8 @@ public:
   Scope* mScope;
   ILGenerator* mILGen;
   llvm::Function* mCurrentFunction;
+  llvm::Value* mCurrentFunctionReturnValueAddress;
+  llvm::BasicBlock* mCurrentFunctionReturnBB;
 
   ILGenVisitor(ILGenerator* generator)
     : mScope(nullptr), mILGen(generator) {
@@ -142,67 +146,49 @@ public:
   }
 
   void visit(NIfStmt* ifStmt) {
+    BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "", mCurrentFunction);
+    BasicBlock* elseBB = BasicBlock::Create(getGlobalContext());
+    BasicBlock* endBB = BasicBlock::Create(getGlobalContext());
+    bool needsEndBlock = false;
+    
     Location* lcondition = gen(ifStmt->mCondition);
-
-    if(ifStmt->mElseStmt == nullptr) {
-      BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
-      BasicBlock* mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
-
-      mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, mergeBB);
-
-      mILGen->mIRBuilder.SetInsertPoint(thenBB);
-      ifStmt->mThenStmt->accept(this);
-      thenBB = mILGen->mIRBuilder.GetInsertBlock();
-      bool mergeNeeded = false;
-      if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
-        mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeNeeded = true;
-      }
-
-      if(mergeNeeded) {
-        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
-      }
-
-    } else {
-      BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "if.then", mCurrentFunction);
-      BasicBlock* elseBB = BasicBlock::Create(getGlobalContext(), "if.else");
-      BasicBlock* mergeBB = BasicBlock::Create(getGlobalContext(), "if.end");
-
-      mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, elseBB);
-
-      mILGen->mIRBuilder.SetInsertPoint(thenBB);
-      ifStmt->mThenStmt->accept(this);
-      thenBB = mILGen->mIRBuilder.GetInsertBlock();
-      bool mergeNeeded = false;
-      if(thenBB->getTerminator() == nullptr || !isa<ReturnInst>(thenBB->getTerminator())) {
-        mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeNeeded = true;
-      }
-
-      mCurrentFunction->getBasicBlockList().push_back(elseBB);
-      mILGen->mIRBuilder.SetInsertPoint(elseBB);
-      ifStmt->mElseStmt->accept(this);
-      elseBB = mILGen->mIRBuilder.GetInsertBlock();
-
-      if(elseBB->getTerminator() == nullptr || !isa<ReturnInst>(elseBB->getTerminator())) {
-        mILGen->mIRBuilder.CreateBr(mergeBB);
-        mergeNeeded = true;
-      }
-
-      if(mergeNeeded) {
-        mCurrentFunction->getBasicBlockList().push_back(mergeBB);
-        mILGen->mIRBuilder.SetInsertPoint(mergeBB);
-      }
+    mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, elseBB);
+    
+    //Codegen Then block
+    mILGen->mIRBuilder.SetInsertPoint(thenBB);
+    ifStmt->mThenStmt->accept(this);
+    //thenBB = mILGen->mIRBuilder.GetInsertBlock();
+    if(thenBB->getTerminator() == nullptr) {
+        mILGen->mIRBuilder.CreateBr(endBB);
+        needsEndBlock = true;
     }
-
-
+    
+    //Codegen Else block
+    mCurrentFunction->getBasicBlockList().push_back(elseBB);
+    mILGen->mIRBuilder.SetInsertPoint(elseBB);
+    if(ifStmt->mElseStmt != nullptr) {
+        ifStmt->mElseStmt->accept(this);
+        //elseBB = mILGen->mIRBuilder.GetInsertBlock();
+    }
+    
+    if(elseBB->getTerminator() == nullptr) {
+        mILGen->mIRBuilder.CreateBr(endBB);
+        needsEndBlock = true;
+    }
+    
+    if(needsEndBlock) {
+        //Emit the merge block
+        mCurrentFunction->getBasicBlockList().push_back(endBB);
+        mILGen->mIRBuilder.SetInsertPoint(endBB);
+    }
 
   }
 
   void visit(Return* returnStmt) {
     Location* expr = gen(returnStmt->mExpr);
-    mILGen->mIRBuilder.CreateRet(getValue(expr));
+    mILGen->mIRBuilder.CreateStore(getValue(expr), mCurrentFunctionReturnValueAddress);
+    mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+    //mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
 
   void visit(NBlock* block) {
@@ -319,20 +305,39 @@ public:
       BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", mCurrentFunction);
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
+      //preamble
+      if(function->mReturnType) {
+          llvm::Type* returnType = llvm::IntegerType::getInt32Ty(getGlobalContext());
+          AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType, 0);
+          mCurrentFunctionReturnValueAddress = alloc;
+      }
       Function::arg_iterator AI = mCurrentFunction->arg_begin();
       const size_t numArgs = function->mParams.size();
       for(size_t i=0; i<numArgs; i++,++AI) {
         NParam* param = function->mParams.at(i);
         llvm::Type* type = AI->getType();
         AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
-        mILGen->mIRBuilder.CreateStore(AI, alloc);
+        mILGen->mIRBuilder.CreateStore(&*AI, alloc);
         mScope->defineSymbol(param->mName, new LLVMAddress(alloc));
       }
 
+      mCurrentFunctionReturnBB = BasicBlock::Create(getGlobalContext());
 
       for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
       }
+      
+      if(basicBlock->getTerminator() == nullptr) {
+          mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+      }
+      
+      //postamble
+      mCurrentFunction->getBasicBlockList().push_back(mCurrentFunctionReturnBB);
+      mILGen->mIRBuilder.SetInsertPoint(mCurrentFunctionReturnBB);
+      LoadInst* returnValue = mILGen->mIRBuilder.CreateLoad(mCurrentFunctionReturnValueAddress);
+      mILGen->mIRBuilder.CreateRet(returnValue);
+      
+      
       pop();
     }
 

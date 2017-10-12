@@ -36,8 +36,8 @@ public:
   bool isAssignableFrom(Type* type) const;
   std::string toString() const;
 
-  const bool mSigned;
   const uint16_t mWidth;
+  const bool mSigned;
 
   static inline bool classof(const Type* T) {
     return T->mTypeId == Type::TypeId::Integer;

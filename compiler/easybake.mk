@@ -22,7 +22,7 @@ $(eval $(parserrule))
 
 include $(DEFINE_MODULE)
 MODULE := stp
-LOCAL_CXXFLAGS := -std=c++11 -I$(LOCAL_PATH)src/ $(shell llvm-config-3.5 --cxxflags)
+LOCAL_CXXFLAGS := -std=c++11 -I$(LOCAL_PATH)src/ $(shell llvm-config --cxxflags) -g -O0
 LOCAL_SRCS := \
 	src/staple_lex.cpp \
 	src/staple_parser.cpp \
@@ -40,5 +40,5 @@ LOCAL_CLEAN := \
 	src/staple_parser.hpp \
 	src/staple_parser.cpp
 
-LOCAL_LIBS := $(shell llvm-config-3.5 --ldflags --libs) -ltinfo -ldl -pthread
+LOCAL_LIBS := $(shell llvm-config --ldflags --libs) -ltinfo -ldl -pthread
 include $(BUILD_EXE)
