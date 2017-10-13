@@ -14,7 +14,5 @@ int fib(int x) {
 }
 
 int main(int argv) {
-  int x;
-  x = fib(argv);
-  printf("fib(%d) = %d", argv, x);
+  printf("fib(%d) = %d", 6, fib(6));
 }
