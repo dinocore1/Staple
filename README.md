@@ -84,4 +84,6 @@ Build Dependencies:
 
 ### Test C Code ###
 
+$ llc -march=cpp helloworld.c
+
 $ clang helloworld.c -S -emit-llvm -O0

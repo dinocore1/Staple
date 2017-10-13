@@ -50,31 +50,11 @@ public:
   }
 };
 
-class VargType : public Type {
-public:
-    VargType()
-     : Type(TypeId::VArgs) {}
-     
-     bool isAssignableFrom(const Type* type) const {
-         return true;
-     }
-     
-     static inline bool classof(const Type* T) {
-         return T->mTypeId == Type::TypeId::VArgs;
-     }
-     
-     std::string toString() const {
-         return "...";
-     }
-};
-
 VoidType VOIDTYPE;
 BoolType BOOLTYPE;
-VargType VARGTYPE;
 
 const Type* Primitives::Void(&VOIDTYPE);
 const Type* Primitives::Bool(&BOOLTYPE);
-const Type* Primitives::Vargs(&VARGTYPE);
 const IntegerType Primitives::UInt8(8, false);
 const IntegerType Primitives::Int8(8, true);
 const IntegerType Primitives::UInt16(16, false);

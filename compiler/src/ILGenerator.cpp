@@ -14,6 +14,35 @@ using namespace llvm;
 
 namespace staple {
 
+    
+llvm::Type* getLLVMType(const NNamedType* n) {
+    if(n->mTypeName.getNumParts() == 1) {
+        std::string simpleName = n->mTypeName.getSimpleName();
+        if(simpleName.compare("void") == 0){
+            return llvm::Type::getVoidTy(getGlobalContext());
+        } else if(simpleName.compare("bool") == 0) {
+            return llvm::Type::getInt1Ty(getGlobalContext());
+        } else if(simpleName.compare("byte") == 0) {
+            return llvm::Type::getInt8Ty(getGlobalContext());
+        }
+    } else {
+        //todo: resolve struct types
+    }
+}
+
+llvm::Type* getLLVMType(const NType* n) {
+    if(isa<NNamedType>(n)) {
+        const NNamedType* namedType = cast<NNamedType>(n);
+        return getLLVMType(namedType);
+        
+    } else if(isa<NPointerType>(n)) {
+        const NPointerType* npointerType = cast<NPointerType>(n);
+        llvm::Type* baseType = getLLVMType(npointerType->mBase);
+        return llvm::PointerType::get(baseType, 0);
+    }
+
+}
+
 class Location {
 public:
   virtual ~Location() {};
@@ -230,6 +259,24 @@ public:
     llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
     set(lit, new LLVMValue(value));
   }
+  
+  void visit(NStringLiteral* strLit) {
+      StringRef value(strLit->mStr);
+      
+      llvm::ArrayType* arrayType = llvm::ArrayType::get(llvm::IntegerType::get(mILGen->mModule.getContext(), 8), value.size()+1);
+      
+      GlobalVariable* gvar_array_str = new GlobalVariable(mILGen->mModule, arrayType, true, GlobalValue::PrivateLinkage, 0, ".str");
+      Constant* const_array = ConstantDataArray::getString(mILGen->mModule.getContext(), value, true);
+      gvar_array_str->setInitializer(const_array);
+      
+      std::vector<Constant*> const_ptr_indices;
+      const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0, false)));
+      const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0, false)));
+      
+      Constant* const_ptr = ConstantExpr::getGetElementPtr(arrayType, gvar_array_str, const_ptr_indices);
+      
+      set(strLit, new LLVMValue(const_ptr));
+  }
 
   llvm::Value* getValue(Location* l) {
     return l->isAddress() ? mILGen->mIRBuilder.CreateLoad(l->getValue()) : l->getValue();
@@ -281,6 +328,7 @@ public:
     set(call, result);
 
   }
+
 
   void visit(NFunction* function) {
 
@@ -368,17 +416,20 @@ public:
   ForwardDeclareMethodVisitor(ILGenerator* ir)
     : mILGen(ir) {}
 
+  void visit(NCompileUnit* compileUnit) {
+      visitChildren(compileUnit);
+  }
+  
   void visit(NFunctionDecl* funDecl) {
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : funDecl->mParams) {
-      //TODO: replace this with actual types not just ints
-      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+      argTypes.push_back(getLLVMType(param->mType));
     }
 
     llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
                                   getGlobalContext()), argTypes,
-                                false);
+                                funDecl->mIsVarg);
 
     llvm::Function::Create(ftype,
                            Function::LinkageTypes::ExternalLinkage,

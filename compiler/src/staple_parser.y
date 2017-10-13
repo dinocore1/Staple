@@ -88,7 +88,9 @@ body
 
 functiondecl
   : type TID TLPAREN paramlist TRPAREN TSEMI
-    { $$ = new NFunctionDecl(*$2, $1, $4); delete $2; delete $4; }
+    { $$ = new NFunctionDecl(*$2, $1, $4, false); delete $2; delete $4; }
+  | type TID TLPAREN paramlist TCOMMA TELLIPSIS TRPAREN TSEMI
+    { $$ = new NFunctionDecl(*$2, $1, $4, true); delete $2; delete $4; }
   ;
 
 globalfunction
@@ -135,8 +137,6 @@ paramlist
     { $$ = new ParamList(); $$->push_back(new NParam(*$2, $1)); delete $2; }
   | paramlist TCOMMA type TID
     { $$->push_back(new NParam(*$4, $3)); delete $4; }
-  | paramlist TCOMMA TELLIPSIS
-    { $$->push_back(new NParam("", new NType(NType::VariantType::Varg))); }
   | { $$ = new ParamList(); }
   ;
 
@@ -252,7 +252,7 @@ unaryexpr
 primary
   : TLPAREN expr TRPAREN { $$ = $2; }
   | TINT { $$ = new NIntLiteral($1); }
-  | TSTRINGLITERAL { $$ = new NStringLiteral(*$1); delete $1; }
+  | TSTRINGLITERAL { $$ = new NStringLiteral($1->substr(1, $1->length()-2)); delete $1; }
   | lvalue
   ;
 

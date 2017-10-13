@@ -15,7 +15,6 @@ public:
     Object,
     Array,
     Pointer,
-    VArgs,
     Unknown
   };
 
@@ -95,6 +94,7 @@ public:
 
   std::vector<Type*> mParams;
   Type* mReturnType;
+  bool mIsVarg;
 
   bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
@@ -115,7 +115,6 @@ class Primitives {
 public:
   static const Type* Void;
   static const Type* Bool;
-  static const Type* Vargs;
   static const IntegerType UInt8;
   static const IntegerType Int8;
   static const IntegerType UInt16;

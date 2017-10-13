@@ -1,4 +1,6 @@
 
+void printf(byte* fmt, ...);
+
 int fib(int x) {
   if(x == 0) {
     return 0;
@@ -12,5 +14,7 @@ int fib(int x) {
 }
 
 int main(int argv) {
-  fib(argv);
+  int x;
+  x = fib(argv);
+  printf("fib(%d) = %d", argv, x);
 }

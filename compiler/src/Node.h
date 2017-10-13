@@ -110,13 +110,14 @@ public:
 class NFunctionDecl : public Node {
 public:
   NFunctionDecl(const std::string& name, NType* returnType,
-                ParamList* params)
+                ParamList* params, bool isVarg)
     : Node(TypeId::FunctionDecl), mName(name), mReturnType(returnType),
-      mParams(*params) { }
+      mParams(*params), mIsVarg(isVarg) { }
 
   std::string mName;
   NType* mReturnType;
   ParamList mParams;
+  bool mIsVarg;
 
   ACCEPT
 

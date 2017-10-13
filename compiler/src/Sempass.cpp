@@ -107,8 +107,6 @@ public:
       NArrayType* arrayType = cast<NArrayType>(n);
       return new ArrayType(getType(arrayType->mBase));
 
-    } else if(n->mVariant == NType::VariantType::Varg) {
-        return const_cast<Type*>(Primitives::Vargs);
     }
 
     return nullptr;
@@ -259,7 +257,7 @@ public:
 
     mCtx.mTypeTable[funcall] = funType->mReturnType;
 
-    for(int i=0; i<funType->mParams.size(); i++) {
+    for(int i=0; i<(int)funType->mParams.size(); i++) {
       Type* declType = funType->mParams[i];
 
       Expr* expr = funcall->mArgList[i];
