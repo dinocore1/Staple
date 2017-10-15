@@ -22,12 +22,20 @@ llvm::Type* getLLVMType(const NNamedType* n) {
             return llvm::Type::getVoidTy(getGlobalContext());
         } else if(simpleName.compare("bool") == 0) {
             return llvm::Type::getInt1Ty(getGlobalContext());
-        } else if(simpleName.compare("byte") == 0) {
+        } else if(simpleName.compare("i8") == 0) {
             return llvm::Type::getInt8Ty(getGlobalContext());
+        } else if(simpleName.compare("i16") == 0) {
+            return llvm::Type::getInt16Ty(getGlobalContext());
+        } else if(simpleName.compare("i32") == 0) {
+            return llvm::Type::getInt32Ty(getGlobalContext());
+        } else if(simpleName.compare("int") == 0) {
+            return llvm::Type::getInt32Ty(getGlobalContext());
         }
     } else {
         //todo: resolve struct types
     }
+    
+    return nullptr;
 }
 
 llvm::Type* getLLVMType(const NType* n) {
@@ -43,48 +51,6 @@ llvm::Type* getLLVMType(const NType* n) {
 
 }
 
-class Location {
-public:
-  virtual ~Location() {};
-  virtual llvm::Value* getValue() = 0;
-  virtual bool isAddress() = 0;
-
-};
-
-class LLVMValue : public Location {
-public:
-  LLVMValue(llvm::Value* value)
-    : mValue(value) {}
-
-  llvm::Value* getValue() {
-    return mValue;
-  }
-
-  bool isAddress() {
-    return false;
-  }
-
-protected:
-  llvm::Value* mValue;
-};
-
-class LLVMAddress : public Location {
-public:
-  LLVMAddress(llvm::Value* address)
-    : mAddress(address) {}
-
-  llvm::Value* getValue() {
-    return mAddress;
-  }
-
-  bool isAddress() {
-    return true;
-  }
-
-protected:
-  llvm::Value* mAddress;
-};
-
 class Scope {
 public:
   Scope* mParent;
@@ -93,18 +59,15 @@ public:
     : mParent(scope) { }
 
   ~Scope() {
-    for(Location* l : managedLocations) {
-      delete l;
-    }
   }
 
 
-  void defineSymbol(const std::string& symbolName, Location* l) {
+  void defineSymbol(const std::string& symbolName, llvm::Value* l) {
     symbolTable[symbolName] = l;
     managedLocations.insert(l);
   }
 
-  Location* lookup(const std::string& symbolName) {
+  llvm::Value* lookup(const std::string& symbolName) {
     auto it = symbolTable.find(symbolName);
     if(it != symbolTable.end()) {
       return (*it).second;
@@ -117,9 +80,9 @@ public:
     return nullptr;
   }
 
-  map<Node*, Location*> locationTable;
-  map<const std::string, Location*> symbolTable;
-  set<Location*> managedLocations;
+  map<Node*, llvm::Value*> locationTable;
+  map<const std::string, llvm::Value*> symbolTable;
+  set<llvm::Value*> managedLocations;
 
 
 };
@@ -148,12 +111,12 @@ public:
     delete top;
   }
 
-  void set(Node* n, Location* l) {
+  void set(Node* n, llvm::Value* l) {
     mScope->locationTable[n] = l;
     mScope->managedLocations.insert(l);
   }
 
-  Location* gen(Node* n) {
+  llvm::Value* gen(Node* n) {
     n->accept(this);
     return mScope->locationTable[n];
   }
@@ -180,8 +143,8 @@ public:
     BasicBlock* endBB = BasicBlock::Create(getGlobalContext());
     bool needsEndBlock = false;
     
-    Location* lcondition = gen(ifStmt->mCondition);
-    mILGen->mIRBuilder.CreateCondBr(getValue(lcondition), thenBB, elseBB);
+    llvm::Value* lcondition = gen(ifStmt->mCondition);
+    mILGen->mIRBuilder.CreateCondBr(lcondition, thenBB, elseBB);
     
     //Codegen Then block
     mILGen->mIRBuilder.SetInsertPoint(thenBB);
@@ -214,8 +177,8 @@ public:
   }
 
   void visit(Return* returnStmt) {
-    Location* expr = gen(returnStmt->mExpr);
-    mILGen->mIRBuilder.CreateStore(getValue(expr), mCurrentFunctionReturnValueAddress);
+    llvm::Value* expr = gen(returnStmt->mExpr);
+    mILGen->mIRBuilder.CreateStore(expr, mCurrentFunctionReturnValueAddress);
     mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
     //mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
@@ -230,34 +193,34 @@ public:
 
     pop();
 
-    set(block, new LLVMValue(basicBlock));
+    set(block, basicBlock);
   }
 
   void visit(NLocalVar* localVar) {
     llvm::Type* type = llvm::IntegerType::getInt32Ty(getGlobalContext());
 
     AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
-    mScope->defineSymbol(localVar->mName, new LLVMAddress(alloc));
+    mScope->defineSymbol(localVar->mName, alloc);
   }
 
   void visit(NSymbolRef* symbolRef) {
-    Location* l = mScope->lookup(symbolRef->mName);
+    llvm::Value* l = mScope->lookup(symbolRef->mName);
     set(symbolRef, l);
   }
 
   void visit(NArrayRef* arrayRef) {
-    Location* base = gen(arrayRef->mBase);
-    Location* index = gen(arrayRef->mIndex);
+    llvm::Value* base = gen(arrayRef->mBase);
+    llvm::Value* index = gen(arrayRef->mIndex);
 
     llvm::Value* value = mILGen->mIRBuilder.CreateGEP(
-                           base->getValue(), getValue(index));
+                           base, index);
 
-    set(arrayRef, new LLVMValue(value));
+    set(arrayRef, value);
   }
 
   virtual void visit(NIntLiteral* lit) {
     llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
-    set(lit, new LLVMValue(value));
+    set(lit, value);
   }
   
   void visit(NStringLiteral* strLit) {
@@ -275,33 +238,26 @@ public:
       
       Constant* const_ptr = ConstantExpr::getGetElementPtr(arrayType, gvar_array_str, const_ptr_indices);
       
-      set(strLit, new LLVMValue(const_ptr));
-  }
-
-  llvm::Value* getValue(Location* l) {
-    return l->isAddress() ? mILGen->mIRBuilder.CreateLoad(l->getValue()) : l->getValue();
+      set(strLit, const_ptr);
   }
 
   virtual void visit(NOperation* op) {
-    Location* lleft = gen(op->mLeft);
-    Location* lright = gen(op->mRight);
+    llvm::Value* lvalue = gen(op->mLeft);
+    llvm::Value* rvalue = gen(op->mRight);
 
-    llvm::Value* lvalue = getValue(lleft);
-    llvm::Value* rvalue = getValue(lright);
-
-    Location* result;
+    llvm::Value* result;
 
     switch(op->mOp) {
     case NOperation::Type::ADD:
-      result = new LLVMValue(mILGen->mIRBuilder.CreateAdd(lvalue, rvalue));
+      result = mILGen->mIRBuilder.CreateAdd(lvalue, rvalue);
       break;
 
     case NOperation::Type::SUB:
-      result = new LLVMValue(mILGen->mIRBuilder.CreateSub(lvalue, rvalue));
+      result = mILGen->mIRBuilder.CreateSub(lvalue, rvalue);
       break;
 
     case NOperation::Type::CMPEQ:
-      result = new LLVMValue(mILGen->mIRBuilder.CreateICmpEQ(lvalue, rvalue));
+      result = mILGen->mIRBuilder.CreateICmpEQ(lvalue, rvalue);
       break;
     }
 
@@ -309,10 +265,10 @@ public:
   }
 
   virtual void visit(Assign* assign) {
-    Location* lright = gen(assign->mRight);
-    Location* lleft = gen(assign->mLeft);
+    llvm::Value* lright = gen(assign->mRight);
+    llvm::Value* lleft = gen(assign->mLeft);
 
-    mILGen->mIRBuilder.CreateStore(getValue(lright), lleft->getValue());
+    mILGen->mIRBuilder.CreateStore(lright, lleft);
   }
 
   void visit(NCall* call) {
@@ -320,13 +276,18 @@ public:
     llvm::Function* func = mILGen->mModule.getFunction(call->mName);
     std::vector<llvm::Value*> args;
     for(Expr* argExp : call->mArgList) {
-      Location* argLoc = gen(argExp);
-      args.push_back(getValue(argLoc));
+      llvm::Value* argLoc = gen(argExp);
+      args.push_back(argLoc);
     }
 
-    Location* result = new LLVMValue(mILGen->mIRBuilder.CreateCall(func, args));
+    llvm::Value* result = mILGen->mIRBuilder.CreateCall(func, args);
     set(call, result);
 
+  }
+  
+  void visit(NLoad* load) {
+    llvm::Value* l = gen(load->mExpr);
+    set(load, mILGen->mIRBuilder.CreateLoad(l));
   }
 
 
@@ -335,13 +296,12 @@ public:
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : function->mParams) {
-      //TODO: replace this with actual types not just ints
-      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+      argTypes.push_back(getLLVMType(param->mType));
     }
+    
+    llvm::Type* returnType = getLLVMType(function->mReturnType);
 
-    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
-                                  getGlobalContext()), argTypes,
-                                false);
+    llvm::FunctionType* ftype = llvm::FunctionType::get(returnType, argTypes, false);
 
     mCurrentFunction = Function::Create(ftype,
                                         Function::LinkageTypes::ExternalLinkage,
@@ -355,18 +315,17 @@ public:
 
       //preamble
       if(function->mReturnType) {
-          llvm::Type* returnType = llvm::IntegerType::getInt32Ty(getGlobalContext());
           AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType, 0);
           mCurrentFunctionReturnValueAddress = alloc;
       }
+      
       Function::arg_iterator AI = mCurrentFunction->arg_begin();
       const size_t numArgs = function->mParams.size();
       for(size_t i=0; i<numArgs; i++,++AI) {
-        NParam* param = function->mParams.at(i);
-        llvm::Type* type = AI->getType();
+        llvm::Type* type = argTypes[i];
         AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
         mILGen->mIRBuilder.CreateStore(&*AI, alloc);
-        mScope->defineSymbol(param->mName, new LLVMAddress(alloc));
+        mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
       }
 
       mCurrentFunctionReturnBB = BasicBlock::Create(getGlobalContext());

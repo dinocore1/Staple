@@ -54,17 +54,20 @@ public:
       } else if(simpleName.compare("bool") == 0) {
         return const_cast<Type*>(Primitives::Bool);
 
-      } else if(simpleName.compare("int") == 0) {
-        return const_cast<IntegerType*>(&Primitives::Int32);
-
       } else if(simpleName.compare("i8") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int8);
           
       } else if(simpleName.compare("i16") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int16);
           
-      } else if(simpleName.compare("byte") == 0) {
+      } else if(simpleName.compare("i32") == 0) {
         return const_cast<IntegerType*>(&Primitives::UInt8);
+
+      } else if(simpleName.compare("int") == 0) {
+        return const_cast<IntegerType*>(&Primitives::Int32);
+
+      } else if(simpleName.compare("i64") == 0) {
+          return const_cast<IntegerType*>(&Primitives::Int64);
 
       } else {
         //class type
@@ -131,6 +134,18 @@ public:
 
       return nullptr;
     }
+  }
+  
+  void visit(NLoad* load) {
+    Type* exprType = getType(load->mExpr);
+    
+    if(!isa<PointerType>(exprType)) {
+      mCtx.addError("cannot load a non-pointer type", load->location.first_line, load->location.first_column);
+    } else {
+      PointerType* ptrType = cast<PointerType>(exprType);
+      mCtx.mTypeTable[load] = ptrType->mBase;
+    }
+    
   }
 
   void visit(NIntLiteral* intLiteral) {
@@ -317,7 +332,11 @@ public:
     Type* ltype = getType(assign->mLeft);
     Type* rtype = getType(assign->mRight);
 
-    //TODO: ensure that rtype can be assigned to ltype
+    if(!ltype->isAssignableFrom(rtype)){
+      std::ostringstream strBuilder;
+      strBuilder << "cannot assign type '" << ltype->toString() << "' from: '" << rtype->toString() << "'";
+      mCtx.addError(strBuilder.str(), assign->location.first_line, assign->location.first_column);
+    }
 
   }
 

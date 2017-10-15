@@ -29,6 +29,7 @@ class NSymbolRef;
 class NArrayRef;
 class NIntLiteral;
 class NStringLiteral;
+class NLoad;
 
 #define VISIT(x) virtual void visit(x*){};
 class Visitor {
@@ -57,6 +58,7 @@ public:
   VISIT(NArrayRef)
   VISIT(NIntLiteral)
   VISIT(NStringLiteral)
+  VISIT(NLoad)
 
 };
 
@@ -465,6 +467,15 @@ public:
    
      ACCEPT
      const std::string mStr;
+};
+
+class NLoad : public Expr {
+public:
+  NLoad(Expr* expr)
+   : mExpr(expr) {}
+  
+   ACCEPT
+   Expr* mExpr;
 };
 
 } // namespace staple

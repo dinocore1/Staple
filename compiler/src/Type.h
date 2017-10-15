@@ -121,6 +121,7 @@ public:
   static const IntegerType Int16;
   static const IntegerType UInt32;
   static const IntegerType Int32;
+  static const IntegerType Int64;
   static const ArrayType StringLiteral;
 };
 

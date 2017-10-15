@@ -61,10 +61,16 @@ const IntegerType Primitives::UInt16(16, false);
 const IntegerType Primitives::Int16(16, true);
 const IntegerType Primitives::UInt32(32, false);
 const IntegerType Primitives::Int32(32, true);
+const IntegerType Primitives::Int64(64, true);
 const ArrayType Primitives::StringLiteral(&Primitives::UInt8);
 
 bool IntegerType::isAssignableFrom(const Type* type) const {
-  return isa<IntegerType>(type) || isa<FloatType>(type);
+  if(isa<PointerType>(type)) {
+    const PointerType* ptrType = cast<PointerType>(type);
+    return isAssignableFrom(ptrType->mBase);
+  } else {
+    return isa<IntegerType>(type) || isa<FloatType>(type);
+  }
 }
 
 std::string IntegerType::toString() const {
@@ -106,11 +112,11 @@ PointerType::PointerType(Type* baseType)
 
 bool PointerType::isAssignableFrom(const Type* type) const {
     if(isa<PointerType>(type)) {
-        const PointerType* ptrType = reinterpret_cast<const PointerType*>(type);
+        const PointerType* ptrType = cast<PointerType>(type);
         return mBase->isAssignableFrom(ptrType->mBase);
         
     } else if(isa<ArrayType>(type)) {
-        const ArrayType* arrayType = reinterpret_cast<const ArrayType*>(type);
+        const ArrayType* arrayType = cast<ArrayType>(type);
         return mBase->isAssignableFrom(arrayType->mBase);
     } else {
         return false;

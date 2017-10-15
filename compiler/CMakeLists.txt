@@ -1,5 +1,5 @@
 
-execute_process(COMMAND llvm-config-3.5 --cxxflags
+execute_process(COMMAND llvm-config --cxxflags
         OUTPUT_VARIABLE llvm_cxxflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -18,16 +18,16 @@ set(SOURCE_FILES
   src/main.cpp
   )
 
-include_directories("/usr/lib/llvm-3.5/include")
+include_directories("/usr/lib/llvm/include")
 
 add_executable(stp ${SOURCE_FILES})
 
-execute_process(COMMAND llvm-config-3.5 --libs
+execute_process(COMMAND llvm-config --libs
         OUTPUT_VARIABLE llvm_libs
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-execute_process(COMMAND llvm-config-3.5 --ldflags
+execute_process(COMMAND llvm-config --ldflags
         OUTPUT_VARIABLE llvm_ldflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )

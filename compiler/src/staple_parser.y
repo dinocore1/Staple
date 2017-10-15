@@ -182,7 +182,7 @@ fieldref
 
 arrayref
   : lvalue TLBRACKET expr TRBRACKET
-  { $$ = new NArrayRef($1, $3); }
+  { $$ = new NArrayRef(new NLoad($1), $3); }
   ;
 
 funcall
@@ -253,7 +253,11 @@ primary
   : TLPAREN expr TRPAREN { $$ = $2; }
   | TINT { $$ = new NIntLiteral($1); }
   | TSTRINGLITERAL { $$ = new NStringLiteral($1->substr(1, $1->length()-2)); delete $1; }
-  | lvalue
+  | funcall
+  | methodcall
+  | fieldref { $$ = new NLoad($$); $$->location = @$; }
+  | TID { $$ = new NSymbolRef(*$1); delete $1; $$ = new NLoad($$); $$->location = @$; }
+  | arrayref { $$ = new NLoad($$); $$->location = @$; }
   ;
 
 %%
