@@ -263,6 +263,23 @@ public:
     case NOperation::Type::CMPEQ:
       result = mILGen->mIRBuilder.CreateICmpEQ(lvalue, rvalue);
       break;
+
+    case NOperation::Type::CMPLT:
+      result = mILGen->mIRBuilder.CreateICmpSLT(lvalue, rvalue);
+      break;
+
+    case NOperation::Type::CMPLE:
+      result = mILGen->mIRBuilder.CreateICmpSLE(lvalue, rvalue);
+      break;
+
+    case NOperation::Type::CMPGT:
+      result = mILGen->mIRBuilder.CreateICmpSGT(lvalue, rvalue);
+      break;
+
+    case NOperation::Type::CMPGE:
+      result = mILGen->mIRBuilder.CreateICmpSGE(lvalue, rvalue);
+      break;
+      
     }
 
     set(op, result);
