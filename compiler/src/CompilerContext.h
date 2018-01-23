@@ -9,6 +9,7 @@ public:
   CompilerContext();
   ParserContext parserContext;
   File inputFile;
+  std::string outputFile;
   std::vector<File> includeDirs;
   Node* rootNode;
   bool generateDebugSymobols;
@@ -18,6 +19,7 @@ public:
   std::map<staple::Node*, staple::Type*> mTypeTable;
 
   void setInputFile(const File&);
+  void setOutputFile(const std::string&);
   void addIncludeDir(const File&);
   bool parse();
 

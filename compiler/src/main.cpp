@@ -27,7 +27,7 @@ static option::ArgStatus NonEmpty(const option::Option& option, bool msg) {
   return option::ARG_ILLEGAL;
 }
 
-enum  optionIndex { UNKNOWN, HELP, GEN_DEBUG, INCLUDE_DIR };
+enum  optionIndex { UNKNOWN, HELP, GEN_DEBUG, INCLUDE_DIR, OUTPUT_FILE };
 const option::Descriptor usage[] = {
   {
     UNKNOWN, 0,"" , ""    ,option::Arg::None, "USAGE: stp [options] file.stp\n\n"
@@ -35,6 +35,7 @@ const option::Descriptor usage[] = {
   },
   {GEN_DEBUG,    0,"g" , "debug",option::Arg::None, "  -g  \tGenerate debug symbols." },
   {INCLUDE_DIR,    0,"I", "",NonEmpty, "  -I  \tInclude directory." },
+  {OUTPUT_FILE, 0,"o", "output file", NonEmpty, "  -o out.ll \tOutput file or '-' for stdout"},
   {HELP, 0, "", "help", option::Arg::None, "  --help \tprint help"},
   {
     UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExample:\n"
@@ -70,6 +71,10 @@ int main(int argc, char** argv) {
 
     for(option::Option* opt = options[INCLUDE_DIR]; opt; opt = opt->next()) {
       ctx.addIncludeDir(opt->arg);
+    }
+
+    if(options[OUTPUT_FILE]) {
+      ctx.setOutputFile(options[OUTPUT_FILE].arg);
     }
 
     ctx.setInputFile(parse.nonOption(i));

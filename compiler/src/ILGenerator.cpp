@@ -9,27 +9,31 @@ using namespace std;
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/BasicBlock.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/FileSystem.h>
 
 using namespace llvm;
 
 namespace staple {
+
+static LLVMContext TheContext;
 
     
 llvm::Type* getLLVMType(const NNamedType* n) {
     if(n->mTypeName.getNumParts() == 1) {
         std::string simpleName = n->mTypeName.getSimpleName();
         if(simpleName.compare("void") == 0){
-            return llvm::Type::getVoidTy(getGlobalContext());
+            return llvm::Type::getVoidTy(TheContext);
         } else if(simpleName.compare("bool") == 0) {
-            return llvm::Type::getInt1Ty(getGlobalContext());
+            return llvm::Type::getInt1Ty(TheContext);
         } else if(simpleName.compare("i8") == 0) {
-            return llvm::Type::getInt8Ty(getGlobalContext());
+            return llvm::Type::getInt8Ty(TheContext);
         } else if(simpleName.compare("i16") == 0) {
-            return llvm::Type::getInt16Ty(getGlobalContext());
+            return llvm::Type::getInt16Ty(TheContext);
         } else if(simpleName.compare("i32") == 0) {
-            return llvm::Type::getInt32Ty(getGlobalContext());
+            return llvm::Type::getInt32Ty(TheContext);
         } else if(simpleName.compare("int") == 0) {
-            return llvm::Type::getInt32Ty(getGlobalContext());
+            return llvm::Type::getInt32Ty(TheContext);
         }
     } else {
         //todo: resolve struct types
@@ -125,7 +129,7 @@ public:
     IRBuilder<>::InsertPointGuard guard(mILGen->mIRBuilder);
 
     push();
-    BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
+    BasicBlock* basicBlock = BasicBlock::Create(TheContext);
     mILGen->mIRBuilder.SetInsertPoint(basicBlock);
     visitChildren(block);
     pop();
@@ -138,9 +142,9 @@ public:
   }
 
   void visit(NIfStmt* ifStmt) {
-    BasicBlock* thenBB = BasicBlock::Create(getGlobalContext(), "", mCurrentFunction);
-    BasicBlock* elseBB = BasicBlock::Create(getGlobalContext());
-    BasicBlock* endBB = BasicBlock::Create(getGlobalContext());
+    BasicBlock* thenBB = BasicBlock::Create(TheContext, "", mCurrentFunction);
+    BasicBlock* elseBB = BasicBlock::Create(TheContext);
+    BasicBlock* endBB = BasicBlock::Create(TheContext);
     bool needsEndBlock = false;
     
     llvm::Value* lcondition = gen(ifStmt->mCondition);
@@ -186,7 +190,7 @@ public:
   void visit(NBlock* block) {
     push();
 
-    BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext());
+    BasicBlock* basicBlock = BasicBlock::Create(TheContext);
     mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
     visitChildren(block);
@@ -197,7 +201,7 @@ public:
   }
 
   void visit(NLocalVar* localVar) {
-    llvm::Type* type = llvm::IntegerType::getInt32Ty(getGlobalContext());
+    llvm::Type* type = llvm::IntegerType::getInt32Ty(TheContext);
 
     AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
     mScope->defineSymbol(localVar->mName, alloc);
@@ -310,7 +314,7 @@ public:
     if(function->mStmts != NULL) {
       push();
 
-      BasicBlock* basicBlock = BasicBlock::Create(getGlobalContext(), "", mCurrentFunction);
+      BasicBlock* basicBlock = BasicBlock::Create(TheContext, "", mCurrentFunction);
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
       //preamble
@@ -328,7 +332,7 @@ public:
         mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
       }
 
-      mCurrentFunctionReturnBB = BasicBlock::Create(getGlobalContext());
+      mCurrentFunctionReturnBB = BasicBlock::Create(TheContext);
 
       for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
@@ -356,8 +360,8 @@ public:
 
 ILGenerator::ILGenerator(CompilerContext* ctx)
   : mCtx(ctx),
-    mIRBuilder(getGlobalContext()),
-    mModule(ctx->inputFile.getAbsolutePath().c_str(), getGlobalContext()) {
+    mIRBuilder(TheContext),
+    mModule(ctx->inputFile.getAbsolutePath().c_str(), TheContext) {
   if(ctx->generateDebugSymobols) {
     mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
     mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
@@ -387,7 +391,7 @@ public:
     }
 
     llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
-                                  getGlobalContext()), argTypes,
+                                  TheContext), argTypes,
                                 funDecl->mIsVarg);
 
     llvm::Function::Create(ftype,
@@ -410,13 +414,20 @@ void ILGenerator::generate() {
 
   /*
       std::vector<llvm::Type*> argTypes;
-      argTypes.push_back(llvm::IntegerType::getInt32Ty(getGlobalContext()));
+      argTypes.push_back(llvm::IntegerType::getInt32Ty(TheContext));
 
       FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
       Function* blah = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "main", &mILGen->mModule);
   */
 
-  mModule.dump();
+  std::error_code err;
+  llvm::raw_fd_ostream outstream(mCtx->outputFile, err, llvm::sys::fs::F_None);
+  mModule.print(outstream, NULL);
+  outstream.flush();
+  
+
+  //mModule.dump();
+  
 }
 
 } // namespace staple

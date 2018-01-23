@@ -5,12 +5,16 @@
 namespace staple {
 
 CompilerContext::CompilerContext()
-  : rootNode(NULL), generateDebugSymobols(false) {
+  : outputFile("-"), rootNode(NULL), generateDebugSymobols(false) {
 
 }
 
 void CompilerContext::setInputFile(const File& file) {
   inputFile = file;
+}
+
+void CompilerContext::setOutputFile(const std::string& str) {
+  outputFile = str;
 }
 
 void CompilerContext::addIncludeDir(const File& file) {

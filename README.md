@@ -66,7 +66,7 @@ the programmer from worrying about managing memory explicitly.
 ### Compile a Staple Program ###
 
 
-    $ ./stp -g test.stp
+    $ ./stp -o output.ll test.stp
     $ llc -O0 -filetype=obj -o output.o output.ll
     $ gcc -o test output.o build/stp_runtime/stp_runtime.a
     $ ./test
@@ -80,6 +80,11 @@ Build Dependencies:
 * Bison (apt-get install bison)
 * Flex (apt-get install flex)
 
+install dependencies on Ubuntu:
+```
+$ sudo apt-get install llvm-dev bison flex
+$ make
+```
 
 
 ### Test C Code ###
