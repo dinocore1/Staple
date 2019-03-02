@@ -4,6 +4,35 @@ execute_process(COMMAND llvm-config --cxxflags
         OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
+FIND_PACKAGE(BISON REQUIRED)
+SET(BisonOutput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_parser.cpp)
+SET(BisonInput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_parser.y)
+IF(BISON_FOUND)
+    ADD_CUSTOM_COMMAND(
+      OUTPUT ${BisonOutput} ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_parser.hpp
+      MAIN_DEPENDENCY ${BisonInput}
+      COMMAND ${BISON_EXECUTABLE}
+                -d
+                --output=${BisonOutput}
+                ${BisonInput}
+      COMMENT "Generating staple_parser.cpp"
+    )
+ENDIF()
+
+FIND_PACKAGE(FLEX REQUIRED)
+SET(FlexOutput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_lex.cpp)
+SET(FlexInput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_lex.l)
+IF(FLEX_FOUND)
+    ADD_CUSTOM_COMMAND(
+      OUTPUT ${FlexOutput}
+      MAIN_DEPENDENCY ${FlexInput}
+      COMMAND ${FLEX_EXECUTABLE}
+              --outfile=${FlexOutput}
+              ${FlexInput}
+      COMMENT "Generating staple_lex.cpp"
+    )
+ENDIF()
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${llvm_cxxflags} -O0 -g")
 set(SOURCE_FILES
   src/staple_lex.cpp
