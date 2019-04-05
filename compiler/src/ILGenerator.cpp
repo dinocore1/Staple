@@ -203,7 +203,7 @@ public:
   void visit(NLocalVar* localVar) {
     llvm::Type* type = llvm::IntegerType::getInt32Ty(TheContext);
 
-    AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
+    AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
     mScope->defineSymbol(localVar->mName, alloc);
   }
 
@@ -336,7 +336,7 @@ public:
 
       //preamble
       if(function->mReturnType) {
-          AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType, 0);
+          AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType);
           mCurrentFunctionReturnValueAddress = alloc;
       }
       
@@ -344,7 +344,7 @@ public:
       const size_t numArgs = function->mParams.size();
       for(size_t i=0; i<numArgs; i++,++AI) {
         llvm::Type* type = argTypes[i];
-        AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type, 0);
+        AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
         mILGen->mIRBuilder.CreateStore(&*AI, alloc);
         mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
       }
