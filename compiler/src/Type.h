@@ -20,6 +20,7 @@ public:
 
   Type();
   Type(TypeId id);
+  virtual ~Type() {}
 
   virtual bool isAssignableFrom(const Type* type) const = 0;
   virtual std::string toString() const = 0;

@@ -81,6 +81,8 @@ public:
   Node(TypeId type = TypeId::Unknown)
     : mType(type) {};
 
+  virtual ~Node() {}
+  
   YYLTYPE location;
   std::vector<Node*> children;
 
