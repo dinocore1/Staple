@@ -33,7 +33,7 @@ IF(FLEX_FOUND)
     )
 ENDIF()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ${llvm_cxxflags} -O0 -g")
+list(APPEND CMAKE_CXX_FLAGS "${llvm_cxxflags}")
 set(SOURCE_FILES
   src/staple_lex.cpp
   src/staple_parser.cpp
@@ -50,6 +50,14 @@ set(SOURCE_FILES
 include_directories("/usr/lib/llvm/include")
 
 add_executable(stp ${SOURCE_FILES})
+
+target_compile_features(stp
+    PRIVATE
+        cxx_auto_type
+        cxx_lambdas
+        cxx_variadic_templates
+        cxx_nullptr
+)
 
 execute_process(COMMAND llvm-config --libs
         OUTPUT_VARIABLE llvm_libs

@@ -1,3 +1,3 @@
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.1)
 project("Staple")
 add_subdirectory("compiler")
