@@ -97,6 +97,10 @@ public:
   Type* mReturnType;
   bool mIsVarg;
 
+  static inline bool classof(const Type* T) {
+    return T->mTypeId == Type::TypeId::Function;
+  }
+
   bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
 };
@@ -107,6 +111,10 @@ public:
     : mFQName(fqName) {}
 
   FQPath mFQName;
+
+  static inline bool classof(const Type* T) {
+    return T->mTypeId == Type::TypeId::Object;
+  }
 
   bool isAssignableFrom(const Type* type) const;
   std::string toString() const;

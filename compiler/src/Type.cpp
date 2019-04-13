@@ -81,7 +81,8 @@ std::string IntegerType::toString() const {
 }
 
 bool ClassType::isAssignableFrom(const Type* type) const {
-
+  //TODO: 
+  return false;
 }
 
 std::string ClassType::toString() const {

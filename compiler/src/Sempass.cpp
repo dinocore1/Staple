@@ -264,10 +264,11 @@ public:
   }
 
   void visit(NCall* funcall) {
-    FunctionType* funType = cast<FunctionType>(lookup(funcall->mName));
+    FunctionType* funType = dyn_cast_or_null<FunctionType>(lookup(funcall->mName));
     if(funType == nullptr) {
       mCtx.addError("undefined function: '" + funcall->mName + "'",
                     funcall->location.first_line, funcall->location.first_column);
+      return;
     }
 
     mCtx.mTypeTable[funcall] = funType->mReturnType;
