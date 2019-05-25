@@ -76,7 +76,10 @@ Build Dependencies:
 
 install dependencies on Ubuntu:
 ```
-$ sudo apt-get install llvm-dev bison flex
+$ sudo apt-get install cmake g++ llvm-dev bison flex libz-dev
+$ mkdir build
+$ cd build
+$ cmake -DLLVM_DIR=`llvm-config --cmakedir` ..
 $ make
 ```
 

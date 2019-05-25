@@ -1,9 +1,4 @@
 
-execute_process(COMMAND llvm-config --cxxflags
-        OUTPUT_VARIABLE llvm_cxxflags
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
 FIND_PACKAGE(BISON REQUIRED)
 SET(BisonOutput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_parser.cpp)
 SET(BisonInput ${CMAKE_CURRENT_SOURCE_DIR}/src/staple_parser.y)
@@ -33,7 +28,6 @@ IF(FLEX_FOUND)
     )
 ENDIF()
 
-list(APPEND CMAKE_CXX_FLAGS "${llvm_cxxflags}")
 set(SOURCE_FILES
   src/staple_lex.cpp
   src/staple_parser.cpp
@@ -47,8 +41,6 @@ set(SOURCE_FILES
   src/main.cpp
   )
 
-include_directories("/usr/lib/llvm/include")
-
 add_executable(stp ${SOURCE_FILES})
 
 target_compile_features(stp
@@ -59,16 +51,9 @@ target_compile_features(stp
         cxx_nullptr
 )
 
-execute_process(COMMAND llvm-config --libs
-        OUTPUT_VARIABLE llvm_libs
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
-execute_process(COMMAND llvm-config --ldflags
-        OUTPUT_VARIABLE llvm_ldflags
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        )
-
+# Find the libraries that correspond to the LLVM components
+# that we wish to use
+llvm_map_components_to_libnames(llvm_libs support core irreader codegen)
 
 # Link against LLVM libraries
-target_link_libraries(stp "${llvm_ldflags} ${llvm_libs} -ltinfo -ldl -lpthread")
+target_link_libraries(stp ${llvm_libs})
