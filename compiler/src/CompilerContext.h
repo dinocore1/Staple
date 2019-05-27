@@ -14,8 +14,7 @@ public:
   Node* rootNode;
   bool generateDebugSymobols;
 
-  std::map<std::string, staple::ClassType*> mClasses;
-  std::map<std::string, staple::FunctionType*> mFunctions;
+  std::map<const FQPath, staple::Type*> mKnownTypes;
   std::map<staple::Node*, staple::Type*> mTypeTable;
 
   void setInputFile(const File&);

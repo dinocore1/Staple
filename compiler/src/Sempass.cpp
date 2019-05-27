@@ -22,8 +22,8 @@ public:
 };
 
 /**
- * Semantic Pass 1 job is to discover all classes
- * and functions
+ * Semantic Pass 1 job is to discover all class
+ * and function names
  */ 
 class SemPass1Visitor : public SemPassBaseVisitor {
 public:
@@ -36,18 +36,21 @@ public:
 
     for(const FQPath& fq : compileUnit->mImports) {
       ClassType* classType = new ClassType(fq);
-      mCtx.mClasses[fq.getFullString()] = classType;
+      //mCtx.mClasses[fq.getFullString()] = classType;
     }
 
-    visitChildren(compileUnit);
+    //visitChildren(compileUnit);
   }
 
-  void visit(NClassDecl* clazz) {
-    FQPath classFQPath = mCurrentPackage;
-    classFQPath.add(clazz->mName);
+  void visit(NClassDecl* classDecl) {
+    FQPath path = mCurrentPackage;
+    path.add(classDecl->mName);
 
-    ClassType* classType = new ClassType(classFQPath);
-    mCtx.mClasses[classFQPath.getFullString()] = classType;
+    if(mCtx.mKnownTypes.find(path) == mCtx.mKnownTypes.end()) {
+      mCtx.mKnownTypes[path] = new ClassType(path);
+    } else {
+      mCtx.addError("redefinition of " + path.getFullString(), classDecl->location.first_line, classDecl->location.first_column);
+    }
   }
 
 
@@ -89,8 +92,8 @@ public:
         FQPath fqName = mCurrentPackage;
         fqName.add(simpleName);
 
-        auto ct = mCtx.mClasses.find(fqName.getFullString());
-        if(ct != mCtx.mClasses.end()) {
+        auto ct = mCtx.mKnownTypes.find(fqName);
+        if(ct != mCtx.mKnownTypes.end()) {
           return (*ct).second;
         } else {
           mCtx.addError("unknown type: '" + n->mTypeName.getFullString() + "'",
@@ -151,13 +154,13 @@ public:
     }
   }
 
-  void visit(NClassDecl* clazz) {
+  void visit(NClassDecl* classDecl) {
     FQPath classFQPath = mCurrentPackage;
-    classFQPath.add(clazz->mName);
+    classFQPath.add(classDecl->mName);
 
-    mCurrentClassType = mCtx.mClasses[classFQPath.getFullString()];
+    mCurrentClassType = dyn_cast_or_null<ClassType>( mCtx.mKnownTypes[classFQPath] );
 
-    visitChildren(clazz);
+    visitChildren(classDecl);
   }
 
   void visit(NFieldDecl* field) {
@@ -212,7 +215,7 @@ public:
     FQPath fqFunName = mCurrentPackage;
     fqFunName.add(fun->mName);
 
-    mCtx.mFunctions[fqFunName.getFullString()] = funType;
+    mCtx.mKnownTypes[fqFunName] = funType;
   }
 
   void visit(NExternFunctionDecl* funDecl) {
@@ -228,7 +231,7 @@ public:
     FQPath fqFunName = mCurrentPackage;
     fqFunName.add(funDecl->mName);
 
-    mCtx.mFunctions[fqFunName.getFullString()] = funType;
+    mCtx.mKnownTypes[fqFunName] = funType;
   }
 
 
@@ -296,7 +299,7 @@ public:
   void visit(NCompileUnit* compileUnit) {
     mCurrentPackage = compileUnit->mPackage;
 
-    for(auto it : mCtx.mFunctions) {
+    for(auto it : mCtx.mKnownTypes) {
       FQPath funName(it.first);
       if(mCurrentPackage.getFullString().compare(funName.getPackageName()) == 0) {
         defineSymbol(funName.getSimpleName(), it.second);
