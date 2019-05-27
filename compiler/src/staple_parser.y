@@ -38,7 +38,7 @@ typedef std::vector<staple::NParam*> ParamList;
 %token <string> TID TSTRINGLITERAL
 %token <ival> TINT
 
-%type <node> functionDecl globalfunction classDecl classparts fieldDecl methodDecl
+%type <node> externFunctionDecl functionDecl classDecl classparts fieldDecl methodDecl
 %type <stmt> stmt block
 %type <expr> expr lvalue fieldref arrayref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
@@ -88,19 +88,19 @@ package
 
 body
   : body classDecl { ctx->rootNode->add($2); }
+  | body externFunctionDecl { ctx->rootNode->add($2); }
   | body functionDecl { ctx->rootNode->add($2); }
-  | body globalfunction { ctx->rootNode->add($2); }
   |
   ;
 
-functionDecl
+externFunctionDecl
   : type TID TLPAREN paramlist TRPAREN TSEMI
-    { $$ = new NFunctionDecl(*$2, $1, $4, false); delete $2; delete $4; }
+    { $$ = new NExternFunctionDecl(*$2, $1, $4, false); delete $2; delete $4; }
   | type TID TLPAREN paramlist TCOMMA TELLIPSIS TRPAREN TSEMI
-    { $$ = new NFunctionDecl(*$2, $1, $4, true); delete $2; delete $4; }
+    { $$ = new NExternFunctionDecl(*$2, $1, $4, true); delete $2; delete $4; }
   ;
 
-globalfunction
+functionDecl
   : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
     { $$ = new NFunction(*$2, $1, $4, $7); delete $2; delete $4; }
   ;

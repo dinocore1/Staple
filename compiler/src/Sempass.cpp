@@ -211,7 +211,7 @@ public:
     mCtx.mFunctions[fqFunName.getFullString()] = funType;
   }
 
-  void visit(NFunctionDecl* funDecl) {
+  void visit(NExternFunctionDecl* funDecl) {
     std::vector<Type*> paramTypes;
     for(NParam* param : funDecl->mParams) {
       paramTypes.push_back(getType(param->mType));
@@ -359,7 +359,7 @@ public:
     mCtx.mTypeTable[arrayRef] = new PointerType(baseType);
   }
 
-  void visit(NFunctionDecl* funDecl) { }
+  void visit(NExternFunctionDecl* funDecl) { }
 
   void visit(NFunction* fun) {
 

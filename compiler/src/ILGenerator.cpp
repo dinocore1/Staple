@@ -410,7 +410,7 @@ public:
       visitChildren(compileUnit);
   }
   
-  void visit(NFunctionDecl* funDecl) {
+  void visit(NExternFunctionDecl* funDecl) {
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : funDecl->mParams) {
