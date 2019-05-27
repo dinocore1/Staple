@@ -1,6 +1,8 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
+#include "FileUtils.h"
+
 namespace staple {
 
 class FileLocation {
@@ -42,6 +44,7 @@ public:
   std::string getPackageName() const;
   std::string getFullString() const;
   size_t getNumParts() const;
+  const std::string& part(size_t) const;
 
 private:
   std::vector< std::string > mParts;

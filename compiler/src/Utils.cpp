@@ -88,8 +88,10 @@ std::string FQPath::getPackageName() const {
   ostream os(&buf);
 
   for(size_t i=0; i<mParts.size()-1; i++) {
-    os << ".";
     os << mParts[i];
+    if(i+1 < mParts.size()-1) {
+      os << ".";
+    }
   }
 
   return buf.str();
@@ -104,11 +106,19 @@ std::string FQPath::getFullString() const {
   ostream os(&buf);
 
   for(size_t i=0; i<mParts.size(); i++) {
-    os << ".";
+    
     os << mParts[i];
+    if(i+1 < mParts.size()) {
+      os << ".";
+    }
   }
 
   return buf.str();
+}
+
+const std::string& FQPath::part(size_t i) const
+{
+  return mParts[i];
 }
 
 } // namespace staple

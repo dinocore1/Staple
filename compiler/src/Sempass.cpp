@@ -21,6 +21,9 @@ public:
   }
 };
 
+/**
+ * Semantic Pass 1 job is to discover all class names
+ */ 
 class SemPass1Visitor : public SemPassBaseVisitor {
 public:
   using Visitor::visit;

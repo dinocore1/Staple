@@ -28,22 +28,23 @@ IF(FLEX_FOUND)
     )
 ENDIF()
 
-set(SOURCE_FILES
+set(STP_CORE_FILES
   src/staple_lex.cpp
   src/staple_parser.cpp
-  src/FileUtils.cpp src/FileUtils.h
+  src/FileUtils.cpp
   src/Utils.cpp
-  src/Node.cpp src/Node.h
+  src/Node.cpp
   src/Type.cpp
   src/Sempass.cpp
-  src/ILGenerator.cpp src/ILGenerator.h
-  src/CompilerContext.cpp src/CompilerContext.h
-  src/main.cpp
+  src/ILGenerator.cpp
+  src/CompilerContext.cpp
   )
 
-add_executable(stp ${SOURCE_FILES})
 
-target_compile_features(stp
+include_directories(src)
+
+add_library(stp_core STATIC ${STP_CORE_FILES})
+target_compile_features(stp_core
     PRIVATE
         cxx_auto_type
         cxx_lambdas
@@ -56,4 +57,15 @@ target_compile_features(stp
 llvm_map_components_to_libnames(llvm_libs support core irreader codegen)
 
 # Link against LLVM libraries
-target_link_libraries(stp ${llvm_libs})
+target_link_libraries(stp_core ${llvm_libs})
+
+add_executable(stp src/main.cpp)
+target_link_libraries(stp stp_core)
+
+if(BUILD_TESTS)
+  add_executable(compiler_tests
+    "tests/utils_tests.cpp"
+  )
+  target_link_libraries(compiler_tests stp_core gtest gmock_main)
+  add_test(NAME compilter_tests COMMAND compiler_tests)
+endif()
