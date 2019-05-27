@@ -7,9 +7,9 @@ class Node;
 class NCompileUnit;
 class NFunction;
 class NFunctionDecl;
-class NClass;
-class NMethod;
-class NField;
+class NClassDecl;
+class NFieldDecl;
+class NMethodDecl;
 class NParam;
 class NType;
 class NArrayType;
@@ -42,9 +42,9 @@ public:
   VISIT(NCompileUnit)
   VISIT(NFunction)
   VISIT(NFunctionDecl)
-  VISIT(NClass)
-  VISIT(NField)
-  VISIT(NMethod)
+  VISIT(NClassDecl)
+  VISIT(NFieldDecl)
+  VISIT(NMethodDecl)
   VISIT(NParam)
   VISIT(NType)
   VISIT(NCall)
@@ -159,10 +159,10 @@ public:
 
 };
 
-class NField : public Node {
+class NFieldDecl : public Node {
 public:
 
-  NField(NType* type, const std::string& name)
+  NFieldDecl(NType* type, const std::string& name)
     : Node(TypeId::Field), mType(type), mName(name) { }
 
   NType* mType;
@@ -176,9 +176,9 @@ public:
 
 };
 
-class NMethod : public Node {
+class NMethodDecl : public Node {
 public:
-  NMethod(const std::string& name)
+  NMethodDecl(const std::string& name)
     : Node(TypeId::Method), mName(name) {}
 
   std::string mName;
@@ -190,9 +190,9 @@ public:
   }
 };
 
-class NClass : public Node {
+class NClassDecl : public Node {
 public:
-  NClass(const std::string& name, Node* classparts);
+  NClassDecl(const std::string& name, Node* classparts);
 
   std::string mName;
 

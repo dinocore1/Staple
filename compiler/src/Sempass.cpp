@@ -38,7 +38,7 @@ public:
     visitChildren(compileUnit);
   }
 
-  void visit(NClass* clazz) {
+  void visit(NClassDecl* clazz) {
     FQPath classFQPath = mCurrentPackage;
     classFQPath.add(clazz->mName);
 
@@ -147,7 +147,7 @@ public:
     }
   }
 
-  void visit(NClass* clazz) {
+  void visit(NClassDecl* clazz) {
     FQPath classFQPath = mCurrentPackage;
     classFQPath.add(clazz->mName);
 
@@ -156,12 +156,11 @@ public:
     visitChildren(clazz);
   }
 
-  void visit(NField* field) {
+  void visit(NFieldDecl* field) {
     Type* fieldType = getType(field->mType);
     mCtx.mTypeTable[field] = fieldType;
 
     mCurrentClassType->mFields[field->mName] = fieldType;
-    
   }
   
   void visit(NLoad* load) {

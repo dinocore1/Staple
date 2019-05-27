@@ -20,8 +20,6 @@ typedef std::vector<staple::NParam*> ParamList;
   int ival;
   std::string* string;
   staple::Node* node;
-  staple::NField* field;
-  staple::NMethod* method;
   staple::NType* type;
   staple::NStmt* stmt;
   staple::Expr* expr;
@@ -40,9 +38,7 @@ typedef std::vector<staple::NParam*> ParamList;
 %token <string> TID TSTRINGLITERAL
 %token <ival> TINT
 
-%type <node> class functiondecl globalfunction classparts
-%type <field> field
-%type <method> method
+%type <node> functionDecl globalfunction classDecl classparts fieldDecl methodDecl
 %type <stmt> stmt block
 %type <expr> expr lvalue fieldref arrayref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
@@ -91,13 +87,13 @@ package
   ;
 
 body
-  : body class { ctx->rootNode->add($2); }
-  | body functiondecl { ctx->rootNode->add($2); }
+  : body classDecl { ctx->rootNode->add($2); }
+  | body functionDecl { ctx->rootNode->add($2); }
   | body globalfunction { ctx->rootNode->add($2); }
   |
   ;
 
-functiondecl
+functionDecl
   : type TID TLPAREN paramlist TRPAREN TSEMI
     { $$ = new NFunctionDecl(*$2, $1, $4, false); delete $2; delete $4; }
   | type TID TLPAREN paramlist TCOMMA TELLIPSIS TRPAREN TSEMI
@@ -114,13 +110,13 @@ fqpath
   | fqpath TNAMESEP TID { $$->add(*$3); delete $3; }
   ;
 
-class
+classDecl
   : TCLASS TID TLBRACE classparts TRBRACE
-    { $$ = new NClass(*$2, $4); delete $2; }
+    { $$ = new NClassDecl(*$2, $4); delete $2; }
   | TCLASS TID TEXTENDS fqpath TLBRACE classparts TRBRACE
-    { $$ = new NClass(*$2, $6); delete $2; }
+    { $$ = new NClassDecl(*$2, $6); delete $2; }
   | TCLASS TID TEXTENDS fqpath TIMPLEMENTS classlist TLBRACE classparts TRBRACE
-    { $$ = new NClass(*$2, $8); delete $2; }
+    { $$ = new NClassDecl(*$2, $8); delete $2; }
   ;
 
 classlist
@@ -129,18 +125,18 @@ classlist
   ;
 
 classparts
-  : classparts field { $1->add($2); }
-  | classparts method { $1->add($2); }
+  : classparts fieldDecl { $1->add($2); }
+  | classparts methodDecl { $1->add($2); }
   | { $$ = new Node(); }
   ;
 
-field
-  : type TID TSEMI { $$ = new NField($1, *$2); delete $2; $$->location = @$; }
+fieldDecl
+  : type TID TSEMI { $$ = new NFieldDecl($1, *$2); delete $2; $$->location = @$; }
   ;
 
-method
+methodDecl
   : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
-   { $$ = new NMethod(*$2); delete $2; $$->location = @$; }
+   { $$ = new NMethodDecl(*$2); delete $2; $$->location = @$; }
   ;
 
 paramlist
