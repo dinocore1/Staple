@@ -205,6 +205,12 @@ public:
 
     AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
     mScope->defineSymbol(localVar->mName, alloc);
+
+    if(localVar->mInitializer) {
+      llvm::Value* vright = gen(localVar->mInitializer);
+      mILGen->mIRBuilder.CreateStore(vright, alloc);
+    }
+
   }
 
   void visit(NSymbolRef* symbolRef) {

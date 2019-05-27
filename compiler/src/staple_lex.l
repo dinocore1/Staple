@@ -24,6 +24,7 @@ result = yyextra->readBytes(buf, max_size);
 
 [ \t]                   /* eat whitespace */;
 \n                      { yycolumn = 1; }
+"import"                return TIMPORT;
 "package"               return TPACKAGE;
 "class"                 return TCLASS;
 "extends"               return TEXTENDS;

@@ -1,0 +1,9 @@
+void printf(i8* fmt, ...);
+int atoi(i8* str);
+
+int main(int argc, i8** argv) {
+  int x = 5;
+  printf("x=%d", x);
+  return 0;
+}
+

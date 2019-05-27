@@ -90,8 +90,7 @@ public:
 
 class FunctionType : public Type {
 public:
-  FunctionType(std::vector<Type*> params, Type* retType)
-    : mParams(params), mReturnType(retType) {}
+  FunctionType(const std::vector<Type*>& params, Type* retType);
 
   std::vector<Type*> mParams;
   Type* mReturnType;
@@ -108,7 +107,7 @@ public:
 class ClassType : public Type {
 public:
   ClassType(const FQPath& fqName)
-    : mFQName(fqName) {}
+    : Type(TypeId::Object), mFQName(fqName) {}
 
   FQPath mFQName;
 

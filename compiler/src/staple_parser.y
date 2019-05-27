@@ -31,7 +31,7 @@ typedef std::vector<staple::NParam*> ParamList;
   staple::FQPath* fqpath;
 }
 
-%token TPACKAGE TCLASS TEXTENDS TIMPLEMENTS TNAMESEP
+%token TIMPORT TPACKAGE TCLASS TEXTENDS TIMPLEMENTS TNAMESEP
 %token TIF TELSE TNOT TSEMI TRETURN TFOR
 %token TCEQ TCNE TCLT TCLE TCGT TCGE TEQUAL
 %token TLPAREN TRPAREN TLBRACE TRBRACE TLBRACKET TRBRACKET TCOMMA TDOT
@@ -43,7 +43,7 @@ typedef std::vector<staple::NParam*> ParamList;
 %type <node> class functiondecl globalfunction
 %type <field> field
 %type <method> method
-%type <stmt> stmt localvar block
+%type <stmt> stmt block
 %type <expr> expr lvalue fieldref arrayref funcall methodcall relationexpr logicexpr
 %type <expr> primary addexpr mulexpr bitexpr unaryexpr
 %type <fqpath> fqpath
@@ -71,11 +71,22 @@ using namespace staple;
 
 compileunit
   : { ctx->rootNode = new NCompileUnit(); }
-    package body
+    imports package body
+  ;
+
+imports
+  : imports import
+  |
+  ; 
+
+import
+  : TIMPORT fqpath TSEMI
+  { ctx->rootNode->addImport(*$2); delete $2; }
   ;
 
 package
-  : TPACKAGE fqpath { ctx->rootNode->setPackage(*$2); delete $2; }
+  : TPACKAGE fqpath TSEMI
+  { ctx->rootNode->setPackage(*$2); delete $2; }
   |
   ;
 
@@ -151,7 +162,9 @@ stmt
   : lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
   | funcall TSEMI { $$ = (NStmt*)$1; }
   | methodcall TSEMI { $$ = (NStmt*)$1; }
-  | localvar
+  | type TID TSEMI { $$ = new NLocalVar(*$2, $1); delete $2; }
+  | type TID TEQUAL expr TSEMI
+    { $$ = new NLocalVar(*$2, $1, $4); delete $2; $$->location = @$; }
   | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new NIfStmt($3, $5); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStmt($3, $5, $7); $$->location = @$; }
@@ -197,10 +210,6 @@ arglist
 
 methodcall
   : lvalue TDOT TID TLPAREN arglist TRPAREN
-  ;
-
-localvar
-  : type TID TSEMI { $$ = new NLocalVar(*$2, $1); delete $2; }
   ;
 
 expr

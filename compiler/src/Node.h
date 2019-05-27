@@ -106,7 +106,12 @@ public:
     mPackage = package;
   }
 
+  void addImport(const FQPath& package) {
+    mImports.push_back(package);
+  }
+
   FQPath mPackage;
+  std::vector<FQPath> mImports;
 
   ACCEPT
 };
@@ -354,11 +359,15 @@ public:
 class NLocalVar : public NStmt {
 public:
   NLocalVar(const std::string& name, NType* type)
-    : mName(name), mType(type) { };
+    : mName(name), mType(type), mInitializer(nullptr) { };
+
+  NLocalVar(const std::string& name, NType* type, Expr* initializer)
+    : mName(name), mType(type), mInitializer(initializer) {}
 
   ACCEPT
   std::string mName;
   NType* mType;
+  Expr* mInitializer;
 };
 
 class NArrayDecl : public NLocalVar {

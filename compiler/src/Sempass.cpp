@@ -27,6 +27,17 @@ public:
   SemPass1Visitor(CompilerContext& ctx)
     : SemPassBaseVisitor(ctx) {}
 
+  void visit(NCompileUnit* compileUnit) {
+    mCurrentPackage = compileUnit->mPackage;
+
+    for(const FQPath& fq : compileUnit->mImports) {
+      ClassType* classType = new ClassType(fq);
+      mCtx.mClasses[fq.getFullString()] = classType;
+    }
+
+    visitChildren(compileUnit);
+  }
+
   void visit(NClass* clazz) {
     FQPath classFQPath = mCurrentPackage;
     classFQPath.add(clazz->mName);
@@ -60,10 +71,8 @@ public:
       } else if(simpleName.compare("i16") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int16);
           
-      } else if(simpleName.compare("i32") == 0) {
-        return const_cast<IntegerType*>(&Primitives::UInt8);
-
-      } else if(simpleName.compare("int") == 0) {
+      } else if(simpleName.compare("i32") == 0 ||
+                simpleName.compare("int") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int32);
 
       } else if(simpleName.compare("i64") == 0) {
@@ -288,6 +297,15 @@ public:
   void visit(NLocalVar* localVar) {
     Type* t = getType(localVar->mType);
     defineSymbol(localVar->mName, t);
+
+    if(localVar->mInitializer) {
+      Type* rtype = getType(localVar->mInitializer);
+      if(!t->isAssignableFrom(rtype)){
+        std::ostringstream strBuilder;
+        strBuilder << "cannot assign type '" << t->toString() << "' from: '" << rtype->toString() << "'";
+        mCtx.addError(strBuilder.str(), localVar->location.first_line, localVar->location.first_column);
+      }
+    }
   }
 
   void visit(NSymbolRef* symbolRef) {
