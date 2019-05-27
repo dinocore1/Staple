@@ -18,5 +18,11 @@ NBlock::NBlock(StmtList* stmts)
   children.insert(children.end(), mStmts.begin(), mStmts.end());
 }
 
+NClass::NClass(const std::string& name, Node* classparts)
+ : Node(TypeId::Class), mName(name)
+{
+  children = classparts->children;
+  delete classparts;
+}
 
 } // namespace staple

@@ -53,6 +53,8 @@ class SemPass2Visitor : public SemPassBaseVisitor {
 public:
   using Visitor::visit;
 
+  ClassType* mCurrentClassType;
+
   SemPass2Visitor(CompilerContext& ctx)
     : SemPassBaseVisitor(ctx) {}
 
@@ -144,6 +146,23 @@ public:
       return nullptr;
     }
   }
+
+  void visit(NClass* clazz) {
+    FQPath classFQPath = mCurrentPackage;
+    classFQPath.add(clazz->mName);
+
+    mCurrentClassType = mCtx.mClasses[classFQPath.getFullString()];
+
+    visitChildren(clazz);
+  }
+
+  void visit(NField* field) {
+    Type* fieldType = getType(field->mType);
+    mCtx.mTypeTable[field] = fieldType;
+
+    mCurrentClassType->mFields[field->mName] = fieldType;
+    
+  }
   
   void visit(NLoad* load) {
     Type* exprType = getType(load->mExpr);
@@ -155,6 +174,18 @@ public:
       mCtx.mTypeTable[load] = ptrType->mBase;
     }
     
+  }
+
+  void visit(NFieldRef* fieldRef) {
+    Type* baseType = getType(fieldRef->mBase);
+
+    if(!isa<ClassType>(baseType)) {
+      mCtx.addError("not an object type", fieldRef->location.first_line, fieldRef->location.first_column);
+    } else {
+      ClassType* classType = cast<ClassType>(baseType);
+      Type* fieldType = classType->mFields[fieldRef->mField];
+      mCtx.mTypeTable[fieldRef] = fieldType;
+    }
   }
 
   void visit(NIntLiteral* intLiteral) {

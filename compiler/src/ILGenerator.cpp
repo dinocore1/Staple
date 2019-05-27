@@ -141,6 +141,10 @@ public:
     visitChildren(compileUnit);
   }
 
+  void visit(NClass* classDecl) {
+    
+  }
+
   void visit(NIfStmt* ifStmt) {
     BasicBlock* thenBB = BasicBlock::Create(TheContext, "", mCurrentFunction);
     BasicBlock* elseBB = BasicBlock::Create(TheContext);

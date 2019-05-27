@@ -1,9 +1,16 @@
 void printf(i8* fmt, ...);
 int atoi(i8* str);
 
+class MyClass {
+  int x;
+  int y;
+}
+
 int main(int argc, i8** argv) {
-  int x = 5;
-  printf("x=%d", x);
+  MyClass myobj;
+  myobj.x = 5;
+  
+  printf("myobj.x=%d", myobj.x);
   return 0;
 }
 

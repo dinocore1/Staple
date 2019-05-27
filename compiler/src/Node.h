@@ -26,6 +26,7 @@ class NArrayDecl;
 class NNot;
 class NNeg;
 class NSymbolRef;
+class NFieldRef;
 class NArrayRef;
 class NIntLiteral;
 class NStringLiteral;
@@ -55,6 +56,7 @@ public:
   VISIT(Block)
   VISIT(NOperation)
   VISIT(NSymbolRef)
+  VISIT(NFieldRef)
   VISIT(NArrayRef)
   VISIT(NIntLiteral)
   VISIT(NStringLiteral)
@@ -90,7 +92,9 @@ public:
     children.push_back(child);
   }
 
-  virtual void accept(Visitor*) = 0;
+  virtual void accept(Visitor* visitor) {
+    visitor->visit(this);
+  }
 
   const TypeId mType;
 
@@ -158,9 +162,10 @@ public:
 class NField : public Node {
 public:
 
-  NField(const std::string& name)
-    : Node(TypeId::Field), mName(name) { }
+  NField(NType* type, const std::string& name)
+    : Node(TypeId::Field), mType(type), mName(name) { }
 
+  NType* mType;
   std::string mName;
 
   ACCEPT
@@ -187,8 +192,7 @@ public:
 
 class NClass : public Node {
 public:
-  NClass(const std::string& name)
-    : Node(TypeId::Class), mName(name) {}
+  NClass(const std::string& name, Node* classparts);
 
   std::string mName;
 
@@ -449,6 +453,16 @@ public:
   ACCEPT
   const std::string mName;
 
+};
+
+class NFieldRef : public Expr {
+public:
+  NFieldRef(Expr* base, const std::string& field)
+   : mBase(base), mField(field) {}
+
+  ACCEPT
+  Expr* mBase;
+  const std::string mField;
 };
 
 class NArrayRef : public Expr {
