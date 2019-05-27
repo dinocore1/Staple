@@ -38,3 +38,30 @@ TEST(FQPath, getSimpleName)
     EXPECT_EQ(0, path.getSimpleName().compare("cool"));
 }
 
+TEST(FQPath, less_than_operator_works)
+{
+    FQPath a("a.b.c");
+    FQPath b("a.b.a");
+
+    EXPECT_TRUE(b < a);
+    EXPECT_FALSE(a < b);
+}
+
+TEST(FQPath, shorter_path_less)
+{
+    FQPath a("a.b.c");
+    FQPath b("a.b");
+
+    EXPECT_TRUE(b < a);
+    EXPECT_FALSE(a < b);
+}
+
+TEST(FQPath, path_equal)
+{
+    FQPath a("a.b.c");
+    FQPath b("a.b.c");
+
+    EXPECT_FALSE(b < a);
+    EXPECT_FALSE(a < b);
+}
+

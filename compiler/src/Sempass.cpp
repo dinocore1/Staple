@@ -22,7 +22,8 @@ public:
 };
 
 /**
- * Semantic Pass 1 job is to discover all class names
+ * Semantic Pass 1 job is to discover all classes
+ * and functions
  */ 
 class SemPass1Visitor : public SemPassBaseVisitor {
 public:

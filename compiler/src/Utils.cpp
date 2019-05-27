@@ -67,6 +67,8 @@ std::string CompilerMessage::toString() const {
   return buf.str();
 }
 
+//////////////////// FQPath ////////////////////////////
+
 FQPath::FQPath() {}
 FQPath::FQPath(const std::vector<std::string>& parts)
   : mParts(parts) {}
@@ -119,6 +121,17 @@ std::string FQPath::getFullString() const {
 const std::string& FQPath::part(size_t i) const
 {
   return mParts[i];
+}
+
+bool FQPath::operator< (const FQPath& o) const
+{
+  auto a = mParts.begin();
+  auto b = o.mParts.begin();
+  for(; (a != mParts.end()) && (b != o.mParts.end()); ++a, ++b) {
+    if(*a < *b) return true;
+    if(*b < *a) return false;
+  }
+  return (a == mParts.end()) && (b != o.mParts.end());
 }
 
 } // namespace staple

@@ -86,7 +86,7 @@ bool ClassType::isAssignableFrom(const Type* type) const {
 }
 
 std::string ClassType::toString() const {
-  return "class " + mFQName.getFullString();
+  return "class: " + mFQName.getFullString();
 }
 
 ArrayType::ArrayType(const Type* baseType)

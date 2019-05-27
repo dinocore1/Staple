@@ -111,6 +111,7 @@ public:
 
   FQPath mFQName;
   std::map<std::string, Type*> mFields;
+  std::map<std::string, Type*> mMethods;
 
   static inline bool classof(const Type* T) {
     return T->mTypeId == Type::TypeId::Object;
