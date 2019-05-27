@@ -322,7 +322,7 @@ public:
   }
 
 
-  void visit(NFunction* function) {
+  void visit(NFunctionDecl* function) {
 
     std::vector<llvm::Type*> argTypes;
 

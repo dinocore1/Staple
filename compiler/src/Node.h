@@ -5,7 +5,7 @@ namespace staple {
 
 class Node;
 class NCompileUnit;
-class NFunction;
+class NFunctionDecl;
 class NExternFunctionDecl;
 class NClassDecl;
 class NFieldDecl;
@@ -40,7 +40,7 @@ public:
   void visitChildren(Node* node);
   virtual void visit(Node* node);
   VISIT(NCompileUnit)
-  VISIT(NFunction)
+  VISIT(NFunctionDecl)
   VISIT(NExternFunctionDecl)
   VISIT(NClassDecl)
   VISIT(NFieldDecl)
@@ -139,9 +139,9 @@ public:
   }
 };
 
-class NFunction : public Node {
+class NFunctionDecl : public Node {
 public:
-  NFunction(const std::string& name, NType* returnType,
+  NFunctionDecl(const std::string& name, NType* returnType,
             ParamList* params, StmtList* stmtList)
     : Node(TypeId::Function), mName(name), mReturnType(returnType),
       mParams(*params), mStmts(stmtList) { }

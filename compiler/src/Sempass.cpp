@@ -202,7 +202,7 @@ public:
       mCtx.mTypeTable[strLiteral] = const_cast<ArrayType*>(&Primitives::StringLiteral);
   }
 
-  void visit(NFunction* fun) {
+  void visit(NFunctionDecl* fun) {
     std::vector<Type*> paramTypes;
     for(NParam* param : fun->mParams) {
       paramTypes.push_back(getType(param->mType));
@@ -368,7 +368,7 @@ public:
 
   void visit(NExternFunctionDecl* funDecl) { }
 
-  void visit(NFunction* fun) {
+  void visit(NFunctionDecl* fun) {
 
     push();
 
