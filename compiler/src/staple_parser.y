@@ -77,7 +77,7 @@ imports
 
 import
   : TIMPORT fqpath TSEMI
-  { ctx->rootNode->addImport(*$2); delete $2; }
+  { ctx->rootNode->add( new NImport(*$2) ); delete $2; }
   ;
 
 package

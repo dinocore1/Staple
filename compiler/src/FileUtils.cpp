@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "FileUtils.h"
 
 #include <iostream>
 #include <sstream>
@@ -84,6 +83,21 @@ File::File()
 File::File(const File& root, const std::string& filepath)
   : mParent(root.getPath()), mPath(filepath) {
 }
+
+File::File(const File& root, const FQPath& path)
+ : mParent(root.getPath())
+{
+  stringbuf buf;
+  ostream os(&buf);
+
+  for(size_t i=0; i<path.getNumParts(); i++) {
+    os << PATH_SEP;
+    os << path.part(i);
+  }
+
+  mPath = buf.str();
+}
+
 
 File::File(const std::string& filepath) {
   char pathBuf[FILENAME_MAX];

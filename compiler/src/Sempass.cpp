@@ -21,40 +21,7 @@ public:
   }
 };
 
-/**
- * Semantic Pass 1 job is to discover all class
- * and function names
- */ 
-class SemPass1Visitor : public SemPassBaseVisitor {
-public:
-  using Visitor::visit;
-  SemPass1Visitor(CompilerContext& ctx)
-    : SemPassBaseVisitor(ctx) {}
 
-  void visit(NCompileUnit* compileUnit) {
-    mCurrentPackage = compileUnit->mPackage;
-
-    for(const FQPath& fq : compileUnit->mImports) {
-      ClassType* classType = new ClassType(fq);
-      //mCtx.mClasses[fq.getFullString()] = classType;
-    }
-
-    //visitChildren(compileUnit);
-  }
-
-  void visit(NClassDecl* classDecl) {
-    FQPath path = mCurrentPackage;
-    path.add(classDecl->mName);
-
-    if(mCtx.mKnownTypes.find(path) == mCtx.mKnownTypes.end()) {
-      mCtx.mKnownTypes[path] = new ClassType(path);
-    } else {
-      mCtx.addError("redefinition of " + path.getFullString(), classDecl->location.first_line, classDecl->location.first_column);
-    }
-  }
-
-
-};
 
 class SemPass2Visitor : public SemPassBaseVisitor {
 public:
@@ -210,12 +177,12 @@ public:
     Type* returnType = getType(fun->mReturnType);
     mCtx.mTypeTable[fun->mReturnType] = returnType;
 
-    FunctionType* funType = new FunctionType(paramTypes, returnType);
-
     FQPath fqFunName = mCurrentPackage;
     fqFunName.add(fun->mName);
 
-    mCtx.mKnownTypes[fqFunName] = funType;
+    FunctionType* funType = dyn_cast_or_null<FunctionType>( mCtx.mKnownTypes[fqFunName] );
+    funType->mParams = paramTypes;
+    funType->mReturnType = returnType;
   }
 
   void visit(NExternFunctionDecl* funDecl) {
@@ -226,12 +193,12 @@ public:
     Type* returnType = getType(funDecl->mReturnType);
     mCtx.mTypeTable[funDecl->mReturnType] = returnType;
 
-    FunctionType* funType = new FunctionType(paramTypes, returnType);
-
     FQPath fqFunName = mCurrentPackage;
     fqFunName.add(funDecl->mName);
 
-    mCtx.mKnownTypes[fqFunName] = funType;
+    FunctionType* funType = dyn_cast_or_null<FunctionType>( mCtx.mKnownTypes[fqFunName] );
+    funType->mParams = paramTypes;
+    funType->mReturnType = returnType;
   }
 
 
@@ -402,7 +369,7 @@ Sempass::Sempass(CompilerContext* ctx)
   : mCtx(ctx) {}
 
 void Sempass::doit() {
-  SemPass1Visitor sempass1(*mCtx);
+  Sempass1Visitor sempass1(*mCtx);
   mCtx->rootNode->accept(&sempass1);
 
   SemPass2Visitor sempass2(*mCtx);

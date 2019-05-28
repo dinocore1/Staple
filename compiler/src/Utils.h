@@ -1,9 +1,31 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#include "FileUtils.h"
-
 namespace staple {
+
+class FQPath;
+
+class File {
+public:
+
+  File();
+  File(const File& root, const std::string& filepath);
+  File(const File& root, const FQPath& path);
+  File(const std::string& filepath);
+  File(const char*);
+
+  bool isDirectory() const;
+  bool isFile() const;
+  std::string getName() const;
+  const std::string& getPath() const;
+  std::string getAbsolutePath() const;
+  std::string getCanonicalPath() const;
+
+
+private:
+  std::string mParent;
+  std::string mPath;
+};
 
 class FileLocation {
 public:

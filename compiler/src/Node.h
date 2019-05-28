@@ -5,6 +5,7 @@ namespace staple {
 
 class Node;
 class NCompileUnit;
+class NImport;
 class NFunctionDecl;
 class NExternFunctionDecl;
 class NClassDecl;
@@ -40,6 +41,7 @@ public:
   void visitChildren(Node* node);
   virtual void visit(Node* node);
   VISIT(NCompileUnit)
+  VISIT(NImport)
   VISIT(NFunctionDecl)
   VISIT(NExternFunctionDecl)
   VISIT(NClassDecl)
@@ -103,6 +105,14 @@ public:
   }
 };
 
+class NImport : public Node {
+public:
+  NImport(const FQPath& path)
+   : mPath(path) {}
+
+  FQPath mPath;
+};
+
 class NCompileUnit : public Node {
 public:
 
@@ -110,12 +120,8 @@ public:
     mPackage = package;
   }
 
-  void addImport(const FQPath& package) {
-    mImports.push_back(package);
-  }
-
+  File mFile;
   FQPath mPackage;
-  std::vector<FQPath> mImports;
 
   ACCEPT
 };

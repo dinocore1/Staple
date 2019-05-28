@@ -86,7 +86,7 @@ bool ClassType::isAssignableFrom(const Type* type) const {
 }
 
 std::string ClassType::toString() const {
-  return "class: " + mFQName.getFullString();
+  return "class";
 }
 
 ArrayType::ArrayType(const Type* baseType)
@@ -100,9 +100,13 @@ std::string ArrayType::toString() const {
   return "array";
 }
 
+FunctionType::FunctionType()
+ : Type(TypeId::Function)
+{}
+
 FunctionType::FunctionType(const std::vector<Type*>& params, Type* retType)
  : Type(TypeId::Function), mParams(params), mReturnType(retType)
- {}
+{}
 
 bool FunctionType::isAssignableFrom(const Type* type) const {
 

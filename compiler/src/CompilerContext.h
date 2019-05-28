@@ -11,11 +11,12 @@ public:
   File inputFile;
   std::string outputFile;
   std::vector<File> includeDirs;
-  Node* rootNode;
+  NCompileUnit* rootNode;
   bool generateDebugSymobols;
 
   std::map<const FQPath, staple::Type*> mKnownTypes;
   std::map<staple::Node*, staple::Type*> mTypeTable;
+  std::map<const FQPath, Node*> mParsedFiles;
 
   void setInputFile(const File&);
   void setOutputFile(const std::string&);
