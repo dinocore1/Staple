@@ -111,6 +111,7 @@ public:
    : mPath(path) {}
 
   FQPath mPath;
+  ACCEPT
 };
 
 class NCompileUnit : public Node {

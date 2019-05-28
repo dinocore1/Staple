@@ -1,5 +1,4 @@
-void printf(i8* fmt, ...);
-int atoi(i8* str);
+import util;
 
 class MyClass {
   int x;
