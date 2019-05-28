@@ -23,7 +23,6 @@ public:
 
 
 private:
-  std::string mParent;
   std::string mPath;
 };
 

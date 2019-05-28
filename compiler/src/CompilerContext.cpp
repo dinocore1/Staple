@@ -23,8 +23,10 @@ void CompilerContext::addIncludeDir(const File& file) {
 
 bool CompilerContext::parse() {
   bool retval = parserContext.parse(inputFile);
-  rootNode = parserContext.rootNode;
-  rootNode->mFile = inputFile;
+  if(retval) {
+    rootNode = parserContext.rootNode;
+    rootNode->mFile = inputFile;
+  }
   return retval;
 }
 

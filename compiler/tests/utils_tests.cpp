@@ -65,3 +65,13 @@ TEST(FQPath, path_equal)
     EXPECT_FALSE(a < b);
 }
 
+TEST(File, local_absolutepath)
+{
+    char pathBuf[FILENAME_MAX];
+    getcwd(pathBuf, FILENAME_MAX);
+
+    File f(".");
+
+    EXPECT_EQ(0, f.getAbsolutePath().compare(pathBuf));
+}
+

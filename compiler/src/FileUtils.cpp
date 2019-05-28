@@ -62,6 +62,8 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
     if(part.length() > 0) {
       if(part.compare("..") == 0) {
         pathParts.pop_back();
+      } if(part.compare(".") == 0) {
+
       } else {
         pathParts.push_back(part);
       }
@@ -75,20 +77,23 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
 }
 
 File::File()
-  : mParent("") {
+{
   char pathBuf[FILENAME_MAX];
-  mPath = getcwd(pathBuf, FILENAME_MAX);
+  getcwd(pathBuf, FILENAME_MAX);
+  mPath = std::string(pathBuf);
 }
 
 File::File(const File& root, const std::string& filepath)
-  : mParent(root.getPath()), mPath(filepath) {
+  : mPath(root.getPath() + PATH_SEP + filepath)
+{
 }
 
 File::File(const File& root, const FQPath& path)
- : mParent(root.getPath())
 {
   stringbuf buf;
   ostream os(&buf);
+
+  os << root.getPath();
 
   for(size_t i=0; i<path.getNumParts(); i++) {
     os << PATH_SEP;
@@ -99,17 +104,13 @@ File::File(const File& root, const FQPath& path)
 }
 
 
-File::File(const std::string& filepath) {
-  char pathBuf[FILENAME_MAX];
-  mParent = getcwd(pathBuf, FILENAME_MAX);
-  mPath = filepath;
-}
+File::File(const std::string& filepath)
+ : mPath(filepath)
+{}
 
-File::File(const char* filepath) {
-  char pathBuf[FILENAME_MAX];
-  mParent = getcwd(pathBuf, FILENAME_MAX);
-  mPath = filepath;
-}
+File::File(const char* filepath)
+ : mPath(filepath)
+{}
 
 bool File::isDirectory() const {
   std::string path = getCanonicalPath();
@@ -127,7 +128,7 @@ std::string File::getName() const {
     return mPath;
   } else {
     const size_t strLen = mPath.length();
-    return mPath.substr(i + i, strLen - i);
+    return mPath.substr(i, strLen - i);
   }
 }
 
@@ -136,12 +137,17 @@ const std::string& File::getPath() const {
 }
 
 std::string File::getAbsolutePath() const {
-  return mParent + PATH_SEP + mPath;
+  if(mPath[0] != '/') {
+    char buf[FILENAME_MAX];
+    getcwd(buf, FILENAME_MAX);
+    return std::string(buf) + PATH_SEP + mPath;
+  } else {
+    return mPath;
+  }
 }
 
 std::string File::getCanonicalPath() const {
   std::vector<std::string> pathParts;
-  processPath(mParent, pathParts);
   processPath(mPath, pathParts);
 
   stringbuf buf;
