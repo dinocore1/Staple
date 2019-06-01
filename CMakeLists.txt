@@ -17,7 +17,7 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 if(BUILD_TESTS)
     download_project(PROJ               googletest
                     GIT_REPOSITORY      https://github.com/google/googletest.git
-                    GIT_TAG             master
+                    GIT_TAG             release-1.8.0
     )
     add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR})
 endif()

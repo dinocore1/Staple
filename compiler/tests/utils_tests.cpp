@@ -72,6 +72,17 @@ TEST(File, local_absolutepath)
 
     File f(".");
 
-    EXPECT_EQ(0, f.getAbsolutePath().compare(pathBuf));
+    EXPECT_EQ(std::string(pathBuf), f.getAbsolutePath());
+}
+
+TEST(File, local_child)
+{
+    File f(".");
+    File f1(f, "cool.txt");
+
+    char pathBuf[FILENAME_MAX];
+    getcwd(pathBuf, FILENAME_MAX);
+
+    EXPECT_EQ(std::string( pathBuf) + std::string("/cool.txt"), f1.getAbsolutePath());
 }
 

@@ -8,6 +8,15 @@ static const char PATH_SEP = '\\';
 #include <direct.h>
 #define getcwd _getcwd
 
+#define BUFSIZE 4096
+
+static inline std::string normalize(const std::string& input)
+{
+  TCHAR buffer[BUFSIZE];
+  GetFullPathName(input.c_str(), BUFSIZE, buffer, NULL);
+  return std::string(buffer);
+}
+
 static inline bool isDir(const char* path) {
   DWORD dwAttrib = GetFileAttributesA(dirName_in.c_str());
   return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
@@ -26,6 +35,14 @@ static const char PATH_SEP = '/';
 #include <dirent.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#define BUFSIZE 4096
+
+static inline std::string normalize(const std::string& input) {
+  char buffer[BUFSIZE];
+  realpath(input.c_str(), buffer);
+  return std::string(buffer);
+}
 
 static inline bool isDir(const char* path) {
   struct stat statinfo;
@@ -84,8 +101,9 @@ File::File()
 }
 
 File::File(const File& root, const std::string& filepath)
-  : mPath(root.getPath() + PATH_SEP + filepath)
 {
+  //this.path = fs.resolve(root.path, fs.normalize(child))
+  mPath = root.mPath + PATH_SEP + filepath;
 }
 
 File::File(const File& root, const FQPath& path)
@@ -137,13 +155,7 @@ const std::string& File::getPath() const {
 }
 
 std::string File::getAbsolutePath() const {
-  if(mPath[0] != '/') {
-    char buf[FILENAME_MAX];
-    getcwd(buf, FILENAME_MAX);
-    return std::string(buf) + PATH_SEP + mPath;
-  } else {
-    return mPath;
-  }
+  return normalize(mPath);
 }
 
 std::string File::getCanonicalPath() const {
