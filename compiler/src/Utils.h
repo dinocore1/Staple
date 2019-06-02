@@ -19,7 +19,6 @@ public:
   std::string getName() const;
   const std::string& getPath() const;
   std::string getAbsolutePath() const;
-  std::string getCanonicalPath() const;
 
 
 private:

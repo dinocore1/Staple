@@ -131,12 +131,12 @@ File::File(const char* filepath)
 {}
 
 bool File::isDirectory() const {
-  std::string path = getCanonicalPath();
+  std::string path = getAbsolutePath();
   return ::isDir(path.c_str());
 }
 
 bool File::isFile() const {
-  std::string path = getCanonicalPath();
+  std::string path = getAbsolutePath();
   return ::isFile(path.c_str());
 }
 
@@ -158,6 +158,7 @@ std::string File::getAbsolutePath() const {
   return normalize(mPath);
 }
 
+/*
 std::string File::getCanonicalPath() const {
   std::vector<std::string> pathParts;
   processPath(mPath, pathParts);
@@ -172,5 +173,6 @@ std::string File::getCanonicalPath() const {
 
   return buf.str();
 }
+*/
 
 } // namespace staple
