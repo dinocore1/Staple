@@ -13,18 +13,14 @@ static
 bool searchClasspathFor(const CompilerContext& ctx, const FQPath& path, File& found)
 {
     for(const File& include : ctx.includeDirs) {
+        File srcFile = include;
 
-        std::stringbuf buf;
-        std::ostream os(&buf);
-
-        for(size_t i=0; i<path.getNumParts(); i++) {
-            
-            os << path.part(i);
+        for(size_t i=0; i<path.getNumParts()-1; i++) {
+            srcFile = File(srcFile, path.part(i));
         }
 
-        os << ".stp";
+        srcFile = File(srcFile, path.getSimpleName() + ".stp");
 
-        File srcFile(include, buf.str());
         if(srcFile.isFile()) {
             found = srcFile;
             return true;
