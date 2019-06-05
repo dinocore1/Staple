@@ -36,6 +36,7 @@ set(STP_CORE_FILES
   src/Node.cpp
   src/Type.cpp
   src/Sempass1.cpp
+  src/Sempass2.cpp
   src/Sempass.cpp
   src/ILGenerator.cpp
   src/CompilerContext.cpp

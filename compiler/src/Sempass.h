@@ -11,9 +11,6 @@ public:
   CompilerContext* mCtx;
 };
 
-
-
-
 /**
  * Semantic Pass 1 job is to:
  * (1) parse all import files and add them to the parse tree.
@@ -32,6 +29,42 @@ public:
   void visit(NExternFunctionDecl*);
   void visit(NFunctionDecl*);
 
+};
+
+class Sempass2Visitor : public Visitor {
+public:
+  Sempass2Visitor(CompilerContext& ctx);
+
+  
+
+  Type* getType(Node*);
+
+  void push();
+  void pop();
+
+  void visit(NCompileUnit*);
+  void visit(NImport*);
+  void visit(NClassDecl*);
+  void visit(NFieldDecl*);
+  void visit(NExternFunctionDecl*);
+  void visit(NFunctionDecl*);
+  void visit(NType*);
+  void visit(NNamedType*);
+  void visit(NPointerType*);
+  void visit(NLocalVar*);
+  void visit(Assign*);
+  void visit(NSymbolRef*);
+  void visit(NFieldRef*);
+  void visit(NIntLiteral*);
+  void visit(NStringLiteral*);
+  void visit(NCall*);
+
+  class Scope;
+
+  CompilerContext& mCtx;
+  FQPath mCurrentPackage;
+  ClassType* mCurrentClassType;
+  Scope* mScope;
 };
 
 

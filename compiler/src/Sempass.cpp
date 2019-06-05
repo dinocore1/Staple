@@ -6,6 +6,8 @@ using namespace llvm;
 
 namespace staple {
 
+/*
+
 class SemPassBaseVisitor : public Visitor {
 public:
   using Visitor::visit;
@@ -20,8 +22,6 @@ public:
     visitChildren(compileUnit);
   }
 };
-
-
 
 class SemPass2Visitor : public SemPassBaseVisitor {
 public:
@@ -364,6 +364,7 @@ public:
   }
 
 };
+*/
 
 Sempass::Sempass(CompilerContext* ctx)
   : mCtx(ctx) {}
@@ -372,11 +373,11 @@ void Sempass::doit() {
   Sempass1Visitor sempass1(*mCtx);
   mCtx->rootNode->accept(&sempass1);
 
-  SemPass2Visitor sempass2(*mCtx);
+  Sempass2Visitor sempass2(*mCtx);
   mCtx->rootNode->accept(&sempass2);
 
-  SemPass3Visitor sempass3(*mCtx);
-  mCtx->rootNode->accept(&sempass3);
+  //SemPass3Visitor sempass3(*mCtx);
+  //mCtx->rootNode->accept(&sempass3);
 
 }
 
