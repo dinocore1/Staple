@@ -34,8 +34,7 @@ public:
 class Sempass2Visitor : public Visitor {
 public:
   Sempass2Visitor(CompilerContext& ctx);
-
-  
+  ~Sempass2Visitor();
 
   Type* getType(Node*);
 
@@ -62,7 +61,8 @@ public:
   class Scope;
 
   CompilerContext& mCtx;
-  FQPath mCurrentPackage;
+  FQPath* mCurrentPackage;
+  NImport* mCurrentImport;
   ClassType* mCurrentClassType;
   Scope* mScope;
 };

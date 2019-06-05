@@ -37,8 +37,14 @@ class Sempass2Visitor::Scope {
   };
 
 Sempass2Visitor::Sempass2Visitor(CompilerContext& ctx)
- : mCtx(ctx), mCurrentClassType(nullptr), mScope(nullptr)
+ : mCtx(ctx), mCurrentPackage(nullptr), mCurrentImport(nullptr), 
+ mCurrentClassType(nullptr), mScope(new Scope(nullptr))
 {}
+
+Sempass2Visitor::~Sempass2Visitor()
+{
+    delete mScope;
+}
 
 void Sempass2Visitor::push()
 {
@@ -60,18 +66,29 @@ Type* Sempass2Visitor::getType(Node* n)
 
 void Sempass2Visitor::visit(NCompileUnit* compileUnit)
 {
-    mCurrentPackage = compileUnit->mPackage;
+    FQPath* oldPackage = mCurrentPackage;
+    mCurrentPackage = &compileUnit->mPackage;
     visitChildren(compileUnit);
+    mCurrentPackage = oldPackage;
+}
+
+void Sempass2Visitor::visit(NImport* n)
+{
+    NImport* oldImport = mCurrentImport;
+    mCurrentImport = n;
+    visitChildren(n);
+    mCurrentImport = oldImport;
 }
 
 void Sempass2Visitor::visit(NClassDecl* n)
 {
-    FQPath classFQPath = mCurrentPackage;
+    FQPath classFQPath = *mCurrentPackage;
     classFQPath.add(n->mName);
 
+    ClassType* oldClassType = mCurrentClassType;
     mCurrentClassType = dyn_cast_or_null<ClassType>( mCtx.mKnownTypes[classFQPath] );
     visitChildren(n);
-    mCurrentClassType = nullptr;
+    mCurrentClassType = oldClassType;
 }
 
 void Sempass2Visitor::visit(NFieldDecl* n)
@@ -84,7 +101,7 @@ void Sempass2Visitor::visit(NFunctionDecl* funDecl)
 {
     push();
 
-    FQPath fqFunName = mCurrentPackage;
+    FQPath fqFunName = *mCurrentPackage;
     fqFunName.add(funDecl->mName);
     FunctionType* funType = dyn_cast_or_null<FunctionType>( mCtx.mKnownTypes[fqFunName] );
 
@@ -94,9 +111,13 @@ void Sempass2Visitor::visit(NFunctionDecl* funDecl)
       mScope->defineSymbol(param->mName, paramType);
     }
     funType->mReturnType = getType(funDecl->mReturnType);
+    mScope->defineSymbol(funDecl->mName, funType);
 
-    for(NStmt* stmt : *funDecl->mStmts) {
-      stmt->accept(this);
+    //only do statement type checking for the compile unit, not its imports
+    if(mCurrentImport == nullptr) {
+        for(NStmt* stmt : *funDecl->mStmts) {
+            stmt->accept(this);
+        }
     }
 
     pop();
@@ -104,7 +125,7 @@ void Sempass2Visitor::visit(NFunctionDecl* funDecl)
 
 void Sempass2Visitor::visit(NExternFunctionDecl* funDecl)
 {
-    FQPath fqFunName = mCurrentPackage;
+    FQPath fqFunName = *mCurrentPackage;
     fqFunName.add(funDecl->mName);
     FunctionType* funType = dyn_cast_or_null<FunctionType>( mCtx.mKnownTypes[fqFunName] );
 
@@ -113,6 +134,7 @@ void Sempass2Visitor::visit(NExternFunctionDecl* funDecl)
       funType->mParams.push_back(paramType);
     }
     funType->mReturnType = getType(funDecl->mReturnType);
+    mScope->defineSymbol(funDecl->mName, funType);
 }
 
 void Sempass2Visitor::visit(NType* n)
@@ -150,7 +172,7 @@ void Sempass2Visitor::visit(NNamedType* n)
 
       } else {
         //class type
-        FQPath fqName = mCurrentPackage;
+        FQPath fqName = *mCurrentPackage;
         fqName.add(simpleName);
 
         auto ct = mCtx.mKnownTypes.find(fqName);
