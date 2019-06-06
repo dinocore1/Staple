@@ -19,8 +19,7 @@ NBlock::NBlock(StmtList* stmts)
 }
 
 NClassDecl::NClassDecl(const std::string& name, Node* classparts)
- : Node(TypeId::Class), mName(name)
-{
+  : Node(TypeId::Class), mName(name) {
   children = classparts->children;
   delete classparts;
 }

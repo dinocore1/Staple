@@ -10,8 +10,7 @@ static const char PATH_SEP = '\\';
 
 #define BUFSIZE 4096
 
-static inline std::string normalize(const std::string& input)
-{
+static inline std::string normalize(const std::string& input) {
   TCHAR buffer[BUFSIZE];
   GetFullPathName(input.c_str(), BUFSIZE, buffer, NULL);
   return std::string(buffer);
@@ -79,7 +78,8 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
     if(part.length() > 0) {
       if(part.compare("..") == 0) {
         pathParts.pop_back();
-      } if(part.compare(".") == 0) {
+      }
+      if(part.compare(".") == 0) {
 
       } else {
         pathParts.push_back(part);
@@ -93,21 +93,18 @@ static void processPath(const string& filepath, vector<string>& pathParts) {
   }
 }
 
-File::File()
-{
+File::File() {
   char pathBuf[FILENAME_MAX];
   getcwd(pathBuf, FILENAME_MAX);
   mPath = std::string(pathBuf);
 }
 
-File::File(const File& root, const std::string& filepath)
-{
+File::File(const File& root, const std::string& filepath) {
   //this.path = fs.resolve(root.path, fs.normalize(child))
   mPath = root.mPath + PATH_SEP + filepath;
 }
 
-File::File(const File& root, const FQPath& path)
-{
+File::File(const File& root, const FQPath& path) {
   stringbuf buf;
   ostream os(&buf);
 
@@ -123,11 +120,11 @@ File::File(const File& root, const FQPath& path)
 
 
 File::File(const std::string& filepath)
- : mPath(filepath)
+  : mPath(filepath)
 {}
 
 File::File(const char* filepath)
- : mPath(filepath)
+  : mPath(filepath)
 {}
 
 bool File::isDirectory() const {

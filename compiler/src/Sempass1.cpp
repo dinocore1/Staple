@@ -5,74 +5,68 @@
 namespace staple {
 
 Sempass1Visitor::Sempass1Visitor(CompilerContext& ctx)
- : mCtx(ctx)
+  : mCtx(ctx)
 {}
 
 
 static
-bool searchClasspathFor(const CompilerContext& ctx, const FQPath& path, File& found)
-{
-    for(const File& include : ctx.includeDirs) {
-        File srcFile = include;
+bool searchClasspathFor(const CompilerContext& ctx, const FQPath& path, File& found) {
+  for(const File& include : ctx.includeDirs) {
+    File srcFile = include;
 
-        for(size_t i=0; i<path.getNumParts()-1; i++) {
-            srcFile = File(srcFile, path.part(i));
-        }
-
-        srcFile = File(srcFile, path.getSimpleName() + ".stp");
-
-        if(srcFile.isFile()) {
-            found = srcFile;
-            return true;
-        }
+    for(size_t i=0; i<path.getNumParts()-1; i++) {
+      srcFile = File(srcFile, path.part(i));
     }
 
-    return false;
-}
+    srcFile = File(srcFile, path.getSimpleName() + ".stp");
 
-void Sempass1Visitor::visit(NCompileUnit* compileUnit)
-{
-    mCompileUnitCtx.push_back(compileUnit);
-    visitChildren(compileUnit);
-    mCompileUnitCtx.pop_back();
-}
-
-void Sempass1Visitor::visit(NImport* import)
-{
-    File file;
-    if(mCtx.mParsedFiles.find(import->mPath) == mCtx.mParsedFiles.end()) {
-        if(searchClasspathFor(mCtx, import->mPath, file)){
-            CompilerContext ctx;
-            ctx.setInputFile(file);
-            if(ctx.parse()){
-                import->add(ctx.rootNode);
-                mCtx.mParsedFiles[import->mPath] = ctx.rootNode;
-                ctx.rootNode->accept(this);
-            }
-        }
+    if(srcFile.isFile()) {
+      found = srcFile;
+      return true;
     }
+  }
+
+  return false;
 }
 
-void Sempass1Visitor::visit(NClassDecl* classDecl)
-{
-    FQPath path = mCompileUnitCtx.back()->mPackage;
-    path.add(classDecl->mName);
-
-    mCtx.mKnownTypes[path] = new ClassType();
+void Sempass1Visitor::visit(NCompileUnit* compileUnit) {
+  mCompileUnitCtx.push_back(compileUnit);
+  visitChildren(compileUnit);
+  mCompileUnitCtx.pop_back();
 }
 
-void Sempass1Visitor::visit(NExternFunctionDecl* externalFunDecl)
-{
-    FQPath path(externalFunDecl->mName);
-    mCtx.mKnownTypes[path] = new FunctionType();
+void Sempass1Visitor::visit(NImport* import) {
+  File file;
+  if(mCtx.mParsedFiles.find(import->mPath) == mCtx.mParsedFiles.end()) {
+    if(searchClasspathFor(mCtx, import->mPath, file)) {
+      CompilerContext ctx;
+      ctx.setInputFile(file);
+      if(ctx.parse()) {
+        import->add(ctx.rootNode);
+        mCtx.mParsedFiles[import->mPath] = ctx.rootNode;
+        ctx.rootNode->accept(this);
+      }
+    }
+  }
 }
 
-void Sempass1Visitor::visit(NFunctionDecl* funDecl)
-{
-    FQPath path = mCompileUnitCtx.back()->mPackage;
-    path.add(funDecl->mName);
+void Sempass1Visitor::visit(NClassDecl* classDecl) {
+  FQPath path = mCompileUnitCtx.back()->mPackage;
+  path.add(classDecl->mName);
 
-    mCtx.mKnownTypes[path] = new FunctionType();
+  mCtx.mKnownTypes[path] = new ClassType();
+}
+
+void Sempass1Visitor::visit(NExternFunctionDecl* externalFunDecl) {
+  FQPath path(externalFunDecl->mName);
+  mCtx.mKnownTypes[path] = new FunctionType();
+}
+
+void Sempass1Visitor::visit(NFunctionDecl* funDecl) {
+  FQPath path = mCompileUnitCtx.back()->mPackage;
+  path.add(funDecl->mName);
+
+  mCtx.mKnownTypes[path] = new FunctionType();
 }
 
 }

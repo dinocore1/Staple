@@ -68,9 +68,9 @@ public:
   std::string toString() const;
 
   static inline bool classof(const Type* T) {
-      return T->mTypeId == Type::TypeId::Pointer;
+    return T->mTypeId == Type::TypeId::Pointer;
   }
-  
+
   Type* mBase;
 };
 
@@ -80,11 +80,11 @@ public:
 
   bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
-  
+
   static inline bool classof(const Type* T) {
-      return T->mTypeId == Type::TypeId::Array;
+    return T->mTypeId == Type::TypeId::Array;
   }
-  
+
   const Type* mBase;
 };
 

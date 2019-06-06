@@ -81,7 +81,7 @@ std::string IntegerType::toString() const {
 }
 
 bool ClassType::isAssignableFrom(const Type* type) const {
-  //TODO: 
+  //TODO:
   return false;
 }
 
@@ -101,11 +101,11 @@ std::string ArrayType::toString() const {
 }
 
 FunctionType::FunctionType()
- : Type(TypeId::Function)
+  : Type(TypeId::Function)
 {}
 
 FunctionType::FunctionType(const std::vector<Type*>& params, Type* retType)
- : Type(TypeId::Function), mParams(params), mReturnType(retType)
+  : Type(TypeId::Function), mParams(params), mReturnType(retType)
 {}
 
 bool FunctionType::isAssignableFrom(const Type* type) const {
@@ -117,19 +117,19 @@ std::string FunctionType::toString() const {
 }
 
 PointerType::PointerType(Type* baseType)
- : Type(TypeId::Pointer), mBase(baseType) {}
+  : Type(TypeId::Pointer), mBase(baseType) {}
 
 bool PointerType::isAssignableFrom(const Type* type) const {
-    if(isa<PointerType>(type)) {
-        const PointerType* ptrType = cast<PointerType>(type);
-        return mBase->isAssignableFrom(ptrType->mBase);
-        
-    } else if(isa<ArrayType>(type)) {
-        const ArrayType* arrayType = cast<ArrayType>(type);
-        return mBase->isAssignableFrom(arrayType->mBase);
-    } else {
-        return false;
-    }
+  if(isa<PointerType>(type)) {
+    const PointerType* ptrType = cast<PointerType>(type);
+    return mBase->isAssignableFrom(ptrType->mBase);
+
+  } else if(isa<ArrayType>(type)) {
+    const ArrayType* arrayType = cast<ArrayType>(type);
+    return mBase->isAssignableFrom(arrayType->mBase);
+  } else {
+    return false;
+  }
 }
 
 std::string PointerType::toString() const {

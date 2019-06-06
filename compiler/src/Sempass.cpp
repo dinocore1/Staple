@@ -43,10 +43,10 @@ public:
 
       } else if(simpleName.compare("i8") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int8);
-          
+
       } else if(simpleName.compare("i16") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int16);
-          
+
       } else if(simpleName.compare("i32") == 0 ||
                 simpleName.compare("int") == 0) {
         return const_cast<IntegerType*>(&Primitives::Int32);
@@ -136,17 +136,17 @@ public:
 
     mCurrentClassType->mFields[field->mName] = fieldType;
   }
-  
+
   void visit(NLoad* load) {
     Type* exprType = getType(load->mExpr);
-    
+
     if(!isa<PointerType>(exprType)) {
       mCtx.addError("cannot load a non-pointer type", load->location.first_line, load->location.first_column);
     } else {
       PointerType* ptrType = cast<PointerType>(exprType);
       mCtx.mTypeTable[load] = ptrType->mBase;
     }
-    
+
   }
 
   void visit(NFieldRef* fieldRef) {
@@ -164,7 +164,7 @@ public:
   void visit(NIntLiteral* intLiteral) {
     mCtx.mTypeTable[intLiteral] = const_cast<IntegerType*>(&Primitives::Int32);
   }
-  
+
   void visit(NStringLiteral* strLiteral) {
       mCtx.mTypeTable[strLiteral] = const_cast<ArrayType*>(&Primitives::StringLiteral);
   }

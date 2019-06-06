@@ -30,15 +30,15 @@ static option::ArgStatus NonEmpty(const option::Option& option, bool msg) {
 enum  optionIndex { UNKNOWN, HELP, GEN_DEBUG, INCLUDE_DIR, OUTPUT_FILE };
 const option::Descriptor usage[] = {
   {
-    UNKNOWN, 0,"" , ""    ,option::Arg::None, "USAGE: stp [options] file.stp\n\n"
+    UNKNOWN, 0,"", "",option::Arg::None, "USAGE: stp [options] file.stp\n\n"
     "Options:"
   },
-  {GEN_DEBUG,    0,"g" , "debug",option::Arg::None, "  -g  \tGenerate debug symbols." },
+  {GEN_DEBUG,    0,"g", "debug",option::Arg::None, "  -g  \tGenerate debug symbols." },
   {INCLUDE_DIR,    0,"I", "",NonEmpty, "  -I  \tInclude directory." },
   {OUTPUT_FILE, 0,"o", "output file", NonEmpty, "  -o out.ll \tOutput file or '-' for stdout"},
   {HELP, 0, "", "help", option::Arg::None, "  --help \tprint help"},
   {
-    UNKNOWN, 0,"" ,  ""   ,option::Arg::None, "\nExample:\n"
+    UNKNOWN, 0,"",  "",option::Arg::None, "\nExample:\n"
     "  stp -g -I path/to/inclue test.stp\n"
   },
   {0,0,0,0,0,0}

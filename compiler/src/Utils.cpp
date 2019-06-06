@@ -108,7 +108,7 @@ std::string FQPath::getFullString() const {
   ostream os(&buf);
 
   for(size_t i=0; i<mParts.size(); i++) {
-    
+
     os << mParts[i];
     if(i+1 < mParts.size()) {
       os << ".";
@@ -118,18 +118,20 @@ std::string FQPath::getFullString() const {
   return buf.str();
 }
 
-const std::string& FQPath::part(size_t i) const
-{
+const std::string& FQPath::part(size_t i) const {
   return mParts[i];
 }
 
-bool FQPath::operator< (const FQPath& o) const
-{
+bool FQPath::operator< (const FQPath& o) const {
   auto a = mParts.begin();
   auto b = o.mParts.begin();
   for(; (a != mParts.end()) && (b != o.mParts.end()); ++a, ++b) {
-    if(*a < *b) return true;
-    if(*b < *a) return false;
+    if(*a < *b) {
+      return true;
+    }
+    if(*b < *a) {
+      return false;
+    }
   }
   return (a == mParts.end()) && (b != o.mParts.end());
 }

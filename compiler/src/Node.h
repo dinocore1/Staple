@@ -86,7 +86,7 @@ public:
     : mType(type) {};
 
   virtual ~Node() {}
-  
+
   YYLTYPE location;
   std::vector<Node*> children;
 
@@ -108,7 +108,7 @@ public:
 class NImport : public Node {
 public:
   NImport(const FQPath& path)
-   : mPath(path) {}
+    : mPath(path) {}
 
   FQPath mPath;
   ACCEPT
@@ -130,7 +130,7 @@ public:
 class NExternFunctionDecl : public Node {
 public:
   NExternFunctionDecl(const std::string& name, NType* returnType,
-                ParamList* params, bool isVarg)
+                      ParamList* params, bool isVarg)
     : Node(TypeId::FunctionDecl), mName(name), mReturnType(returnType),
       mParams(*params), mIsVarg(isVarg) { }
 
@@ -149,7 +149,7 @@ public:
 class NFunctionDecl : public Node {
 public:
   NFunctionDecl(const std::string& name, NType* returnType,
-            ParamList* params, StmtList* stmtList)
+                ParamList* params, StmtList* stmtList)
     : Node(TypeId::Function), mName(name), mReturnType(returnType),
       mParams(*params), mStmts(stmtList) { }
 
@@ -465,7 +465,7 @@ public:
 class NFieldRef : public Expr {
 public:
   NFieldRef(Expr* base, const std::string& field)
-   : mBase(base), mField(field) {}
+    : mBase(base), mField(field) {}
 
   ACCEPT
   Expr* mBase;
@@ -494,20 +494,20 @@ public:
 
 class NStringLiteral : public Expr {
 public:
-    NStringLiteral(const std::string& value)
-     : mStr(value) {}
-   
-     ACCEPT
-     const std::string mStr;
+  NStringLiteral(const std::string& value)
+    : mStr(value) {}
+
+  ACCEPT
+  const std::string mStr;
 };
 
 class NLoad : public Expr {
 public:
   NLoad(Expr* expr)
-   : mExpr(expr) {}
-  
-   ACCEPT
-   Expr* mExpr;
+    : mExpr(expr) {}
+
+  ACCEPT
+  Expr* mExpr;
 };
 
 } // namespace staple

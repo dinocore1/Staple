@@ -18,40 +18,40 @@ namespace staple {
 
 static LLVMContext TheContext;
 
-    
+
 llvm::Type* getLLVMType(const NNamedType* n) {
-    if(n->mTypeName.getNumParts() == 1) {
-        std::string simpleName = n->mTypeName.getSimpleName();
-        if(simpleName.compare("void") == 0){
-            return llvm::Type::getVoidTy(TheContext);
-        } else if(simpleName.compare("bool") == 0) {
-            return llvm::Type::getInt1Ty(TheContext);
-        } else if(simpleName.compare("i8") == 0) {
-            return llvm::Type::getInt8Ty(TheContext);
-        } else if(simpleName.compare("i16") == 0) {
-            return llvm::Type::getInt16Ty(TheContext);
-        } else if(simpleName.compare("i32") == 0) {
-            return llvm::Type::getInt32Ty(TheContext);
-        } else if(simpleName.compare("int") == 0) {
-            return llvm::Type::getInt32Ty(TheContext);
-        }
-    } else {
-        //todo: resolve struct types
+  if(n->mTypeName.getNumParts() == 1) {
+    std::string simpleName = n->mTypeName.getSimpleName();
+    if(simpleName.compare("void") == 0) {
+      return llvm::Type::getVoidTy(TheContext);
+    } else if(simpleName.compare("bool") == 0) {
+      return llvm::Type::getInt1Ty(TheContext);
+    } else if(simpleName.compare("i8") == 0) {
+      return llvm::Type::getInt8Ty(TheContext);
+    } else if(simpleName.compare("i16") == 0) {
+      return llvm::Type::getInt16Ty(TheContext);
+    } else if(simpleName.compare("i32") == 0) {
+      return llvm::Type::getInt32Ty(TheContext);
+    } else if(simpleName.compare("int") == 0) {
+      return llvm::Type::getInt32Ty(TheContext);
     }
-    
-    return nullptr;
+  } else {
+    //todo: resolve struct types
+  }
+
+  return nullptr;
 }
 
 llvm::Type* getLLVMType(const NType* n) {
-    if(isa<NNamedType>(n)) {
-        const NNamedType* namedType = cast<NNamedType>(n);
-        return getLLVMType(namedType);
-        
-    } else if(isa<NPointerType>(n)) {
-        const NPointerType* npointerType = cast<NPointerType>(n);
-        llvm::Type* baseType = getLLVMType(npointerType->mBase);
-        return llvm::PointerType::get(baseType, 0);
-    }
+  if(isa<NNamedType>(n)) {
+    const NNamedType* namedType = cast<NNamedType>(n);
+    return getLLVMType(namedType);
+
+  } else if(isa<NPointerType>(n)) {
+    const NPointerType* npointerType = cast<NPointerType>(n);
+    llvm::Type* baseType = getLLVMType(npointerType->mBase);
+    return llvm::PointerType::get(baseType, 0);
+  }
 
 }
 
@@ -142,7 +142,7 @@ public:
   }
 
   void visit(NClass* classDecl) {
-    
+
   }
 
   void visit(NIfStmt* ifStmt) {
@@ -150,36 +150,36 @@ public:
     BasicBlock* elseBB = BasicBlock::Create(TheContext);
     BasicBlock* endBB = BasicBlock::Create(TheContext);
     bool needsEndBlock = false;
-    
+
     llvm::Value* lcondition = gen(ifStmt->mCondition);
     mILGen->mIRBuilder.CreateCondBr(lcondition, thenBB, elseBB);
-    
+
     //Codegen Then block
     mILGen->mIRBuilder.SetInsertPoint(thenBB);
     ifStmt->mThenStmt->accept(this);
     //thenBB = mILGen->mIRBuilder.GetInsertBlock();
     if(thenBB->getTerminator() == nullptr) {
-        mILGen->mIRBuilder.CreateBr(endBB);
-        needsEndBlock = true;
+      mILGen->mIRBuilder.CreateBr(endBB);
+      needsEndBlock = true;
     }
-    
+
     //Codegen Else block
     mCurrentFunction->getBasicBlockList().push_back(elseBB);
     mILGen->mIRBuilder.SetInsertPoint(elseBB);
     if(ifStmt->mElseStmt != nullptr) {
-        ifStmt->mElseStmt->accept(this);
-        //elseBB = mILGen->mIRBuilder.GetInsertBlock();
+      ifStmt->mElseStmt->accept(this);
+      //elseBB = mILGen->mIRBuilder.GetInsertBlock();
     }
-    
+
     if(elseBB->getTerminator() == nullptr) {
-        mILGen->mIRBuilder.CreateBr(endBB);
-        needsEndBlock = true;
+      mILGen->mIRBuilder.CreateBr(endBB);
+      needsEndBlock = true;
     }
-    
+
     if(needsEndBlock) {
-        //Emit the merge block
-        mCurrentFunction->getBasicBlockList().push_back(endBB);
-        mILGen->mIRBuilder.SetInsertPoint(endBB);
+      //Emit the merge block
+      mCurrentFunction->getBasicBlockList().push_back(endBB);
+      mILGen->mIRBuilder.SetInsertPoint(endBB);
     }
 
   }
@@ -236,23 +236,27 @@ public:
     llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
     set(lit, value);
   }
-  
+
   void visit(NStringLiteral* strLit) {
-      StringRef value(strLit->mStr);
-      
-      llvm::ArrayType* arrayType = llvm::ArrayType::get(llvm::IntegerType::get(mILGen->mModule.getContext(), 8), value.size()+1);
-      
-      GlobalVariable* gvar_array_str = new GlobalVariable(mILGen->mModule, arrayType, true, GlobalValue::PrivateLinkage, 0, ".str");
-      Constant* const_array = ConstantDataArray::getString(mILGen->mModule.getContext(), value, true);
-      gvar_array_str->setInitializer(const_array);
-      
-      std::vector<Constant*> const_ptr_indices;
-      const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0, false)));
-      const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0, false)));
-      
-      Constant* const_ptr = ConstantExpr::getGetElementPtr(arrayType, gvar_array_str, const_ptr_indices);
-      
-      set(strLit, const_ptr);
+    StringRef value(strLit->mStr);
+
+    llvm::ArrayType* arrayType = llvm::ArrayType::get(llvm::IntegerType::get(
+                                   mILGen->mModule.getContext(), 8), value.size()+1);
+
+    GlobalVariable* gvar_array_str = new GlobalVariable(mILGen->mModule, arrayType, true,
+        GlobalValue::PrivateLinkage, 0, ".str");
+    Constant* const_array = ConstantDataArray::getString(mILGen->mModule.getContext(), value, true);
+    gvar_array_str->setInitializer(const_array);
+
+    std::vector<Constant*> const_ptr_indices;
+    const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0,
+                                false)));
+    const_ptr_indices.push_back(llvm::ConstantInt::get(mILGen->mModule.getContext(), APInt(32, 0,
+                                false)));
+
+    Constant* const_ptr = ConstantExpr::getGetElementPtr(arrayType, gvar_array_str, const_ptr_indices);
+
+    set(strLit, const_ptr);
   }
 
   virtual void visit(NOperation* op) {
@@ -289,7 +293,7 @@ public:
     case NOperation::Type::CMPGE:
       result = mILGen->mIRBuilder.CreateICmpSGE(lvalue, rvalue);
       break;
-      
+
     }
 
     set(op, result);
@@ -315,7 +319,7 @@ public:
     set(call, result);
 
   }
-  
+
   void visit(NLoad* load) {
     llvm::Value* l = gen(load->mExpr);
     set(load, mILGen->mIRBuilder.CreateLoad(l));
@@ -329,7 +333,7 @@ public:
     for(NParam* param : function->mParams) {
       argTypes.push_back(getLLVMType(param->mType));
     }
-    
+
     llvm::Type* returnType = getLLVMType(function->mReturnType);
 
     llvm::FunctionType* ftype = llvm::FunctionType::get(returnType, argTypes, false);
@@ -346,10 +350,10 @@ public:
 
       //preamble
       if(function->mReturnType) {
-          AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType);
-          mCurrentFunctionReturnValueAddress = alloc;
+        AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType);
+        mCurrentFunctionReturnValueAddress = alloc;
       }
-      
+
       Function::arg_iterator AI = mCurrentFunction->arg_begin();
       const size_t numArgs = function->mParams.size();
       for(size_t i=0; i<numArgs; i++,++AI) {
@@ -364,18 +368,18 @@ public:
       for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
       }
-      
+
       if(basicBlock->getTerminator() == nullptr) {
-          mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+        mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
       }
-      
+
       //postamble
       mCurrentFunction->getBasicBlockList().push_back(mCurrentFunctionReturnBB);
       mILGen->mIRBuilder.SetInsertPoint(mCurrentFunctionReturnBB);
       LoadInst* returnValue = mILGen->mIRBuilder.CreateLoad(mCurrentFunctionReturnValueAddress);
       mILGen->mIRBuilder.CreateRet(returnValue);
-      
-      
+
+
       pop();
     }
 
@@ -407,9 +411,9 @@ public:
     : mILGen(ir) {}
 
   void visit(NCompileUnit* compileUnit) {
-      visitChildren(compileUnit);
+    visitChildren(compileUnit);
   }
-  
+
   void visit(NExternFunctionDecl* funDecl) {
     std::vector<llvm::Type*> argTypes;
 
@@ -451,10 +455,10 @@ void ILGenerator::generate() {
   llvm::raw_fd_ostream outstream(mCtx->outputFile, err, llvm::sys::fs::F_None);
   mModule.print(outstream, NULL);
   outstream.flush();
-  
+
 
   //mModule.dump();
-  
+
 }
 
 } // namespace staple
