@@ -104,6 +104,7 @@ void Sempass2Visitor::visit(NFunctionDecl* funDecl)
     FQPath fqFunName = *mCurrentPackage;
     fqFunName.add(funDecl->mName);
     FunctionType* funType = dyn_cast_or_null<FunctionType>( mCtx.mKnownTypes[fqFunName] );
+    mCurrentFunctionType = funType;
 
     for(NParam* param : funDecl->mParams) {
       Type* paramType = getType(param->mType);
@@ -143,6 +144,8 @@ void Sempass2Visitor::visit(NType* n)
         visit(cast<NNamedType>(n));
     } else if(isa<NPointerType>(n)) {
         visit(cast<NPointerType>(n));
+    } else if(isa<NArrayType>(n)) {
+        visit(cast<NArrayType>(n));
     }
 
 }
@@ -192,6 +195,12 @@ void Sempass2Visitor::visit(NPointerType* n)
     mCtx.mTypeTable[n] = new PointerType(baseType);
 }
 
+void Sempass2Visitor::visit(NArrayType* n)
+{
+  Type* baseType = getType(n->mBase);
+  mCtx.mTypeTable[n] = new ArrayType(baseType);
+}
+
 void Sempass2Visitor::visit(NLocalVar* n)
 {
     Type* type = getType(n->mType);
@@ -222,11 +231,13 @@ void Sempass2Visitor::visit(Assign* n)
 void Sempass2Visitor::visit(NSymbolRef* n)
 {
     Type* type = mScope->lookup(n->mName);
-    if(type == nullptr) {
-        mCtx.addError("undefined symbol: '" + n->mName + "'",
+    if(type != nullptr) {
+      mCtx.mTypeTable[n] = type;    
+    } else {
+      mCtx.addError("undefined symbol: '" + n->mName + "'",
                     n->location.first_line, n->location.first_column);
     }
-    mCtx.mTypeTable[n] = type;
+    
 }
 
 void Sempass2Visitor::visit(NFieldRef* n)
@@ -272,6 +283,17 @@ void Sempass2Visitor::visit(NCall* n)
                       expr->location.first_line, expr->location.first_column);
       }
     }
+}
+
+void Sempass2Visitor::visit(Return* n)
+{
+  Type* returnType = getType(n->mExpr);
+
+  if(!mCurrentFunctionType->mReturnType->isAssignableFrom(returnType)) {
+    mCtx.addError("expression cannot be assigned to type: '" + mCurrentFunctionType->mReturnType->toString() + "'",
+              n->location.first_line, n->location.first_column);
+  }
+
 }
 
 } // namespace staple

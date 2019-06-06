@@ -50,6 +50,7 @@ public:
   void visit(NType*);
   void visit(NNamedType*);
   void visit(NPointerType*);
+  void visit(NArrayType*);
   void visit(NLocalVar*);
   void visit(Assign*);
   void visit(NSymbolRef*);
@@ -57,12 +58,14 @@ public:
   void visit(NIntLiteral*);
   void visit(NStringLiteral*);
   void visit(NCall*);
+  void visit(Return*);
 
   class Scope;
 
   CompilerContext& mCtx;
   FQPath* mCurrentPackage;
   NImport* mCurrentImport;
+  FunctionType* mCurrentFunctionType;
   ClassType* mCurrentClassType;
   Scope* mScope;
 };
