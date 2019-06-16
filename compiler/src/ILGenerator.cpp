@@ -15,44 +15,6 @@ using namespace llvm;
 
 namespace staple {
 
-static
-llvm::Type* getLLVMType(const NNamedType* n, ILGenerator* ilgen) {
-  if(n->mTypeName.getNumParts() == 1) {
-    std::string simpleName = n->mTypeName.getSimpleName();
-    if(simpleName.compare("void") == 0) {
-      return llvm::Type::getVoidTy(ilgen->mLLVMCtx);
-    } else if(simpleName.compare("bool") == 0) {
-      return llvm::Type::getInt1Ty(ilgen->mLLVMCtx);
-    } else if(simpleName.compare("i8") == 0) {
-      return llvm::Type::getInt8Ty(ilgen->mLLVMCtx);
-    } else if(simpleName.compare("i16") == 0) {
-      return llvm::Type::getInt16Ty(ilgen->mLLVMCtx);
-    } else if(simpleName.compare("i32") == 0) {
-      return llvm::Type::getInt32Ty(ilgen->mLLVMCtx);
-    } else if(simpleName.compare("int") == 0) {
-      return llvm::Type::getInt32Ty(ilgen->mLLVMCtx);
-    }
-  } else {
-    //todo: resolve struct types
-
-  }
-
-  return nullptr;
-}
-
-static
-llvm::Type* getLLVMType(NType* n, ILGenerator* ilgen) {
-  if(isa<NNamedType>(n)) {
-    const NNamedType* namedType = cast<NNamedType>(n);
-    return getLLVMType(namedType, ilgen);
-
-  } else if(isa<NPointerType>(n)) {
-    const NPointerType* npointerType = cast<NPointerType>(n);
-    llvm::Type* baseType = getLLVMType(npointerType->mBase, ilgen);
-    return llvm::PointerType::get(baseType, 0);
-  }
-}
-
 llvm::Type* ILGenerator::getLLVMType(Node* n) {
   return getLLVMType(mCtx->mTypeTable[n]);
 }
