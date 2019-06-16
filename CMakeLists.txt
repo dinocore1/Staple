@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.4.3)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(DownloadProject)
 
-project(Staple)
+project(Staple CXX)
+set (CMAKE_CXX_STANDARD 11)
 
 set (Staple_VERSION_MAJOR 1)
 set (Staple_VERSION_MINOR 0)
