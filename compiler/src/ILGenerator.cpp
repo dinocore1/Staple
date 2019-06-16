@@ -34,15 +34,14 @@ llvm::Type* getLLVMType(const NNamedType* n, ILGenerator* ilgen) {
     }
   } else {
     //todo: resolve struct types
-    
+
   }
 
   return nullptr;
 }
 
 static
-llvm::Type* getLLVMType(NType* n, ILGenerator* ilgen)
-{
+llvm::Type* getLLVMType(NType* n, ILGenerator* ilgen) {
   if(isa<NNamedType>(n)) {
     const NNamedType* namedType = cast<NNamedType>(n);
     return getLLVMType(namedType, ilgen);
@@ -58,48 +57,47 @@ llvm::Type* ILGenerator::getLLVMType(Node* n) {
   return getLLVMType(mCtx->mTypeTable[n]);
 }
 
-llvm::Type* ILGenerator::getLLVMType(Type* t)
-{
+llvm::Type* ILGenerator::getLLVMType(Type* t) {
   switch(t->mTypeId) {
-    case Type::Void:
-      return llvm::Type::getVoidTy(mLLVMCtx);
+  case Type::Void:
+    return llvm::Type::getVoidTy(mLLVMCtx);
 
-    case Type::Bool:
-      return llvm::Type::getInt1Ty(mLLVMCtx);
+  case Type::Bool:
+    return llvm::Type::getInt1Ty(mLLVMCtx);
 
-    case Type::Integer: {
-      IntegerType* intType = cast<IntegerType>(t);
-      return llvm::IntegerType::get(mLLVMCtx, intType->mWidth);
+  case Type::Integer: {
+    IntegerType* intType = cast<IntegerType>(t);
+    return llvm::IntegerType::get(mLLVMCtx, intType->mWidth);
+  }
+
+  case Type::Float:
+    return llvm::Type::getFloatTy(mLLVMCtx);
+
+  case Type::Pointer: {
+    PointerType* ptrType = cast<PointerType>(t);
+    return llvm::PointerType::get(getLLVMType(ptrType->mBase), 0);
+  }
+
+  case Type::Object: {
+    auto it = mTypeCache.find(t);
+    if(it != mTypeCache.end()) {
+      return it->second;
     }
 
-    case Type::Float:
-      return llvm::Type::getFloatTy(mLLVMCtx);
+    ClassType* classType = cast<ClassType>(t);
 
-    case Type::Pointer: {
-      PointerType* ptrType = cast<PointerType>(t);
-      return llvm::PointerType::get(getLLVMType(ptrType->mBase), 0);
+    std::vector<llvm::Type*> body;
+    for(auto it = classType->mFields.begin(); it != classType->mFields.end(); it++) {
+      body.push_back(getLLVMType(it->second));
     }
 
-    case Type::Object: {
-      auto it = mTypeCache.find(t);
-      if(it != mTypeCache.end()) {
-        return it->second;
-      }
+    llvm::StructType* structType = llvm::StructType::create(mLLVMCtx);
+    structType->setBody(body);
 
-      ClassType* classType = cast<ClassType>(t);
+    mTypeCache[t] = structType;
+    return structType;
+  }
 
-      std::vector<llvm::Type*> body;
-      for( auto it = classType->mFields.begin(); it != classType->mFields.end(); it++ ) {
-        body.push_back(getLLVMType(it->second));
-      }
-
-      llvm::StructType* structType = llvm::StructType::create(mLLVMCtx);
-      structType->setBody(body);
-
-      mTypeCache[t] = structType;
-      return structType;
-    }
-      
   }
 }
 
@@ -280,10 +278,9 @@ public:
     set(arrayRef, value);
   }
 
-  void visit(NFieldRef* n)
-  {
+  void visit(NFieldRef* n) {
     llvm::Value* base = gen(n->mBase);
-    
+
     llvm::Value* value = mILGen->mIRBuilder.CreateStructGEP(base, 0);
     set(n, value);
   }
@@ -387,7 +384,7 @@ public:
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : function->mParams) {
-      argTypes.push_back( mILGen->getLLVMType(param->mType));
+      argTypes.push_back(mILGen->getLLVMType(param->mType));
     }
 
     llvm::Type* returnType = mILGen->getLLVMType(function->mReturnType);
@@ -467,8 +464,7 @@ public:
     visitChildren(compileUnit);
   }
 
-  void visit(NClassDecl* n)
-  {
+  void visit(NClassDecl* n) {
     mILGen->getLLVMType(n);
     /*
     ClassType* classType = dyn_cast_or_null<ClassType>(mILGen->mCtx->mTypeTable[n]);
