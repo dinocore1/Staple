@@ -470,8 +470,7 @@ public:
       argTypes.push_back(mILGen->getLLVMType(param->mType));
     }
 
-    llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
-                                  mILGen->mLLVMCtx), argTypes,
+    llvm::FunctionType* ftype = llvm::FunctionType::get(mILGen->getLLVMType(funDecl->mReturnType), argTypes,
                                 funDecl->mIsVarg);
 
     llvm::Function::Create(ftype,
