@@ -32,8 +32,15 @@ llvm::Type* ILGenerator::getLLVMType(Type* t) {
     return llvm::IntegerType::get(mLLVMCtx, intType->mWidth);
   }
 
-  case Type::Float:
-    return llvm::Type::getFloatTy(mLLVMCtx);
+  case Type::Float: {
+    FloatType* floatType = cast<FloatType>(t);
+    if(floatType->mWidth == 32) {
+      return llvm::Type::getFloatTy(mLLVMCtx);
+    } else {
+      return llvm::Type::getDoubleTy(mLLVMCtx);
+    }
+  }
+    
 
   case Type::Pointer: {
     PointerType* ptrType = cast<PointerType>(t);
@@ -397,11 +404,7 @@ public:
 
       pop();
     }
-
-
-
   }
-
 };
 
 ILGenerator::ILGenerator(CompilerContext* ctx)
@@ -492,14 +495,6 @@ void ILGenerator::generate() {
   if(mCtx->generateDebugSymobols) {
     mDIBuider->finalize();
   }
-
-  /*
-      std::vector<llvm::Type*> argTypes;
-      argTypes.push_back(llvm::IntegerType::getInt32Ty(TheContext));
-
-      FunctionType* ftype = FunctionType::get(mILGen->mIRBuilder.getVoidTy(), argTypes, false);
-      Function* blah = Function::Create(ftype, Function::LinkageTypes::ExternalLinkage, "main", &mILGen->mModule);
-  */
 
   std::error_code err;
   llvm::raw_fd_ostream outstream(mCtx->outputFile, err, llvm::sys::fs::F_None);

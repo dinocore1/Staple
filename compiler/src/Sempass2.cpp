@@ -162,6 +162,12 @@ void Sempass2Visitor::visit(NNamedType* n) {
     } else if(simpleName.compare("i64") == 0) {
       mCtx.mTypeTable[n] = const_cast<IntegerType*>(&Primitives::Int64);
 
+    } else if(simpleName.compare("f32") == 0 ||
+              simpleName.compare("float") == 0) {
+      mCtx.mTypeTable[n] = const_cast<FloatType*>(&Primitives::F32);
+
+    } else if(simpleName.compare("f64") == 0) {
+      mCtx.mTypeTable[n] = const_cast<FloatType*>(&Primitives::F64);
     } else {
       //class type
       FQPath fqName = *mCurrentPackage;

@@ -62,7 +62,12 @@ const IntegerType Primitives::Int16(16, true);
 const IntegerType Primitives::UInt32(32, false);
 const IntegerType Primitives::Int32(32, true);
 const IntegerType Primitives::Int64(64, true);
+const FloatType Primitives::F32(32);
+const FloatType Primitives::F64(64);
 const ArrayType Primitives::StringLiteral(&Primitives::UInt8);
+
+
+////////////////////// IntegerType ///////////////////////////
 
 bool IntegerType::isAssignableFrom(const Type* type) const {
   if(isa<PointerType>(type)) {
@@ -76,7 +81,21 @@ bool IntegerType::isAssignableFrom(const Type* type) const {
 std::string IntegerType::toString() const {
   stringbuf buf;
   ostream os(&buf);
-  os << "int" << mWidth;
+  os << "i" << mWidth;
+  return buf.str();
+}
+
+////////////////////// FloatType ////////////////////////////
+
+bool FloatType::isAssignableFrom(const Type* type) const {
+  //todo:
+  return false;
+}
+
+std::string FloatType::toString() const {
+  stringbuf buf;
+  ostream os(&buf);
+  os << "f" << mWidth;
   return buf.str();
 }
 

@@ -1,3 +1,0 @@
-
-void printf(i8* fmt, ...);
-int atoi(i8* str);

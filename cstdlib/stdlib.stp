@@ -1,0 +1,3 @@
+
+int atoi(i8* str);
+f64 atof(i8* str);
