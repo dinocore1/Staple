@@ -419,36 +419,27 @@ ILGenerator::ILGenerator(CompilerContext* ctx)
 class StructVisitor : public Visitor {
 public:
   StructVisitor(ILGenerator* ig)
-    : mILGen(ig)
+    : mILGen(ig), mCurrentPackage(nullptr)
   {}
 
   void visit(NCompileUnit* compileUnit) {
+    FQPath* oldPackage = mCurrentPackage;
+    mCurrentPackage = &compileUnit->mPackage;
     visitChildren(compileUnit);
+    mCurrentPackage = oldPackage;
   }
 
   void visit(NClassDecl* n) {
-    mILGen->getLLVMType(n);
-    /*
-    ClassType* classType = dyn_cast_or_null<ClassType>(mILGen->mCtx->mTypeTable[n]);
-    if(classType == nullptr) {
-      mILGen->mCtx->addError("expecting class type");
-      return;
-    }
+    FQPath fqName = *mCurrentPackage;
+    fqName.add(n->mName);
 
-    llvm::StructType* structType = llvm::StructType::create(mILGen->mLLVMCtx);
-
-    std::vector<llvm::Type*> body;
-    for( auto it = classType->mFields.begin(); it != classType->mFields.end(); it++ ) {
-      body.push_back( mILGen->getLLVMType(it->second) );
-    }
-
-    structType->setBody(body);
-    */
-
+    llvm::StructType* structType = dyn_cast<llvm::StructType>(mILGen->getLLVMType(n));
+    structType->setName(fqName.getFullString());
   }
 
 private:
   ILGenerator* mILGen;
+  FQPath* mCurrentPackage;
 };
 
 class ForwardDeclareMethodVisitor : public Visitor {
