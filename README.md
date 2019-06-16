@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/dinocore1/Staple.svg?branch=master)](https://travis-ci.org/dinocore1/Staple)
 
 Staple Programming Language
 ============================
