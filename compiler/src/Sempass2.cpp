@@ -80,6 +80,7 @@ void Sempass2Visitor::visit(NClassDecl* n) {
 
   ClassType* oldClassType = mCurrentClassType;
   mCurrentClassType = dyn_cast_or_null<ClassType>(mCtx.mKnownTypes[classFQPath]);
+  mCtx.mTypeTable[n] = mCurrentClassType;
   visitChildren(n);
   mCurrentClassType = oldClassType;
 }

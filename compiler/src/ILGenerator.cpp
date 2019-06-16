@@ -7,7 +7,6 @@
 using namespace std;
 
 #include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/FileSystem.h>
@@ -16,43 +15,92 @@ using namespace llvm;
 
 namespace staple {
 
-static LLVMContext TheContext;
-
-
-llvm::Type* getLLVMType(const NNamedType* n) {
+static
+llvm::Type* getLLVMType(const NNamedType* n, ILGenerator* ilgen) {
   if(n->mTypeName.getNumParts() == 1) {
     std::string simpleName = n->mTypeName.getSimpleName();
     if(simpleName.compare("void") == 0) {
-      return llvm::Type::getVoidTy(TheContext);
+      return llvm::Type::getVoidTy(ilgen->mLLVMCtx);
     } else if(simpleName.compare("bool") == 0) {
-      return llvm::Type::getInt1Ty(TheContext);
+      return llvm::Type::getInt1Ty(ilgen->mLLVMCtx);
     } else if(simpleName.compare("i8") == 0) {
-      return llvm::Type::getInt8Ty(TheContext);
+      return llvm::Type::getInt8Ty(ilgen->mLLVMCtx);
     } else if(simpleName.compare("i16") == 0) {
-      return llvm::Type::getInt16Ty(TheContext);
+      return llvm::Type::getInt16Ty(ilgen->mLLVMCtx);
     } else if(simpleName.compare("i32") == 0) {
-      return llvm::Type::getInt32Ty(TheContext);
+      return llvm::Type::getInt32Ty(ilgen->mLLVMCtx);
     } else if(simpleName.compare("int") == 0) {
-      return llvm::Type::getInt32Ty(TheContext);
+      return llvm::Type::getInt32Ty(ilgen->mLLVMCtx);
     }
   } else {
     //todo: resolve struct types
+    
   }
 
   return nullptr;
 }
 
-llvm::Type* getLLVMType(const NType* n) {
+static
+llvm::Type* getLLVMType(NType* n, ILGenerator* ilgen)
+{
   if(isa<NNamedType>(n)) {
     const NNamedType* namedType = cast<NNamedType>(n);
-    return getLLVMType(namedType);
+    return getLLVMType(namedType, ilgen);
 
   } else if(isa<NPointerType>(n)) {
     const NPointerType* npointerType = cast<NPointerType>(n);
-    llvm::Type* baseType = getLLVMType(npointerType->mBase);
+    llvm::Type* baseType = getLLVMType(npointerType->mBase, ilgen);
     return llvm::PointerType::get(baseType, 0);
   }
+}
 
+llvm::Type* ILGenerator::getLLVMType(Node* n) {
+  return getLLVMType(mCtx->mTypeTable[n]);
+}
+
+llvm::Type* ILGenerator::getLLVMType(Type* t)
+{
+  switch(t->mTypeId) {
+    case Type::Void:
+      return llvm::Type::getVoidTy(mLLVMCtx);
+
+    case Type::Bool:
+      return llvm::Type::getInt1Ty(mLLVMCtx);
+
+    case Type::Integer: {
+      IntegerType* intType = cast<IntegerType>(t);
+      return llvm::IntegerType::get(mLLVMCtx, intType->mWidth);
+    }
+
+    case Type::Float:
+      return llvm::Type::getFloatTy(mLLVMCtx);
+
+    case Type::Pointer: {
+      PointerType* ptrType = cast<PointerType>(t);
+      return llvm::PointerType::get(getLLVMType(ptrType->mBase), 0);
+    }
+
+    case Type::Object: {
+      auto it = mTypeCache.find(t);
+      if(it != mTypeCache.end()) {
+        return it->second;
+      }
+
+      ClassType* classType = cast<ClassType>(t);
+
+      std::vector<llvm::Type*> body;
+      for( auto it = classType->mFields.begin(); it != classType->mFields.end(); it++ ) {
+        body.push_back(getLLVMType(it->second));
+      }
+
+      llvm::StructType* structType = llvm::StructType::create(mLLVMCtx);
+      structType->setBody(body);
+
+      mTypeCache[t] = structType;
+      return structType;
+    }
+      
+  }
 }
 
 class Scope {
@@ -129,7 +177,7 @@ public:
     IRBuilder<>::InsertPointGuard guard(mILGen->mIRBuilder);
 
     push();
-    BasicBlock* basicBlock = BasicBlock::Create(TheContext);
+    BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
     mILGen->mIRBuilder.SetInsertPoint(basicBlock);
     visitChildren(block);
     pop();
@@ -146,9 +194,9 @@ public:
   }
 
   void visit(NIfStmt* ifStmt) {
-    BasicBlock* thenBB = BasicBlock::Create(TheContext, "", mCurrentFunction);
-    BasicBlock* elseBB = BasicBlock::Create(TheContext);
-    BasicBlock* endBB = BasicBlock::Create(TheContext);
+    BasicBlock* thenBB = BasicBlock::Create(mILGen->mLLVMCtx, "", mCurrentFunction);
+    BasicBlock* elseBB = BasicBlock::Create(mILGen->mLLVMCtx);
+    BasicBlock* endBB = BasicBlock::Create(mILGen->mLLVMCtx);
     bool needsEndBlock = false;
 
     llvm::Value* lcondition = gen(ifStmt->mCondition);
@@ -194,7 +242,7 @@ public:
   void visit(NBlock* block) {
     push();
 
-    BasicBlock* basicBlock = BasicBlock::Create(TheContext);
+    BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
     mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
     visitChildren(block);
@@ -205,7 +253,7 @@ public:
   }
 
   void visit(NLocalVar* localVar) {
-    llvm::Type* type = llvm::IntegerType::getInt32Ty(TheContext);
+    llvm::Type* type = mILGen->getLLVMType(localVar->mType);
 
     AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
     mScope->defineSymbol(localVar->mName, alloc);
@@ -230,6 +278,14 @@ public:
                            base, index);
 
     set(arrayRef, value);
+  }
+
+  void visit(NFieldRef* n)
+  {
+    llvm::Value* base = gen(n->mBase);
+    
+    llvm::Value* value = mILGen->mIRBuilder.CreateStructGEP(base, 0);
+    set(n, value);
   }
 
   virtual void visit(NIntLiteral* lit) {
@@ -331,10 +387,10 @@ public:
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : function->mParams) {
-      argTypes.push_back(getLLVMType(param->mType));
+      argTypes.push_back( mILGen->getLLVMType(param->mType));
     }
 
-    llvm::Type* returnType = getLLVMType(function->mReturnType);
+    llvm::Type* returnType = mILGen->getLLVMType(function->mReturnType);
 
     llvm::FunctionType* ftype = llvm::FunctionType::get(returnType, argTypes, false);
 
@@ -345,7 +401,7 @@ public:
     if(function->mStmts != NULL) {
       push();
 
-      BasicBlock* basicBlock = BasicBlock::Create(TheContext, "", mCurrentFunction);
+      BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx, "", mCurrentFunction);
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
       //preamble
@@ -363,7 +419,7 @@ public:
         mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
       }
 
-      mCurrentFunctionReturnBB = BasicBlock::Create(TheContext);
+      mCurrentFunctionReturnBB = BasicBlock::Create(mILGen->mLLVMCtx);
 
       for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
@@ -391,14 +447,51 @@ public:
 
 ILGenerator::ILGenerator(CompilerContext* ctx)
   : mCtx(ctx),
-    mIRBuilder(TheContext),
-    mModule(ctx->inputFile.getAbsolutePath().c_str(), TheContext) {
+    mLLVMCtx(),
+    mIRBuilder(mLLVMCtx),
+    mModule(ctx->inputFile.getAbsolutePath().c_str(), mLLVMCtx) {
   if(ctx->generateDebugSymobols) {
     mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
     mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);
     mDIBuider = new DIBuilder(mModule);
   }
 }
+
+class StructVisitor : public Visitor {
+public:
+  StructVisitor(ILGenerator* ig)
+    : mILGen(ig)
+  {}
+
+  void visit(NCompileUnit* compileUnit) {
+    visitChildren(compileUnit);
+  }
+
+  void visit(NClassDecl* n)
+  {
+    mILGen->getLLVMType(n);
+    /*
+    ClassType* classType = dyn_cast_or_null<ClassType>(mILGen->mCtx->mTypeTable[n]);
+    if(classType == nullptr) {
+      mILGen->mCtx->addError("expecting class type");
+      return;
+    }
+
+    llvm::StructType* structType = llvm::StructType::create(mILGen->mLLVMCtx);
+
+    std::vector<llvm::Type*> body;
+    for( auto it = classType->mFields.begin(); it != classType->mFields.end(); it++ ) {
+      body.push_back( mILGen->getLLVMType(it->second) );
+    }
+
+    structType->setBody(body);
+    */
+
+  }
+
+private:
+  ILGenerator* mILGen;
+};
 
 class ForwardDeclareMethodVisitor : public Visitor {
 private:
@@ -414,15 +507,19 @@ public:
     visitChildren(compileUnit);
   }
 
+  void visit(NImport* n) {
+    visitChildren(n);
+  }
+
   void visit(NExternFunctionDecl* funDecl) {
     std::vector<llvm::Type*> argTypes;
 
     for(NParam* param : funDecl->mParams) {
-      argTypes.push_back(getLLVMType(param->mType));
+      argTypes.push_back(mILGen->getLLVMType(param->mType));
     }
 
     llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::IntegerType::getInt32Ty(
-                                  TheContext), argTypes,
+                                  mILGen->mLLVMCtx), argTypes,
                                 funDecl->mIsVarg);
 
     llvm::Function::Create(ftype,
@@ -433,6 +530,10 @@ public:
 };
 
 void ILGenerator::generate() {
+
+  StructVisitor sv(this);
+  mCtx->rootNode->accept(&sv);
+
   ForwardDeclareMethodVisitor fdv(this);
   mCtx->rootNode->accept(&fdv);
 

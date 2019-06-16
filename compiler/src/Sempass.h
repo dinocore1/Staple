@@ -31,6 +31,12 @@ public:
 
 };
 
+/**
+ * Semantic Pass 2 job is to perform static type analysis
+ * for all function arguments and statements. Specifically,
+ * for each node, determine the correct Type and add it to the 
+ * CompilerContext->mTypeTable
+ */
 class Sempass2Visitor : public Visitor {
 public:
   Sempass2Visitor(CompilerContext& ctx);

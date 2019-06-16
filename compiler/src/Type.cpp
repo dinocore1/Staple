@@ -93,7 +93,7 @@ ArrayType::ArrayType(const Type* baseType)
   : Type(TypeId::Array), mBase(baseType) {}
 
 bool ArrayType::isAssignableFrom(const Type* type) const {
-
+  return false;
 }
 
 std::string ArrayType::toString() const {
@@ -109,7 +109,7 @@ FunctionType::FunctionType(const std::vector<Type*>& params, Type* retType)
 {}
 
 bool FunctionType::isAssignableFrom(const Type* type) const {
-
+  return false;
 }
 
 std::string FunctionType::toString() const {
