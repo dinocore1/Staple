@@ -16,6 +16,10 @@ int main(int argc, i8** argv) {
   myobj.x = 5;
   
   printf("myobj.x=%d", myobj.x);
+  if(myobj.x > 5) {
+    MyClass rad;
+    printf("sick");
+  }
   return 0;
 }
 

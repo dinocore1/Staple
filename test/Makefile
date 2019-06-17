@@ -5,13 +5,22 @@ STPC := ../build/compiler/stp
 all: test
 
 clean:
-	rm -f output.o output.ll test
+	rm -f *.o *.ll test
 
-output.ll: devsmart/test1.stp
+fib.ll: fib.stp
 	$(STPC) -I .. -o $@ $<
 
-output.o: output.ll
+fib.o: fib.ll
 	llc -O0 -filetype=obj -o $@ $<
 
-test: output.o
+fib: fib.o
+	gcc -o $@ $<
+
+test1.ll: devsmart/test1.stp
+	$(STPC) -I .. -o $@ $<
+
+test1.o: test1.ll
+	llc -O0 -filetype=obj -o $@ $<
+
+test: test1.o
 	gcc -o $@ $<

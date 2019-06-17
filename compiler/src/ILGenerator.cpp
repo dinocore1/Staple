@@ -194,11 +194,10 @@ public:
     visitChildren(compileUnit);
   }
 
-  void visit(NIfStmt* ifStmt) {
-    BasicBlock* thenBB = BasicBlock::Create(mILGen->mLLVMCtx, "", mCurrentFunction);
-    BasicBlock* elseBB = BasicBlock::Create(mILGen->mLLVMCtx);
-    BasicBlock* endBB = BasicBlock::Create(mILGen->mLLVMCtx);
-    bool needsEndBlock = false;
+  void genifelse(NIfStmt* ifStmt) {
+    BasicBlock* thenBB = BasicBlock::Create(mILGen->mLLVMCtx, "then", mCurrentFunction);
+    BasicBlock* elseBB = BasicBlock::Create(mILGen->mLLVMCtx, "else");
+    BasicBlock* endBB = BasicBlock::Create(mILGen->mLLVMCtx, "ifcont");
 
     llvm::Value* lcondition = gen(ifStmt->mCondition);
     mILGen->mIRBuilder.CreateCondBr(lcondition, thenBB, elseBB);
@@ -206,10 +205,9 @@ public:
     //Codegen Then block
     mILGen->mIRBuilder.SetInsertPoint(thenBB);
     ifStmt->mThenStmt->accept(this);
-    //thenBB = mILGen->mIRBuilder.GetInsertBlock();
+    thenBB = mILGen->mIRBuilder.GetInsertBlock();
     if(thenBB->getTerminator() == nullptr) {
       mILGen->mIRBuilder.CreateBr(endBB);
-      needsEndBlock = true;
     }
 
     //Codegen Else block
@@ -217,25 +215,54 @@ public:
     mILGen->mIRBuilder.SetInsertPoint(elseBB);
     if(ifStmt->mElseStmt != nullptr) {
       ifStmt->mElseStmt->accept(this);
-      //elseBB = mILGen->mIRBuilder.GetInsertBlock();
     }
-
+    elseBB = mILGen->mIRBuilder.GetInsertBlock();
     if(elseBB->getTerminator() == nullptr) {
       mILGen->mIRBuilder.CreateBr(endBB);
-      needsEndBlock = true;
     }
 
-    if(needsEndBlock) {
-      //Emit the merge block
-      mCurrentFunction->getBasicBlockList().push_back(endBB);
-      mILGen->mIRBuilder.SetInsertPoint(endBB);
+
+    mCurrentFunction->getBasicBlockList().push_back(endBB);
+    mILGen->mIRBuilder.SetInsertPoint(endBB);
+  }
+
+  void genif(NIfStmt* ifStmt) {
+    BasicBlock* thenBB = BasicBlock::Create(mILGen->mLLVMCtx, "then", mCurrentFunction);
+    BasicBlock* endBB = BasicBlock::Create(mILGen->mLLVMCtx, "ifcont");
+
+    llvm::Value* lcondition = gen(ifStmt->mCondition);
+    mILGen->mIRBuilder.CreateCondBr(lcondition, thenBB, endBB);
+
+    //Codegen Then block
+    mILGen->mIRBuilder.SetInsertPoint(thenBB);
+    ifStmt->mThenStmt->accept(this);
+    thenBB = mILGen->mIRBuilder.GetInsertBlock();
+    if(thenBB->getTerminator() == nullptr) {
+      mILGen->mIRBuilder.CreateBr(endBB);
+    }
+
+    mCurrentFunction->getBasicBlockList().push_back(endBB);
+    mILGen->mIRBuilder.SetInsertPoint(endBB);
+  }
+
+  void visit(NIfStmt* ifStmt) {
+    if(ifStmt->mElseStmt != nullptr) {
+      genifelse(ifStmt);
+    } else {
+      genif(ifStmt);
     }
 
   }
 
   void visit(Return* returnStmt) {
+
     llvm::Value* expr = gen(returnStmt->mExpr);
-    mILGen->mIRBuilder.CreateStore(expr, mCurrentFunctionReturnValueAddress);
+
+    mScope->destroyLocals(mILGen);
+
+    //mILGen->mIRBuilder.CreateStore(expr, mCurrentFunctionReturnValueAddress);
+    mILGen->mIRBuilder.CreateRet(expr);
+
     //mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
     //mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
@@ -248,7 +275,9 @@ public:
 
     visitChildren(block);
 
-    mScope->destroyLocals(mILGen);
+    if(mILGen->mIRBuilder.GetInsertBlock()->getTerminator() == nullptr) {
+      mScope->destroyLocals(mILGen);
+    }
     pop();
 
     set(block, basicBlock);
@@ -416,8 +445,8 @@ public:
 
       //preamble
       if(function->mReturnType) {
-        AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType);
-        mCurrentFunctionReturnValueAddress = alloc;
+        //AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(returnType);
+        //mCurrentFunctionReturnValueAddress = alloc;
       }
 
       Function::arg_iterator AI = mCurrentFunction->arg_begin();
@@ -435,17 +464,20 @@ public:
         stmt->accept(this);
       }
 
-      mScope->destroyLocals(mILGen);
 
+
+      basicBlock = mILGen->mIRBuilder.GetInsertBlock();
       if(basicBlock->getTerminator() == nullptr) {
+        mScope->destroyLocals(mILGen);
         //mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+        mILGen->mIRBuilder.CreateRetVoid();
       }
 
       //postamble
       //mCurrentFunction->getBasicBlockList().push_back(mCurrentFunctionReturnBB);
       //mILGen->mIRBuilder.SetInsertPoint(mCurrentFunctionReturnBB);
-      LoadInst* returnValue = mILGen->mIRBuilder.CreateLoad(mCurrentFunctionReturnValueAddress);
-      mILGen->mIRBuilder.CreateRet(returnValue);
+      //LoadInst* returnValue = mILGen->mIRBuilder.CreateLoad(mCurrentFunctionReturnValueAddress);
+      //mILGen->mIRBuilder.CreateRet(returnValue);
 
 
       pop();
