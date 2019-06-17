@@ -136,4 +136,19 @@ bool FQPath::operator< (const FQPath& o) const {
   return (a == mParts.end()) && (b != o.mParts.end());
 }
 
+bool FQPath::operator== (const FQPath& o) const {
+  const size_t len = mParts.size();
+  if(len != o.mParts.size()) {
+    return false;
+  }
+
+  for(size_t i=0; i<len; i++) {
+    if(mParts[i] != o.mParts[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 } // namespace staple

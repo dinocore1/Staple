@@ -18,6 +18,7 @@ public:
 
   llvm::Type* getLLVMType(Node*);
   llvm::Type* getLLVMType(Type*);
+  llvm::Function* getClassDestructorFunction(ClassType*);
 
   CompilerContext* mCtx;
   llvm::LLVMContext mLLVMCtx;
@@ -26,6 +27,7 @@ public:
   llvm::Module mModule;
 
   std::map<Type*, llvm::Type*> mTypeCache;
+  std::map<ClassType*, llvm::Function*> mDestructorFunctionCache;
 };
 
 }

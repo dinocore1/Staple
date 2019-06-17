@@ -66,6 +66,7 @@ public:
   size_t getNumParts() const;
   const std::string& part(size_t) const;
   bool operator< (const FQPath&) const;
+  bool operator== (const FQPath&) const;
 
 private:
   std::vector< std::string > mParts;

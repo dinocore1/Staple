@@ -107,8 +107,8 @@ public:
 
 class ClassType : public Type {
 public:
-  ClassType()
-    : Type(TypeId::Object) {}
+  ClassType(const FQPath& fqn)
+    : Type(TypeId::Object), mFQName(fqn) {}
 
 
   std::map<std::string, Type*> mFields;
@@ -120,6 +120,8 @@ public:
 
   bool isAssignableFrom(const Type* type) const;
   std::string toString() const;
+
+  FQPath mFQName;
 };
 
 class Primitives {

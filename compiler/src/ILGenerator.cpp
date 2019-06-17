@@ -40,7 +40,7 @@ llvm::Type* ILGenerator::getLLVMType(Type* t) {
       return llvm::Type::getDoubleTy(mLLVMCtx);
     }
   }
-    
+
 
   case Type::Pointer: {
     PointerType* ptrType = cast<PointerType>(t);
@@ -70,6 +70,32 @@ llvm::Type* ILGenerator::getLLVMType(Type* t) {
   }
 }
 
+llvm::Function* ILGenerator::getClassDestructorFunction(ClassType* classType) {
+  auto it = mDestructorFunctionCache.find(classType);
+  if(it != mDestructorFunctionCache.end()) {
+    return it->second;
+  }
+
+  llvm::StructType* structType = cast<StructType>(getLLVMType(classType));
+  llvm::Type* arg = llvm::PointerType::get(structType, 0);
+  llvm::FunctionType* ftype = llvm::FunctionType::get(llvm::Type::getVoidTy(mLLVMCtx), arg, false);
+  llvm::Function* retval = llvm::Function::Create(ftype,
+                           Function::LinkageTypes::ExternalLinkage,
+                           classType->mFQName.getFullString() + "_kill", &mModule);
+
+  mDestructorFunctionCache[classType] = retval;
+  return retval;
+}
+
+class Cleanup {
+public:
+  Cleanup(llvm::Value* l, llvm::Function* f)
+    : location(l), destructor(f) {}
+
+  llvm::Function* destructor;
+  llvm::Value* location;
+};
+
 class Scope {
 public:
   Scope* mParent;
@@ -77,13 +103,17 @@ public:
   Scope(Scope* scope)
     : mParent(scope) { }
 
-  ~Scope() {
-  }
+  ~Scope() {}
 
 
-  void defineSymbol(const std::string& symbolName, llvm::Value* l) {
+  void defineSymbol(const std::string& symbolName, llvm::Value* l,
+                    llvm::Function* destructor = nullptr) {
     symbolTable[symbolName] = l;
     managedLocations.insert(l);
+
+    if(destructor != nullptr) {
+      localCleanup.push_back(Cleanup(l, destructor));
+    }
   }
 
   llvm::Value* lookup(const std::string& symbolName) {
@@ -99,9 +129,16 @@ public:
     return nullptr;
   }
 
+  void destroyLocals(ILGenerator* ilgen) {
+    for(const Cleanup& var : localCleanup) {
+      ilgen->mIRBuilder.CreateCall(var.destructor, var.location);
+    }
+  }
+
   map<Node*, llvm::Value*> locationTable;
   map<const std::string, llvm::Value*> symbolTable;
   set<llvm::Value*> managedLocations;
+  vector<Cleanup> localCleanup;
 
 
 };
@@ -147,6 +184,7 @@ public:
     BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
     mILGen->mIRBuilder.SetInsertPoint(basicBlock);
     visitChildren(block);
+    mScope->destroyLocals(mILGen);
     pop();
 
     return basicBlock;
@@ -154,10 +192,6 @@ public:
 
   void visit(NCompileUnit* compileUnit) {
     visitChildren(compileUnit);
-  }
-
-  void visit(NClass* classDecl) {
-
   }
 
   void visit(NIfStmt* ifStmt) {
@@ -214,16 +248,26 @@ public:
 
     visitChildren(block);
 
+    mScope->destroyLocals(mILGen);
     pop();
 
     set(block, basicBlock);
   }
 
   void visit(NLocalVar* localVar) {
-    llvm::Type* type = mILGen->getLLVMType(localVar->mType);
+    llvm::Function* destructor = nullptr;
 
-    AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
-    mScope->defineSymbol(localVar->mName, alloc);
+    Type* type = mILGen->mCtx->mTypeTable[localVar->mType];
+    llvm::Type* llvmType = mILGen->getLLVMType(type);
+    AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(llvmType);
+
+
+    if(type->mTypeId == Type::Object) {
+      ClassType* classType = cast<ClassType>(type);
+      destructor = mILGen->getClassDestructorFunction(classType);
+    }
+
+    mScope->defineSymbol(localVar->mName, alloc, destructor);
 
     if(localVar->mInitializer) {
       llvm::Value* vright = gen(localVar->mInitializer);
@@ -391,6 +435,8 @@ public:
         stmt->accept(this);
       }
 
+      mScope->destroyLocals(mILGen);
+
       if(basicBlock->getTerminator() == nullptr) {
         mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
       }
@@ -422,26 +468,39 @@ ILGenerator::ILGenerator(CompilerContext* ctx)
 class StructVisitor : public Visitor {
 public:
   StructVisitor(ILGenerator* ig)
-    : mILGen(ig), mCurrentPackage(nullptr)
+    : mILGen(ig), mCompileUnit(nullptr), mCurrentPackage(nullptr)
   {}
 
-  void visit(NCompileUnit* compileUnit) {
+  void visit(NCompileUnit* n) {
+    if(mCompileUnit == nullptr) {
+      mCompileUnit = n;
+    }
     FQPath* oldPackage = mCurrentPackage;
-    mCurrentPackage = &compileUnit->mPackage;
-    visitChildren(compileUnit);
+    mCurrentPackage = &n->mPackage;
+    visitChildren(n);
     mCurrentPackage = oldPackage;
   }
 
-  void visit(NClassDecl* n) {
-    FQPath fqName = *mCurrentPackage;
-    fqName.add(n->mName);
+  void visit(NImport* n) {
 
-    llvm::StructType* structType = dyn_cast<llvm::StructType>(mILGen->getLLVMType(n));
-    structType->setName(fqName.getFullString());
+  }
+
+  void visit(NClassDecl* n) {
+    bool isLocalClass = mCompileUnit->mPackage == *mCurrentPackage;
+
+    ClassType* classType = cast<ClassType>(mILGen->mCtx->mTypeTable[n]);
+    llvm::StructType* structType = dyn_cast<llvm::StructType>(mILGen->getLLVMType(classType));
+    structType->setName(classType->mFQName.getFullString());
+
+    mILGen->getClassDestructorFunction(classType);
+    if(isLocalClass) {
+
+    }
   }
 
 private:
   ILGenerator* mILGen;
+  NCompileUnit* mCompileUnit;
   FQPath* mCurrentPackage;
 };
 
@@ -470,7 +529,8 @@ public:
       argTypes.push_back(mILGen->getLLVMType(param->mType));
     }
 
-    llvm::FunctionType* ftype = llvm::FunctionType::get(mILGen->getLLVMType(funDecl->mReturnType), argTypes,
+    llvm::FunctionType* ftype = llvm::FunctionType::get(mILGen->getLLVMType(funDecl->mReturnType),
+                                argTypes,
                                 funDecl->mIsVarg);
 
     llvm::Function::Create(ftype,

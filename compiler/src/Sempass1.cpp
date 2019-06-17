@@ -54,7 +54,7 @@ void Sempass1Visitor::visit(NClassDecl* classDecl) {
   FQPath path = mCompileUnitCtx.back()->mPackage;
   path.add(classDecl->mName);
 
-  mCtx.mKnownTypes[path] = new ClassType();
+  mCtx.mKnownTypes[path] = new ClassType(path);
 }
 
 void Sempass1Visitor::visit(NExternFunctionDecl* externalFunDecl) {
