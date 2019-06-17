@@ -1,0 +1,21 @@
+
+
+import cstdlib::stdio;
+import cstdlib::stdlib;
+
+package devsmart;
+
+
+class MyClass {
+  int x;
+  int y;
+}
+
+int main(int argc, i8** argv) {
+  MyClass myobj;
+  myobj.x = 5;
+  
+  printf("myobj.x=%d", myobj.x);
+  return 0;
+}
+

@@ -150,7 +150,7 @@ public:
   ILGenerator* mILGen;
   llvm::Function* mCurrentFunction;
   llvm::Value* mCurrentFunctionReturnValueAddress;
-  llvm::BasicBlock* mCurrentFunctionReturnBB;
+  //llvm::BasicBlock* mCurrentFunctionReturnBB;
 
   ILGenVisitor(ILGenerator* generator)
     : mScope(nullptr), mILGen(generator) {
@@ -236,7 +236,7 @@ public:
   void visit(Return* returnStmt) {
     llvm::Value* expr = gen(returnStmt->mExpr);
     mILGen->mIRBuilder.CreateStore(expr, mCurrentFunctionReturnValueAddress);
-    mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+    //mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
     //mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
 
@@ -429,7 +429,7 @@ public:
         mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
       }
 
-      mCurrentFunctionReturnBB = BasicBlock::Create(mILGen->mLLVMCtx);
+      //mCurrentFunctionReturnBB = BasicBlock::Create(mILGen->mLLVMCtx);
 
       for(NStmt* stmt : *function->mStmts) {
         stmt->accept(this);
@@ -438,12 +438,12 @@ public:
       mScope->destroyLocals(mILGen);
 
       if(basicBlock->getTerminator() == nullptr) {
-        mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
+        //mILGen->mIRBuilder.CreateBr(mCurrentFunctionReturnBB);
       }
 
       //postamble
-      mCurrentFunction->getBasicBlockList().push_back(mCurrentFunctionReturnBB);
-      mILGen->mIRBuilder.SetInsertPoint(mCurrentFunctionReturnBB);
+      //mCurrentFunction->getBasicBlockList().push_back(mCurrentFunctionReturnBB);
+      //mILGen->mIRBuilder.SetInsertPoint(mCurrentFunctionReturnBB);
       LoadInst* returnValue = mILGen->mIRBuilder.CreateLoad(mCurrentFunctionReturnValueAddress);
       mILGen->mIRBuilder.CreateRet(returnValue);
 
@@ -492,9 +492,11 @@ public:
     llvm::StructType* structType = dyn_cast<llvm::StructType>(mILGen->getLLVMType(classType));
     structType->setName(classType->mFQName.getFullString());
 
-    mILGen->getClassDestructorFunction(classType);
+    llvm::Function* destructor = mILGen->getClassDestructorFunction(classType);
     if(isLocalClass) {
-
+      BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx, "", destructor);
+      mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+      mILGen->mIRBuilder.CreateRetVoid();
     }
   }
 
