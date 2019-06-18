@@ -283,4 +283,53 @@ void Sempass2Visitor::visit(Return* n) {
 
 }
 
+void Sempass2Visitor::visit(NIfStmt* n) {
+  Type* conditionType = getType(n->mCondition);
+
+  if(!Primitives::Bool->isAssignableFrom(conditionType)) {
+    mCtx.addError("if condition is not assignable to bool type",
+                  n->mCondition->location.first_line, n->mCondition->location.first_column);
+  }
+
+  n->mThenStmt->accept(this);
+  if(n->mElseStmt != nullptr) {
+    n->mElseStmt->accept(this);
+  }
+
+  mCtx.mTypeTable[n] = const_cast<Type*>(Primitives::Void);
+}
+
+void Sempass2Visitor::visit(NOperation* n) {
+
+  Type* ltype = getType(n->mLeft);
+  Type* rtype = getType(n->mRight);
+
+  Type* type = nullptr;
+  switch(n->mOp) {
+  case NOperation::CMPEQ:
+  case NOperation::CMPNE:
+  case NOperation::CMPLT:
+  case NOperation::CMPLE:
+  case NOperation::CMPGT:
+  case NOperation::CMPGE:
+    type = const_cast<Type*>(Primitives::Bool);
+    break;
+
+  case NOperation::ADD:
+  case NOperation::SUB:
+  case NOperation::MUL:
+  case NOperation::DIV:
+    type = const_cast<IntegerType*>(&Primitives::Int32);
+    break;
+  }
+
+  mCtx.mTypeTable[n] = type;
+
+}
+
+void Sempass2Visitor::visit(NLoad* n) {
+  Type* type = getType(n->mExpr);
+  mCtx.mTypeTable[n] = type;
+}
+
 } // namespace staple

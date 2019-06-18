@@ -65,6 +65,9 @@ public:
   void visit(NStringLiteral*);
   void visit(NCall*);
   void visit(Return*);
+  void visit(NIfStmt*);
+  void visit(NOperation*);
+  void visit(NLoad*);
 
   class Scope;
 
