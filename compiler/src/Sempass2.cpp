@@ -208,7 +208,7 @@ void Sempass2Visitor::visit(NLocalVar* n) {
   }
 }
 
-void Sempass2Visitor::visit(Assign* n) {
+void Sempass2Visitor::visit(NAssign* n) {
   Type* ltype = getType(n->mLeft);
   Type* rtype = getType(n->mRight);
 
@@ -263,7 +263,7 @@ void Sempass2Visitor::visit(NCall* n) {
   for(size_t i=0; i<funType->mParams.size(); i++) {
     Type* declType = funType->mParams[i];
 
-    Expr* expr = n->mArgList[i];
+    NExpr* expr = n->mArgList[i];
     Type* paramType = getType(expr);
     if(!declType->isAssignableFrom(paramType)) {
       mCtx.addError("expression cannot be assigned to type: '" + declType->toString() + "'",
@@ -272,7 +272,7 @@ void Sempass2Visitor::visit(NCall* n) {
   }
 }
 
-void Sempass2Visitor::visit(Return* n) {
+void Sempass2Visitor::visit(NReturn* n) {
   Type* returnType = getType(n->mExpr);
 
   if(!mCurrentFunctionType->mReturnType->isAssignableFrom(returnType)) {
@@ -330,6 +330,13 @@ void Sempass2Visitor::visit(NOperation* n) {
 void Sempass2Visitor::visit(NLoad* n) {
   Type* type = getType(n->mExpr);
   mCtx.mTypeTable[n] = type;
+}
+
+void Sempass2Visitor::visit(NBlock* n)
+{
+  push();
+  visitChildren(n);
+  pop();
 }
 
 } // namespace staple

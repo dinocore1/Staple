@@ -254,7 +254,7 @@ public:
 
   }
 
-  void visit(Return* returnStmt) {
+  void visit(NReturn* returnStmt) override {
 
     llvm::Value* expr = gen(returnStmt->mExpr);
 
@@ -267,20 +267,20 @@ public:
     //mILGen->mIRBuilder.CreateRet(getValue(expr));
   }
 
-  void visit(NBlock* block) {
+  void visit(NBlock* n) override {
     push();
 
-    BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
-    mILGen->mIRBuilder.SetInsertPoint(basicBlock);
+    //BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
+    //mILGen->mIRBuilder.SetInsertPoint(basicBlock);
 
-    visitChildren(block);
+    visitChildren(n);
 
     if(mILGen->mIRBuilder.GetInsertBlock()->getTerminator() == nullptr) {
       mScope->destroyLocals(mILGen);
     }
     pop();
 
-    set(block, basicBlock);
+    //set(n, basicBlock);
   }
 
   void visit(NLocalVar* localVar) {
@@ -394,7 +394,7 @@ public:
     set(op, result);
   }
 
-  virtual void visit(Assign* assign) {
+  virtual void visit(NAssign* assign) {
     llvm::Value* lright = gen(assign->mRight);
     llvm::Value* lleft = gen(assign->mLeft);
 
@@ -405,7 +405,7 @@ public:
 
     llvm::Function* func = mILGen->mModule.getFunction(call->mName);
     std::vector<llvm::Value*> args;
-    for(Expr* argExp : call->mArgList) {
+    for(NExpr* argExp : call->mArgList) {
       llvm::Value* argLoc = gen(argExp);
       args.push_back(argLoc);
     }

@@ -18,9 +18,8 @@ class NPointerType;
 class NCall;
 class NStmt;
 class NIfStmt;
-class Assign;
-class Return;
-class Block;
+class NAssign;
+class NReturn;
 class NOperation;
 class NLocalVar;
 class NArrayDecl;
@@ -39,7 +38,7 @@ public:
   virtual ~Visitor() {}
 
   void visitChildren(Node* node);
-  virtual void visit(Node* node);
+  virtual void visit(Node*);
   VISIT(NCompileUnit)
   VISIT(NImport)
   VISIT(NFunctionDecl)
@@ -53,9 +52,8 @@ public:
   VISIT(NLocalVar)
   VISIT(NArrayDecl)
   VISIT(NIfStmt)
-  VISIT(Assign)
-  VISIT(Return)
-  VISIT(Block)
+  VISIT(NAssign)
+  VISIT(NReturn)
   VISIT(NOperation)
   VISIT(NSymbolRef)
   VISIT(NFieldRef)
@@ -63,6 +61,7 @@ public:
   VISIT(NIntLiteral)
   VISIT(NStringLiteral)
   VISIT(NLoad)
+  VISIT(NBlock)
 
 };
 
@@ -294,14 +293,14 @@ public:
   }
 };
 
-class Expr : public Node {
+class NExpr : public Node {
 public:
 
 };
 
 class NIfStmt : public NStmt {
 public:
-  NIfStmt(Expr* condition, NStmt* thenStmt, NStmt* elseStmt = nullptr)
+  NIfStmt(NExpr* condition, NStmt* thenStmt, NStmt* elseStmt = nullptr)
     : mCondition(condition), mThenStmt(thenStmt), mElseStmt(elseStmt) {
     add(condition);
     add(thenStmt);
@@ -312,14 +311,14 @@ public:
 
   ACCEPT
 
-  Expr* mCondition;
+  NExpr* mCondition;
   NStmt* mThenStmt;
   NStmt* mElseStmt;
 };
 
-class Assign : public NStmt {
+class NAssign : public NStmt {
 public:
-  Assign(Expr* l, Expr* r)
+  NAssign(NExpr* l, NExpr* r)
     : mLeft(l), mRight(r) {
     children.push_back(l);
     children.push_back(r);
@@ -327,31 +326,31 @@ public:
 
   ACCEPT
 
-  Expr* mLeft;
-  Expr* mRight;
+  NExpr* mLeft;
+  NExpr* mRight;
 };
 
-class StmtExpr : public NStmt {
+class NStmtExpr : public NStmt {
 public:
-  StmtExpr(Expr* expr)
+  NStmtExpr(NExpr* expr)
     : mExpr(expr) {
     children.push_back(expr);
   }
 
   ACCEPT
 
-  Expr* mExpr;
+  NExpr* mExpr;
 };
 
-class Return : public NStmt {
+class NReturn : public NStmt {
 public:
-  Return(Expr* expr)
+  NReturn(NExpr* expr)
     : mExpr(expr) {
     children.push_back(expr);
   }
 
   ACCEPT
-  Expr* mExpr;
+  NExpr* mExpr;
 };
 
 class NBlock : public NStmt {
@@ -372,13 +371,13 @@ public:
   NLocalVar(const std::string& name, NType* type)
     : mName(name), mType(type), mInitializer(nullptr) { };
 
-  NLocalVar(const std::string& name, NType* type, Expr* initializer)
+  NLocalVar(const std::string& name, NType* type, NExpr* initializer)
     : mName(name), mType(type), mInitializer(initializer) {}
 
   ACCEPT
   std::string mName;
   NType* mType;
-  Expr* mInitializer;
+  NExpr* mInitializer;
 };
 
 class NArrayDecl : public NLocalVar {
@@ -390,7 +389,7 @@ public:
   uint32_t mSize;
 };
 
-class NOperation : public Expr {
+class NOperation : public NExpr {
 public:
   enum Type {
     ADD,
@@ -405,7 +404,7 @@ public:
     CMPGE
   };
 
-  NOperation(Type type, Expr* left, Expr* right)
+  NOperation(Type type, NExpr* left, NExpr* right)
     : mOp(type), mLeft(left), mRight(right) {
     add(left);
     add(right);
@@ -413,34 +412,34 @@ public:
 
   ACCEPT
   Type mOp;
-  Expr* mLeft;
-  Expr* mRight;
+  NExpr* mLeft;
+  NExpr* mRight;
 };
 
-class NNot : public Expr {
+class NNot : public NExpr {
 public:
-  NNot(Expr* expr)
+  NNot(NExpr* expr)
     : mExpr(expr) {
     children.push_back(expr);
   }
 
   ACCEPT
-  Expr* mExpr;
+  NExpr* mExpr;
 };
 
-class NNeg : public Expr {
+class NNeg : public NExpr {
 public:
-  NNeg(Expr* expr)
+  NNeg(NExpr* expr)
     : mExpr(expr) {
     children.push_back(expr);
   }
 
   ACCEPT
-  Expr* mExpr;
+  NExpr* mExpr;
 
 };
 
-class NCall : public Expr {
+class NCall : public NExpr {
 public:
   NCall(const std::string& name, ExprList* args)
     : mName(name), mArgList(*args) {
@@ -452,7 +451,7 @@ public:
   ExprList mArgList;
 };
 
-class NSymbolRef : public Expr {
+class NSymbolRef : public NExpr {
 public:
   NSymbolRef(const std::string& name)
     : mName(name) {}
@@ -462,28 +461,28 @@ public:
 
 };
 
-class NFieldRef : public Expr {
+class NFieldRef : public NExpr {
 public:
-  NFieldRef(Expr* base, const std::string& field)
+  NFieldRef(NExpr* base, const std::string& field)
     : mBase(base), mField(field) {}
 
   ACCEPT
-  Expr* mBase;
+  NExpr* mBase;
   const std::string mField;
 };
 
-class NArrayRef : public Expr {
+class NArrayRef : public NExpr {
 public:
-  NArrayRef(Expr* base, Expr* index)
+  NArrayRef(NExpr* base, NExpr* index)
     : mBase(base), mIndex(index) {}
 
   ACCEPT
 
-  Expr* mBase;
-  Expr* mIndex;
+  NExpr* mBase;
+  NExpr* mIndex;
 };
 
-class NIntLiteral : public Expr {
+class NIntLiteral : public NExpr {
 public:
   NIntLiteral(int64_t value)
     : mValue(value) {}
@@ -492,7 +491,7 @@ public:
   const int64_t mValue;
 };
 
-class NStringLiteral : public Expr {
+class NStringLiteral : public NExpr {
 public:
   NStringLiteral(const std::string& value)
     : mStr(value) {}
@@ -501,13 +500,13 @@ public:
   const std::string mStr;
 };
 
-class NLoad : public Expr {
+class NLoad : public NExpr {
 public:
-  NLoad(Expr* expr)
+  NLoad(NExpr* expr)
     : mExpr(expr) {}
 
   ACCEPT
-  Expr* mExpr;
+  NExpr* mExpr;
 };
 
 } // namespace staple

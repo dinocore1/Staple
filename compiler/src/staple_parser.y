@@ -11,7 +11,7 @@
 
 %code requires {
 #include "stdafx.h"
-typedef std::vector<staple::Expr*> ExprList;
+typedef std::vector<staple::NExpr*> ExprList;
 typedef std::vector<staple::NStmt*> StmtList;
 typedef std::vector<staple::NParam*> ParamList;
 }
@@ -22,7 +22,7 @@ typedef std::vector<staple::NParam*> ParamList;
   staple::Node* node;
   staple::NType* type;
   staple::NStmt* stmt;
-  staple::Expr* expr;
+  staple::NExpr* expr;
   StmtList* stmtlist;
   ExprList* exprlist;
   ParamList* paramlist;
@@ -155,13 +155,13 @@ type
   ;
 
 stmt
-  : lvalue TEQUAL expr TSEMI { $$ = new Assign($1, $3); $$->location = @$; }
-  | funcall TSEMI { $$ = (NStmt*)$1; }
-  | methodcall TSEMI { $$ = (NStmt*)$1; }
-  | type TID TSEMI { $$ = new NLocalVar(*$2, $1); delete $2; }
+  : lvalue TEQUAL expr TSEMI { $$ = new NAssign($1, $3); $$->location = @$; }
+  | funcall TSEMI { $$ = (NStmt*)$1; $$->location = @$; }
+  | methodcall TSEMI { $$ = (NStmt*)$1; $$->location = @$; }
+  | type TID TSEMI { $$ = new NLocalVar(*$2, $1); delete $2; $$->location = @$; }
   | type TID TEQUAL expr TSEMI
     { $$ = new NLocalVar(*$2, $1, $4); delete $2; $$->location = @$; }
-  | TRETURN expr TSEMI { $$ = new Return($2); $$->location = @$; }
+  | TRETURN expr TSEMI { $$ = new NReturn($2); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt %prec ELSE { $$ = new NIfStmt($3, $5); $$->location = @$; }
   | TIF TLPAREN expr TRPAREN stmt TELSE stmt { $$ = new NIfStmt($3, $5, $7); $$->location = @$; }
   | TFOR TLPAREN stmt stmt stmt TRPAREN stmt {}
@@ -174,11 +174,11 @@ stmtlist
   ;
 
 block
-  : TLBRACE stmtlist TRBRACE { $$ = new NBlock($2); }
+  : TLBRACE stmtlist TRBRACE { $$ = new NBlock($2); $$->location = @$; }
   ;
 
 lvalue
-  : TID { $$ = new NSymbolRef(*$1); delete $1; }
+  : TID { $$ = new NSymbolRef(*$1); delete $1; $$->location = @$; }
   | funcall
   | fieldref { $$ = $1; }
   | methodcall
@@ -186,16 +186,16 @@ lvalue
   ;
 
 fieldref
-  : lvalue TDOT TID { $$ = new NFieldRef($1, *$3); delete $3; }
+  : lvalue TDOT TID { $$ = new NFieldRef($1, *$3); delete $3; $$->location = @$; }
   ;
 
 arrayref
   : lvalue TLBRACKET expr TRBRACKET
-  { $$ = new NArrayRef(new NLoad($1), $3); }
+  { $$ = new NArrayRef(new NLoad($1), $3); $$->location = @$; }
   ;
 
 funcall
-  : TID TLPAREN arglist TRPAREN { $$ = new NCall(*$1, $3); delete $1;}
+  : TID TLPAREN arglist TRPAREN { $$ = new NCall(*$1, $3); delete $1; $$->location = @$; }
   ;
 
 arglist

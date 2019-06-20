@@ -289,7 +289,7 @@ public:
     for(int i=0; i<(int)funType->mParams.size(); i++) {
       Type* declType = funType->mParams[i];
 
-      Expr* expr = funcall->mArgList[i];
+      NExpr* expr = funcall->mArgList[i];
       Type* paramType = getType(expr);
       if(!declType->isAssignableFrom(paramType)) {
         mCtx.addError("expression cannot be assigned to type: '" + declType->toString() + "'",
@@ -351,7 +351,7 @@ public:
     pop();
   }
 
-  void visit(Assign* assign) {
+  void visit(NAssign* assign) {
     Type* ltype = getType(assign->mLeft);
     Type* rtype = getType(assign->mRight);
 

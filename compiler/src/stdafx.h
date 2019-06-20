@@ -28,7 +28,7 @@ class NParam;
 class NLocalVar;
 class NStmt;
 class NBlock;
-class Expr;
+class NExpr;
 class Not;
 class Neg;
 class Id;

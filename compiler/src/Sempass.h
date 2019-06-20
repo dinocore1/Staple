@@ -58,16 +58,17 @@ public:
   void visit(NPointerType*);
   void visit(NArrayType*);
   void visit(NLocalVar*);
-  void visit(Assign*);
+  void visit(NAssign*);
   void visit(NSymbolRef*);
   void visit(NFieldRef*);
   void visit(NIntLiteral*);
   void visit(NStringLiteral*);
   void visit(NCall*);
-  void visit(Return*);
+  void visit(NReturn*);
   void visit(NIfStmt*);
   void visit(NOperation*);
   void visit(NLoad*);
+  void visit(NBlock*) override;
 
   class Scope;
 
