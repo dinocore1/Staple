@@ -15,10 +15,10 @@ int main(int argc, i8** argv) {
   MyClass myobj;
   myobj.x = 5;
   
-  printf("myobj.x=%d", myobj.x);
+  printf("myobj.x=%d\n", myobj.x);
   if(myobj.x >= 5) {
     MyClass rad;
-    printf("sick");
+    printf("sick\n");
   }
   return 0;
 }

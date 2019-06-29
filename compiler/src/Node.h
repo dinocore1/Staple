@@ -493,11 +493,12 @@ public:
 
 class NStringLiteral : public NExpr {
 public:
-  NStringLiteral(const std::string& value)
-    : mStr(value) {}
+  NStringLiteral(const std::string& value);
+
+  static std::string doEscapeProcessing(const std::string&);
 
   ACCEPT
-  const std::string mStr;
+  std::string mStr;
 };
 
 class NLoad : public NExpr {

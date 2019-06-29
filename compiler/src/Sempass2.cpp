@@ -332,8 +332,7 @@ void Sempass2Visitor::visit(NLoad* n) {
   mCtx.mTypeTable[n] = type;
 }
 
-void Sempass2Visitor::visit(NBlock* n)
-{
+void Sempass2Visitor::visit(NBlock* n) {
   push();
   visitChildren(n);
   pop();
