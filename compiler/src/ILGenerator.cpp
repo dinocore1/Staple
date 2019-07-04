@@ -70,6 +70,32 @@ llvm::Type* ILGenerator::getLLVMType(Type* t) {
   }
 }
 
+llvm::DIType* ILGenerator::getLLVMDebugType(Node* n) {
+  return getLLVMDebugType(mCtx->mTypeTable[n]);
+}
+
+llvm::DIType* ILGenerator::getLLVMDebugType(Type* t) {
+  llvm::DIType* retval = nullptr;
+
+  switch(t->mTypeId) {
+    case Type::Integer:
+      static llvm::DIType* debugIntType = nullptr;
+      if(debugIntType == nullptr) {
+        IntegerType* intType = cast<IntegerType>(t);
+        debugIntType = mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
+      }
+      retval = debugIntType;
+      break;
+
+      case Type::Pointer:
+        PointerType* ptrType = cast<PointerType>(t);
+        retval = mDIBuider->createPointerType( getLLVMDebugType(ptrType->mBase), 32 );
+        break;
+  }
+
+  return retval;
+}
+
 llvm::Function* ILGenerator::getClassDestructorFunction(ClassType* classType) {
   auto it = mDestructorFunctionCache.find(classType);
   if(it != mDestructorFunctionCache.end()) {
@@ -139,8 +165,14 @@ public:
   map<const std::string, llvm::Value*> symbolTable;
   set<llvm::Value*> managedLocations;
   vector<Cleanup> localCleanup;
+  llvm::DIScope* debugCtx;
 
 
+};
+
+struct DebugInfo {
+  llvm::DICompileUnit* compileUnit;
+  llvm::DIFile* file;
 };
 
 class ILGenVisitor : public Visitor {
@@ -150,7 +182,8 @@ public:
   ILGenerator* mILGen;
   llvm::Function* mCurrentFunction;
   llvm::Value* mCurrentFunctionReturnValueAddress;
-  //llvm::BasicBlock* mCurrentFunctionReturnBB;
+
+  DebugInfo mDebugInfo;
 
   ILGenVisitor(ILGenerator* generator)
     : mScope(nullptr), mILGen(generator) {
@@ -165,6 +198,10 @@ public:
     Scope* top = mScope;
     mScope = mScope->mParent;
     delete top;
+  }
+
+  void emitDebugLocation(Node* n) {
+    mILGen->mIRBuilder.SetCurrentDebugLocation(llvm::DebugLoc::get( n->location.first_line, n->location.first_column, mScope->debugCtx ));
   }
 
   void set(Node* n, llvm::Value* l) {
@@ -191,6 +228,14 @@ public:
   }
 
   void visit(NCompileUnit* compileUnit) {
+
+    if(mILGen->mDIBuider) {
+      mDebugInfo.file = mILGen->mDIBuider->createFile(mILGen->mCtx->inputFile.getPath().c_str(), ".");
+      mDebugInfo.compileUnit = mILGen->mDIBuider->createCompileUnit(dwarf::DW_LANG_C, mDebugInfo.file, "Staple Compiler", 0, "", 0);
+      mScope->debugCtx = mDebugInfo.file;
+    }
+    
+
     visitChildren(compileUnit);
   }
 
@@ -284,6 +329,7 @@ public:
   }
 
   void visit(NLocalVar* localVar) {
+    emitDebugLocation(localVar);
     llvm::Function* destructor = nullptr;
 
     Type* type = mILGen->mCtx->mTypeTable[localVar->mType];
@@ -423,10 +469,17 @@ public:
 
   void visit(NFunctionDecl* function) {
 
+    llvm::DISubprogram* subprogram;
     std::vector<llvm::Type*> argTypes;
+    SmallVector<Metadata*, 8> debugArgTypes;
 
     for(NParam* param : function->mParams) {
       argTypes.push_back(mILGen->getLLVMType(param->mType));
+
+      if(mILGen->mCtx->generateDebugSymobols) {
+        debugArgTypes.push_back(mILGen->getLLVMDebugType(param->mType));
+      }
+
     }
 
     llvm::Type* returnType = mILGen->getLLVMType(function->mReturnType);
@@ -437,8 +490,19 @@ public:
                                         Function::LinkageTypes::ExternalLinkage,
                                         function->mName, &mILGen->mModule);
 
+    if(mILGen->mCtx->generateDebugSymobols) {
+      llvm::DISubroutineType* subType = mILGen->mDIBuider->createSubroutineType( mILGen->mDIBuider->getOrCreateTypeArray( debugArgTypes ) );
+      subprogram = mILGen->mDIBuider->createFunction(mScope->debugCtx, function->mName, llvm::StringRef(),
+          mDebugInfo.file, function->location.first_line, subType, function->location.first_line, DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
+      mCurrentFunction->setSubprogram(subprogram);
+    }
+
     if(function->mStmts != NULL) {
       push();
+
+      if(mILGen->mCtx->generateDebugSymobols) {
+        mScope->debugCtx = subprogram;
+      }
 
       BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx, "", mCurrentFunction);
       mILGen->mIRBuilder.SetInsertPoint(basicBlock);
@@ -489,7 +553,8 @@ ILGenerator::ILGenerator(CompilerContext* ctx)
   : mCtx(ctx),
     mLLVMCtx(),
     mIRBuilder(mLLVMCtx),
-    mModule(ctx->inputFile.getAbsolutePath().c_str(), mLLVMCtx) {
+    mModule(ctx->inputFile.getAbsolutePath().c_str(), mLLVMCtx),
+    mDIBuider(nullptr) {
   if(ctx->generateDebugSymobols) {
     mModule.addModuleFlag(llvm::Module::Warning, "Dwarf Version", 4);
     mModule.addModuleFlag(llvm::Module::Error, "Debug Info Version", llvm::DEBUG_METADATA_VERSION);

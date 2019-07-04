@@ -31,12 +31,11 @@ enum  optionIndex { UNKNOWN, HELP, GEN_DEBUG, INCLUDE_DIR, OUTPUT_FILE };
 const option::Descriptor usage[] = {
   {
     UNKNOWN, 0,"", "",option::Arg::None, "USAGE: stp [options] file.stp\n\n"
-    "Options:"
-  },
+                                          "Options:"},
+  {HELP, 0, "", "help", option::Arg::None, "  --help \tprint help"},
   {GEN_DEBUG,    0,"g", "debug",option::Arg::None, "  -g  \tGenerate debug symbols." },
   {INCLUDE_DIR,    0,"I", "",NonEmpty, "  -I  \tInclude directory." },
   {OUTPUT_FILE, 0,"o", "output file", NonEmpty, "  -o out.ll \tOutput file or '-' for stdout"},
-  {HELP, 0, "", "help", option::Arg::None, "  --help \tprint help"},
   {
     UNKNOWN, 0,"",  "",option::Arg::None, "\nExample:\n"
     "  stp -g -I path/to/inclue test.stp\n"
@@ -65,6 +64,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "ERROR: no compile file entered");
     return 1;
   }
+
   for(int i = 0; i < parse.nonOptionsCount(); ++i) {
     CompilerContext ctx;
     ctx.generateDebugSymobols = options[GEN_DEBUG];

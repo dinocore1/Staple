@@ -102,7 +102,7 @@ externFunctionDecl
 
 functionDecl
   : type TID TLPAREN paramlist TRPAREN TLBRACE stmtlist TRBRACE
-    { $$ = new NFunctionDecl(*$2, $1, $4, $7); delete $2; delete $4; }
+    { $$ = new NFunctionDecl(*$2, $1, $4, $7); delete $2; delete $4; $$->location = @$; }
   ;
 
 fqpath

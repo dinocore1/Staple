@@ -18,6 +18,8 @@ public:
 
   llvm::Type* getLLVMType(Node*);
   llvm::Type* getLLVMType(Type*);
+  llvm::DIType* getLLVMDebugType(Node*);
+  llvm::DIType* getLLVMDebugType(Type* t);
   llvm::Function* getClassDestructorFunction(ClassType*);
 
   CompilerContext* mCtx;
