@@ -1,0 +1,10 @@
+
+int bar() {
+    int y;
+    return 1;
+}
+
+int main() {
+    int x;
+    return bar();
+}
