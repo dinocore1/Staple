@@ -31,7 +31,8 @@ enum  optionIndex { UNKNOWN, HELP, GEN_DEBUG, INCLUDE_DIR, OUTPUT_FILE };
 const option::Descriptor usage[] = {
   {
     UNKNOWN, 0,"", "",option::Arg::None, "USAGE: stp [options] file.stp\n\n"
-                                          "Options:"},
+    "Options:"
+  },
   {HELP, 0, "", "help", option::Arg::None, "  --help \tprint help"},
   {GEN_DEBUG,    0,"g", "debug",option::Arg::None, "  -g  \tGenerate debug symbols." },
   {INCLUDE_DIR,    0,"I", "",NonEmpty, "  -I  \tInclude directory." },

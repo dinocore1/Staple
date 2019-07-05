@@ -78,19 +78,20 @@ llvm::DIType* ILGenerator::getLLVMDebugType(Type* t) {
   llvm::DIType* retval = nullptr;
 
   switch(t->mTypeId) {
-    case Type::Integer:
-      static llvm::DIType* debugIntType = nullptr;
-      if(debugIntType == nullptr) {
-        IntegerType* intType = cast<IntegerType>(t);
-        debugIntType = mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
-      }
-      retval = debugIntType;
-      break;
+  case Type::Integer: {
+    //static llvm::DIType* debugIntType = nullptr;
+    //if(debugIntType == nullptr) {
+      IntegerType* intType = cast<IntegerType>(t);
+      retval = mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
+    //}
+    //retval = debugIntType;
+    
+  } break;
 
-      case Type::Pointer:
-        PointerType* ptrType = cast<PointerType>(t);
-        retval = mDIBuider->createPointerType( getLLVMDebugType(ptrType->mBase), 32 );
-        break;
+  case Type::Pointer:
+    PointerType* ptrType = cast<PointerType>(t);
+    retval = mDIBuider->createPointerType(getLLVMDebugType(ptrType->mBase), 32);
+    break;
   }
 
   return retval;
@@ -201,7 +202,8 @@ public:
   }
 
   void emitDebugLocation(Node* n) {
-    mILGen->mIRBuilder.SetCurrentDebugLocation(llvm::DebugLoc::get( n->location.first_line, n->location.first_column, mScope->debugCtx ));
+    mILGen->mIRBuilder.SetCurrentDebugLocation(llvm::DebugLoc::get(n->location.first_line,
+        n->location.first_column, mScope->debugCtx));
   }
 
   void set(Node* n, llvm::Value* l) {
@@ -231,10 +233,11 @@ public:
 
     if(mILGen->mDIBuider) {
       mDebugInfo.file = mILGen->mDIBuider->createFile(mILGen->mCtx->inputFile.getPath().c_str(), ".");
-      mDebugInfo.compileUnit = mILGen->mDIBuider->createCompileUnit(dwarf::DW_LANG_C, mDebugInfo.file, "Staple Compiler", 0, "", 0);
+      mDebugInfo.compileUnit = mILGen->mDIBuider->createCompileUnit(dwarf::DW_LANG_C, mDebugInfo.file,
+                               "Staple Compiler", 0, "", 0);
       mScope->debugCtx = mDebugInfo.file;
     }
-    
+
 
     visitChildren(compileUnit);
   }
@@ -313,7 +316,19 @@ public:
   }
 
   void visit(NBlock* n) override {
+
+    llvm::DILexicalBlock* newDebugScope;
+    if(mILGen->mCtx->generateDebugSymobols) {
+      newDebugScope = mILGen->mDIBuider->createLexicalBlock(mScope->debugCtx, mDebugInfo.file,
+                      n->location.first_line, n->location.first_column);
+    }
+
+
     push();
+
+    if(mILGen->mCtx->generateDebugSymobols) {
+      mScope->debugCtx = newDebugScope;
+    }
 
     //BasicBlock* basicBlock = BasicBlock::Create(mILGen->mLLVMCtx);
     //mILGen->mIRBuilder.SetInsertPoint(basicBlock);
@@ -336,6 +351,18 @@ public:
     llvm::Type* llvmType = mILGen->getLLVMType(type);
     AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(llvmType);
 
+
+    if(mILGen->mCtx->generateDebugSymobols) {
+      llvm::DILocalVariable* debugLocalVar = mILGen->mDIBuider->createAutoVariable(mScope->debugCtx,
+                                             localVar->mName, mDebugInfo.file,
+                                             localVar->location.first_line, mILGen->getLLVMDebugType(type), true);
+
+      mILGen->mDIBuider->insertDeclare(alloc, debugLocalVar, mILGen->mDIBuider->createExpression(),
+                                       llvm::DebugLoc::get(localVar->location.first_line,
+                                           localVar->location.first_column,
+                                           mScope->debugCtx),
+                                       mILGen->mIRBuilder.GetInsertBlock());
+    }
 
     if(type->mTypeId == Type::Object) {
       ClassType* classType = cast<ClassType>(type);
@@ -471,7 +498,8 @@ public:
 
     llvm::DISubprogram* subprogram;
     std::vector<llvm::Type*> argTypes;
-    SmallVector<Metadata*, 8> debugArgTypes;
+    SmallVector<llvm::Metadata*, 8> debugArgTypes;
+    //std::vector<llvm::DIType*> debugArgTypes;
 
     for(NParam* param : function->mParams) {
       argTypes.push_back(mILGen->getLLVMType(param->mType));
@@ -491,9 +519,11 @@ public:
                                         function->mName, &mILGen->mModule);
 
     if(mILGen->mCtx->generateDebugSymobols) {
-      llvm::DISubroutineType* subType = mILGen->mDIBuider->createSubroutineType( mILGen->mDIBuider->getOrCreateTypeArray( debugArgTypes ) );
+      llvm::DISubroutineType* subType = mILGen->mDIBuider->createSubroutineType(
+                                          mILGen->mDIBuider->getOrCreateTypeArray(debugArgTypes));
       subprogram = mILGen->mDIBuider->createFunction(mScope->debugCtx, function->mName, llvm::StringRef(),
-          mDebugInfo.file, function->location.first_line, subType, function->location.first_line, DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
+                   mDebugInfo.file, function->location.first_line, subType, function->location.first_line,
+                   DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
       mCurrentFunction->setSubprogram(subprogram);
     }
 
@@ -520,6 +550,18 @@ public:
         AllocaInst* alloc = mILGen->mIRBuilder.CreateAlloca(type);
         mILGen->mIRBuilder.CreateStore(&*AI, alloc);
         mScope->defineSymbol(function->mParams.at(i)->mName, alloc);
+
+        if(mILGen->mCtx->generateDebugSymobols) {
+          llvm::DILocalVariable* localVar = mILGen->mDIBuider->createParameterVariable(mScope->debugCtx,
+                                            function->mParams.at(i)->mName, i, mDebugInfo.file,
+                                            function->mParams.at(i)->location.first_line, (llvm::DIType*)debugArgTypes[i], true);
+
+          mILGen->mDIBuider->insertDeclare(alloc, localVar, mILGen->mDIBuider->createExpression(),
+                                           llvm::DebugLoc::get(function->mParams.at(i)->location.first_line,
+                                               function->mParams.at(i)->location.first_column,
+                                               subprogram),
+                                           mILGen->mIRBuilder.GetInsertBlock());
+        }
       }
 
       //mCurrentFunctionReturnBB = BasicBlock::Create(mILGen->mLLVMCtx);
