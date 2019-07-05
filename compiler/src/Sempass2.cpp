@@ -242,6 +242,11 @@ void Sempass2Visitor::visit(NFieldRef* n) {
   }
 }
 
+void Sempass2Visitor::visit(NArrayRef* n) {
+  Type* type = getType(n->mBase);
+  mCtx.mTypeTable[n] = type;
+}
+
 void Sempass2Visitor::visit(NIntLiteral* n) {
   mCtx.mTypeTable[n] = const_cast<IntegerType*>(&Primitives::Int32);
 }

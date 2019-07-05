@@ -112,11 +112,11 @@ fqpath
 
 classDecl
   : TCLASS TID TLBRACE classparts TRBRACE
-    { $$ = new NClassDecl(*$2, $4); delete $2; }
+    { $$ = new NClassDecl(*$2, $4); delete $2; $$->location = @$; }
   | TCLASS TID TEXTENDS fqpath TLBRACE classparts TRBRACE
-    { $$ = new NClassDecl(*$2, $6); delete $2; }
+    { $$ = new NClassDecl(*$2, $6); delete $2; $$->location = @$; }
   | TCLASS TID TEXTENDS fqpath TIMPLEMENTS classlist TLBRACE classparts TRBRACE
-    { $$ = new NClassDecl(*$2, $8); delete $2; }
+    { $$ = new NClassDecl(*$2, $8); delete $2; $$->location = @$; }
   ;
 
 classlist
@@ -213,12 +213,12 @@ expr
   ;
 
 relationexpr
-  : logicexpr TCEQ logicexpr { $$ = new NOperation(NOperation::Type::CMPEQ, $1, $3); }
-  | logicexpr TCNE logicexpr { $$ = new NOperation(NOperation::Type::CMPNE, $1, $3); }
-  | logicexpr TCLT logicexpr { $$ = new NOperation(NOperation::Type::CMPLT, $1, $3); }
-  | logicexpr TCLE logicexpr { $$ = new NOperation(NOperation::Type::CMPLE, $1, $3); }
-  | logicexpr TCGT logicexpr { $$ = new NOperation(NOperation::Type::CMPGT, $1, $3); }
-  | logicexpr TCGE logicexpr { $$ = new NOperation(NOperation::Type::CMPGE, $1, $3); }
+  : logicexpr TCEQ logicexpr { $$ = new NOperation(NOperation::Type::CMPEQ, $1, $3); $$->location = @$; }
+  | logicexpr TCNE logicexpr { $$ = new NOperation(NOperation::Type::CMPNE, $1, $3); $$->location = @$; }
+  | logicexpr TCLT logicexpr { $$ = new NOperation(NOperation::Type::CMPLT, $1, $3); $$->location = @$; }
+  | logicexpr TCLE logicexpr { $$ = new NOperation(NOperation::Type::CMPLE, $1, $3); $$->location = @$; }
+  | logicexpr TCGT logicexpr { $$ = new NOperation(NOperation::Type::CMPGT, $1, $3); $$->location = @$; }
+  | logicexpr TCGE logicexpr { $$ = new NOperation(NOperation::Type::CMPGE, $1, $3); $$->location = @$; }
   | logicexpr
   ;
 
@@ -229,14 +229,14 @@ logicexpr
   ;
 
 addexpr
-  : mulexpr TPLUS mulexpr { $$ = new NOperation(NOperation::Type::ADD, $1, $3); }
-  | mulexpr TMINUS mulexpr { $$ = new NOperation(NOperation::Type::SUB, $1, $3); }
+  : mulexpr TPLUS mulexpr { $$ = new NOperation(NOperation::Type::ADD, $1, $3); $$->location = @$; }
+  | mulexpr TMINUS mulexpr { $$ = new NOperation(NOperation::Type::SUB, $1, $3); $$->location = @$; }
   | mulexpr
   ;
 
 mulexpr
-  : bitexpr TMUL bitexpr { $$ = new NOperation(NOperation::Type::MUL, $1, $3); }
-  | bitexpr TDIV bitexpr { $$ = new NOperation(NOperation::Type::DIV, $1, $3); }
+  : bitexpr TMUL bitexpr { $$ = new NOperation(NOperation::Type::MUL, $1, $3); $$->location = @$; }
+  | bitexpr TDIV bitexpr { $$ = new NOperation(NOperation::Type::DIV, $1, $3); $$->location = @$; }
   | bitexpr
   ;
 
@@ -248,16 +248,16 @@ bitexpr
   ;
 
 unaryexpr
-  : TNOT primary { $$ = new NNot($2); }
-  | TMINUS primary { $$ = new NNeg($2); }
+  : TNOT primary { $$ = new NNot($2); $$->location = @$; }
+  | TMINUS primary { $$ = new NNeg($2); $$->location = @$; }
   | TTWIDLE primary {}
   | primary
   ;
 
 primary
   : TLPAREN expr TRPAREN { $$ = $2; }
-  | TINT { $$ = new NIntLiteral($1); }
-  | TSTRINGLITERAL { $$ = new NStringLiteral($1->substr(1, $1->length()-2)); delete $1; }
+  | TINT { $$ = new NIntLiteral($1); $$->location = @$; }
+  | TSTRINGLITERAL { $$ = new NStringLiteral($1->substr(1, $1->length()-2)); delete $1; $$->location = @$; }
   | funcall
   | methodcall
   | fieldref { $$ = new NLoad($$); $$->location = @$; }

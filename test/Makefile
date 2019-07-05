@@ -2,16 +2,16 @@
 
 STPC := ../build/compiler/stp
 
-all: test
+all: test fib
 
 clean:
-	rm -f *.o *.ll test
+	rm -f *.o *.ll test fib
 
 fib.ll: fib.stp
 	$(STPC) -I .. -g -o $@ $<
 
 fib.o: fib.ll
-	llc -O0 -filetype=obj -o -mrelocation-model pie $@ $<
+	llc -O0 -filetype=obj -o $@ $<
 
 fib: fib.o
 	gcc -o $@ $<

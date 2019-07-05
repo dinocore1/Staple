@@ -61,6 +61,7 @@ public:
   void visit(NAssign*);
   void visit(NSymbolRef*);
   void visit(NFieldRef*);
+  void visit(NArrayRef*);
   void visit(NIntLiteral*);
   void visit(NStringLiteral*);
   void visit(NCall*);

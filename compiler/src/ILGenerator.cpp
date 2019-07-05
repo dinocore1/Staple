@@ -75,26 +75,27 @@ llvm::DIType* ILGenerator::getLLVMDebugType(Node* n) {
 }
 
 llvm::DIType* ILGenerator::getLLVMDebugType(Type* t) {
-  llvm::DIType* retval = nullptr;
+  
 
   switch(t->mTypeId) {
-  case Type::Integer: {
-    //static llvm::DIType* debugIntType = nullptr;
-    //if(debugIntType == nullptr) {
-      IntegerType* intType = cast<IntegerType>(t);
-      retval = mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
-    //}
-    //retval = debugIntType;
-    
-  } break;
+    case Type::Void:
+      return mDIBuider->createUnspecifiedType("void");
 
-  case Type::Pointer:
-    PointerType* ptrType = cast<PointerType>(t);
-    retval = mDIBuider->createPointerType(getLLVMDebugType(ptrType->mBase), 32);
-    break;
+    case Type::Integer: {
+      IntegerType* intType = cast<IntegerType>(t);
+      return mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
+    }
+
+    case Type::Pointer: {
+      PointerType* ptrType = cast<PointerType>(t);
+      return mDIBuider->createPointerType(getLLVMDebugType(ptrType->mBase), 32);
+    }
   }
 
-  return retval;
+
+  //should not get here
+  return mDIBuider->createUnspecifiedType("unknown");
+  //return nullptr;
 }
 
 llvm::Function* ILGenerator::getClassDestructorFunction(ClassType* classType) {
@@ -294,6 +295,7 @@ public:
   }
 
   void visit(NIfStmt* ifStmt) {
+    emitDebugLocation(ifStmt);
     if(ifStmt->mElseStmt != nullptr) {
       genifelse(ifStmt);
     } else {
@@ -303,7 +305,7 @@ public:
   }
 
   void visit(NReturn* returnStmt) override {
-
+    emitDebugLocation(returnStmt);
     llvm::Value* expr = gen(returnStmt->mExpr);
 
     mScope->destroyLocals(mILGen);
@@ -379,11 +381,13 @@ public:
   }
 
   void visit(NSymbolRef* symbolRef) {
+    emitDebugLocation(symbolRef);
     llvm::Value* l = mScope->lookup(symbolRef->mName);
     set(symbolRef, l);
   }
 
   void visit(NArrayRef* arrayRef) {
+    emitDebugLocation(arrayRef);
     llvm::Value* base = gen(arrayRef->mBase);
     llvm::Value* index = gen(arrayRef->mIndex);
 
@@ -394,6 +398,7 @@ public:
   }
 
   void visit(NFieldRef* n) {
+    emitDebugLocation(n);
     llvm::Value* base = gen(n->mBase);
 
     llvm::Value* value = mILGen->mIRBuilder.CreateStructGEP(base, 0);
@@ -401,11 +406,13 @@ public:
   }
 
   virtual void visit(NIntLiteral* lit) {
+    emitDebugLocation(lit);
     llvm::Value* value = mILGen->mIRBuilder.getInt(APInt(32, lit->mValue, true));
     set(lit, value);
   }
 
   void visit(NStringLiteral* strLit) {
+    emitDebugLocation(strLit);
     StringRef value(strLit->mStr);
 
     llvm::ArrayType* arrayType = llvm::ArrayType::get(llvm::IntegerType::get(
@@ -428,6 +435,7 @@ public:
   }
 
   virtual void visit(NOperation* op) {
+    emitDebugLocation(op);
     llvm::Value* lvalue = gen(op->mLeft);
     llvm::Value* rvalue = gen(op->mRight);
 
@@ -468,6 +476,7 @@ public:
   }
 
   virtual void visit(NAssign* assign) {
+    emitDebugLocation(assign);
     llvm::Value* lright = gen(assign->mRight);
     llvm::Value* lleft = gen(assign->mLeft);
 
@@ -475,7 +484,7 @@ public:
   }
 
   void visit(NCall* call) {
-
+    emitDebugLocation(call);
     llvm::Function* func = mILGen->mModule.getFunction(call->mName);
     std::vector<llvm::Value*> args;
     for(NExpr* argExp : call->mArgList) {
