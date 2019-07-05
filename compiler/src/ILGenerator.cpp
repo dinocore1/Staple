@@ -244,6 +244,7 @@ public:
   }
 
   void genifelse(NIfStmt* ifStmt) {
+    bool ifcont_needed = false;
     BasicBlock* thenBB = BasicBlock::Create(mILGen->mLLVMCtx, "then", mCurrentFunction);
     BasicBlock* elseBB = BasicBlock::Create(mILGen->mLLVMCtx, "else");
     BasicBlock* endBB = BasicBlock::Create(mILGen->mLLVMCtx, "ifcont");
@@ -257,6 +258,7 @@ public:
     thenBB = mILGen->mIRBuilder.GetInsertBlock();
     if(thenBB->getTerminator() == nullptr) {
       mILGen->mIRBuilder.CreateBr(endBB);
+      ifcont_needed = true;
     }
 
     //Codegen Else block
@@ -268,11 +270,13 @@ public:
     elseBB = mILGen->mIRBuilder.GetInsertBlock();
     if(elseBB->getTerminator() == nullptr) {
       mILGen->mIRBuilder.CreateBr(endBB);
+      ifcont_needed = true;
     }
 
-
-    mCurrentFunction->getBasicBlockList().push_back(endBB);
-    mILGen->mIRBuilder.SetInsertPoint(endBB);
+    if(ifcont_needed) {
+      mCurrentFunction->getBasicBlockList().push_back(endBB);
+      mILGen->mIRBuilder.SetInsertPoint(endBB);
+    }
   }
 
   void genif(NIfStmt* ifStmt) {
