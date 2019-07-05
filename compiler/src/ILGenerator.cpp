@@ -75,21 +75,21 @@ llvm::DIType* ILGenerator::getLLVMDebugType(Node* n) {
 }
 
 llvm::DIType* ILGenerator::getLLVMDebugType(Type* t) {
-  
+
 
   switch(t->mTypeId) {
-    case Type::Void:
-      return mDIBuider->createUnspecifiedType("void");
+  case Type::Void:
+    return mDIBuider->createUnspecifiedType("void");
 
-    case Type::Integer: {
-      IntegerType* intType = cast<IntegerType>(t);
-      return mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
-    }
+  case Type::Integer: {
+    IntegerType* intType = cast<IntegerType>(t);
+    return mDIBuider->createBasicType("int", intType->mWidth, dwarf::DW_ATE_signed);
+  }
 
-    case Type::Pointer: {
-      PointerType* ptrType = cast<PointerType>(t);
-      return mDIBuider->createPointerType(getLLVMDebugType(ptrType->mBase), 32);
-    }
+  case Type::Pointer: {
+    PointerType* ptrType = cast<PointerType>(t);
+    return mDIBuider->createPointerType(getLLVMDebugType(ptrType->mBase), 32);
+  }
   }
 
 

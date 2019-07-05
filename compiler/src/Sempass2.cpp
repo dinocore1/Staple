@@ -279,6 +279,9 @@ void Sempass2Visitor::visit(NCall* n) {
 
 void Sempass2Visitor::visit(NReturn* n) {
   Type* returnType = getType(n->mExpr);
+  if(returnType == nullptr) {
+    return;
+  }
 
   if(!mCurrentFunctionType->mReturnType->isAssignableFrom(returnType)) {
     mCtx.addError("expression cannot be assigned to type: '" +
