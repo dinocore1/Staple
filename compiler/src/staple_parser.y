@@ -261,7 +261,7 @@ primary
   | funcall
   | methodcall
   | fieldref { $$ = new NLoad($$); $$->location = @$; }
-  | TID { $$ = new NSymbolRef(*$1); delete $1; $$ = new NLoad($$); $$->location = @$; }
+  | TID { $$ = new NSymbolRef(*$1); delete $1; $$->location = @$; $$ = new NLoad($$); $$->location = @$; }
   | arrayref { $$ = new NLoad($$); $$->location = @$; }
   ;
 

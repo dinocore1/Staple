@@ -236,7 +236,8 @@ public:
   void visit(NCompileUnit* compileUnit) {
 
     if(mILGen->mDIBuider) {
-      mDebugInfo.file = mILGen->mDIBuider->createFile(mILGen->mCtx->inputFile.getPath().c_str(), ".");
+      File localDir(".");
+      mDebugInfo.file = mILGen->mDIBuider->createFile(mILGen->mCtx->inputFile.getPath().c_str(), localDir.getAbsolutePath().c_str());
       mDebugInfo.compileUnit = mILGen->mDIBuider->createCompileUnit(dwarf::DW_LANG_C, mDebugInfo.file,
                                "Staple Compiler", 0, "", 0);
       mScope->debugCtx = mDebugInfo.file;
