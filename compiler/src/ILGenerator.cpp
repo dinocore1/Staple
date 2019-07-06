@@ -203,11 +203,11 @@ public:
   }
 
   void emitDebugLocation(Node* n) {
-
-    llvm::DILocation* l = llvm::DILocation::get(mILGen->mLLVMCtx, n->location.first_line,
-                          n->location.first_column, mScope->debugCtx);
-
-    mILGen->mIRBuilder.SetCurrentDebugLocation(l);
+    if(mILGen->mCtx->generateDebugSymobols) {
+      llvm::DILocation* l = llvm::DILocation::get(mILGen->mLLVMCtx, n->location.first_line,
+                            n->location.first_column, mScope->debugCtx);
+      mILGen->mIRBuilder.SetCurrentDebugLocation(l);
+    }
   }
 
   void set(Node* n, llvm::Value* l) {
