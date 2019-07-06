@@ -1,8 +1,15 @@
 language: cpp
 dist: xenial
 
-before_install:
-  - sudo apt-get install -y llvm-dev bison flex
+addons:
+  apt:
+    sources:
+    - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main'
+      key_url: 'https://apt.llvm.org/llvm-snapshot.gpg.key'
+    packages:
+    - llvm-8-dev
+    - bison
+    - flex
 
 script:
   - mkdir -p build
