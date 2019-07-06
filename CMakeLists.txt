@@ -10,7 +10,7 @@ set (Staple_VERSION_MINOR 0)
 
 option(BUILD_TESTS "Build unit tests" ON)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 8.0 REQUIRED CONFIG)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
