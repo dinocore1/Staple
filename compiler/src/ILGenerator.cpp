@@ -203,8 +203,11 @@ public:
   }
 
   void emitDebugLocation(Node* n) {
-    mILGen->mIRBuilder.SetCurrentDebugLocation(llvm::DebugLoc::get(n->location.first_line,
-        n->location.first_column, mScope->debugCtx));
+
+    llvm::DILocation* l = llvm::DILocation::get(mILGen->mLLVMCtx, n->location.first_line,
+                          n->location.first_column, mScope->debugCtx);
+
+    mILGen->mIRBuilder.SetCurrentDebugLocation(l);
   }
 
   void set(Node* n, llvm::Value* l) {
@@ -364,9 +367,8 @@ public:
                                              localVar->location.first_line, mILGen->getLLVMDebugType(type), true);
 
       mILGen->mDIBuider->insertDeclare(alloc, debugLocalVar, mILGen->mDIBuider->createExpression(),
-                                       llvm::DebugLoc::get(localVar->location.first_line,
-                                           localVar->location.first_column,
-                                           mScope->debugCtx),
+                                       llvm::DILocation::get(mILGen->mLLVMCtx, localVar->location.first_line,
+                                           localVar->location.first_column, mScope->debugCtx),
                                        mILGen->mIRBuilder.GetInsertBlock());
     }
 
@@ -508,6 +510,8 @@ public:
 
 
   void visit(NFunctionDecl* function) {
+
+    mILGen->mIRBuilder.SetCurrentDebugLocation(nullptr);
 
     llvm::DISubprogram* subprogram;
     std::vector<llvm::Type*> argTypes;

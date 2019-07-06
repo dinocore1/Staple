@@ -91,11 +91,14 @@ void Sempass2Visitor::visit(NFieldDecl* n) {
 }
 
 void Sempass2Visitor::visit(NFunctionDecl* funDecl) {
-  push();
 
   FQPath fqFunName = *mCurrentPackage;
   fqFunName.add(funDecl->mName);
   FunctionType* funType = dyn_cast_or_null<FunctionType>(mCtx.mKnownTypes[fqFunName]);
+  mScope->defineSymbol(funDecl->mName, funType);
+
+  push();
+
   mCurrentFunctionType = funType;
 
   for(NParam* param : funDecl->mParams) {
@@ -104,7 +107,7 @@ void Sempass2Visitor::visit(NFunctionDecl* funDecl) {
     mScope->defineSymbol(param->mName, paramType);
   }
   funType->mReturnType = getType(funDecl->mReturnType);
-  mScope->defineSymbol(funDecl->mName, funType);
+
 
   //only do statement type checking for the compile unit, not its imports
   if(mCurrentImport == nullptr) {
