@@ -21,16 +21,17 @@ task genParser(type: Exec) {
 
     def parser_input_file = file('src/staple_parser.y')
     def parser_src_file = file("${buildDir}/generatedSrc/staple_parser.cpp")
+    def header_file = file( "${headerDir}/staple_parser.hpp" )
 
 
     inputs.file( parser_input_file )
     outputs.file (parser_src_file)
-    outputs.file( "${buildDir}/generatedSrc/staple_parser.hpp" )
+    //outputs.file( header_file )
     outputs.dir(headerDir)
 
     executable 'bison'
 
-    args '-d', '-o', "${parser_src_file}", "${parser_input_file}"
+    args '-o', "${parser_src_file}", "--defines=${header_file}", "${parser_input_file}"
 }
 
 application {
@@ -44,5 +45,6 @@ application {
 
     privateHeaders {
         from genParser.headerDir
+        from file('src')
     }
 }
