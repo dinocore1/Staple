@@ -5,7 +5,7 @@ plugins {
 
 task genLexer(type: Exec) {
     def inputfile = file('src/staple_lex.l')
-    def outputfile = file('src/staple_lex.cpp')
+    def outputfile = file("${buildDir}/generatedSrc/staple_lex.cpp")
 
     inputs.file(inputfile)
     outputs.file(outputfile)
@@ -17,13 +17,16 @@ task genLexer(type: Exec) {
 
 task genParser(type: Exec) {
 
+    ext.headerDir = file("${buildDir}/generatedHeaders")
+
     def parser_input_file = file('src/staple_parser.y')
-    def parser_src_file = file('src/staple_parser.cpp')
+    def parser_src_file = file("${buildDir}/generatedSrc/staple_parser.cpp")
 
 
     inputs.file( parser_input_file )
     outputs.file (parser_src_file)
-    outputs.file( 'src/staple_parser.hpp' )
+    outputs.file( "${buildDir}/generatedSrc/staple_parser.hpp" )
+    outputs.dir(headerDir)
 
     executable 'bison'
 
@@ -37,5 +40,9 @@ application {
         }
         from genParser
         from genLexer
+    }
+
+    privateHeaders {
+        from genParser.headerDir
     }
 }
