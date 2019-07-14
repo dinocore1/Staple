@@ -1,0 +1,41 @@
+plugins {
+    id 'cpp-application'
+}
+
+
+task genLexer(type: Exec) {
+    def inputfile = file('src/staple_lex.l')
+    def outputfile = file('src/staple_lex.cpp')
+
+    inputs.file(inputfile)
+    outputs.file(outputfile)
+
+    executable 'flex'
+
+    args '-o', "${outputfile}", "${inputfile}"
+}
+
+task genParser(type: Exec) {
+
+    def parser_input_file = file('src/staple_parser.y')
+    def parser_src_file = file('src/staple_parser.cpp')
+
+
+    inputs.file( parser_input_file )
+    outputs.file (parser_src_file)
+    outputs.file( 'src/staple_parser.hpp' )
+
+    executable 'bison'
+
+    args '-d', '-o', "${parser_src_file}", "${parser_input_file}"
+}
+
+application {
+    source {
+        from fileTree('src').matching {
+            include '*.cpp'
+        }
+        from genParser
+        from genLexer
+    }
+}

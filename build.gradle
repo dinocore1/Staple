@@ -1,0 +1,4 @@
+allprojects {
+    group = 'com.devsmart.staple'
+    version = '1.0.0'
+}
